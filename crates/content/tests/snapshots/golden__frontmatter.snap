@@ -1,0 +1,13 @@
+---
+source: crates/content/tests/golden.rs
+expression: out.frontmatter
+---
+title: Block Smoke Test
+subtitle: ~
+tags:
+  - test
+series: ~
+series_order: ~
+cover_image: ~
+status: draft
+canonical: ~

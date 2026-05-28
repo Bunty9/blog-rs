@@ -1,0 +1,51 @@
+---
+source: crates/content/tests/golden.rs
+expression: assets
+---
+[
+    (
+        Js,
+        "/assets/blocks/animate.js",
+        true,
+    ),
+    (
+        Css,
+        "/assets/blocks/callout.css",
+        false,
+    ),
+    (
+        Css,
+        "/assets/blocks/chart.css",
+        false,
+    ),
+    (
+        Js,
+        "/assets/blocks/chart.js",
+        true,
+    ),
+    (
+        Js,
+        "/assets/blocks/code/codemirror.bundle.js",
+        true,
+    ),
+    (
+        Css,
+        "/assets/blocks/code/codemirror.css",
+        false,
+    ),
+    (
+        Css,
+        "/assets/blocks/image.css",
+        false,
+    ),
+    (
+        Js,
+        "/assets/vendor/chart.umd.min.js",
+        true,
+    ),
+    (
+        Js,
+        "/assets/vendor/motion.min.js",
+        true,
+    ),
+]
