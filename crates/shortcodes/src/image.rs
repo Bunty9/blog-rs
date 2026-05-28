@@ -1,20 +1,28 @@
-use crate::{Asset, AssetKind, RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{Asset, AssetKind, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Image;
 
 const CSS: &str = "/assets/blocks/image.css";
 
 impl Shortcode for Image {
-    fn name(&self) -> &'static str { "image" }
+    fn name(&self) -> &'static str {
+        "image"
+    }
 
-    fn render(&self, args: &ShortcodeArgs, _body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        _body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let src = args.required("src")?;
         let alt = args.get("alt").unwrap_or("");
         let caption = args.get("caption");
         let width = args.get("width").unwrap_or("100%");
         let aspect = args.get("aspect");
 
-        let aspect_style = aspect.map(|a| format!(" style=\"aspect-ratio:{a};\"")).unwrap_or_default();
+        let aspect_style = aspect
+            .map(|a| format!(" style=\"aspect-ratio:{a};\""))
+            .unwrap_or_default();
 
         let caption_html = caption
             .map(|c| format!("<figcaption>{}</figcaption>", html_escape(c)))
@@ -31,17 +39,21 @@ impl Shortcode for Image {
 
         Ok(RenderedBlock {
             html,
-            assets: vec![Asset { kind: AssetKind::Css, src: CSS.into(), defer: false }],
+            assets: vec![Asset {
+                kind: AssetKind::Css,
+                src: CSS.into(),
+                defer: false,
+            }],
         })
     }
 }
 
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
-     .replace('<', "&lt;")
-     .replace('>', "&gt;")
-     .replace('"', "&quot;")
-     .replace('\'', "&#39;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 #[cfg(test)]

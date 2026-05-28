@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser)]
-#[command(name = "blog-rs-render", about = "Render a blog-rs markdown post to HTML")]
+#[command(
+    name = "blog-rs-render",
+    about = "Render a blog-rs markdown post to HTML"
+)]
 struct Cli {
     /// Input markdown file (use `-` for stdin)
     input: PathBuf,

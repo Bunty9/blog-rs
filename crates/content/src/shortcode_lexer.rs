@@ -7,14 +7,22 @@ pub enum Token<'a> {
     /// Plain markdown text between shortcodes.
     Text(&'a str),
     /// `{{< name args... >}}` self-closing.
-    Self_ { name: &'a str, raw_args: &'a str, offset: usize },
+    Self_ {
+        name: &'a str,
+        raw_args: &'a str,
+        offset: usize,
+    },
     /// `{{< name args... >}} ... {{< /name >}}` paired.
-    Paired { name: &'a str, raw_args: &'a str, body: &'a str, offset: usize },
+    Paired {
+        name: &'a str,
+        raw_args: &'a str,
+        body: &'a str,
+        offset: usize,
+    },
 }
 
-static OPEN_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\{\{<\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*([^>]*?)\s*>\}\}").unwrap()
-});
+static OPEN_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\{\{<\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*([^>]*?)\s*>\}\}").unwrap());
 
 const CLOSE_RE_FMT: &str = r"\{\{<\s*/\s*{name}\s*>\}\}";
 
@@ -43,15 +51,27 @@ pub fn tokenize<'a>(src: &'a str, paired_names: &[&str]) -> Result<Vec<Token<'a>
             let after = m_all.end();
             if let Some(close) = close_re.find_at(src, after) {
                 let body = &src[after..close.start()];
-                out.push(Token::Paired { name, raw_args, body, offset });
+                out.push(Token::Paired {
+                    name,
+                    raw_args,
+                    body,
+                    offset,
+                });
                 cursor = close.end();
                 continue;
             } else {
-                return Err(ContentError::UnterminatedShortcode { name: name.into(), offset });
+                return Err(ContentError::UnterminatedShortcode {
+                    name: name.into(),
+                    offset,
+                });
             }
         }
 
-        out.push(Token::Self_ { name, raw_args, offset });
+        out.push(Token::Self_ {
+            name,
+            raw_args,
+            offset,
+        });
         cursor = m_all.end();
     }
 
@@ -86,7 +106,12 @@ mod tests {
         let toks = tokenize(src, &["callout"]).unwrap();
         assert_eq!(toks.len(), 1);
         match &toks[0] {
-            Token::Paired { name, body, raw_args, .. } => {
+            Token::Paired {
+                name,
+                body,
+                raw_args,
+                ..
+            } => {
                 assert_eq!(*name, "callout");
                 assert_eq!(*body, "hello");
                 assert_eq!(*raw_args, "type=\"warn\"");

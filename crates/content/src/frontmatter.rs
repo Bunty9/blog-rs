@@ -25,11 +25,12 @@ pub enum PostStatus {
 }
 
 impl Default for PostStatus {
-    fn default() -> Self { Self::Draft }
+    fn default() -> Self {
+        Self::Draft
+    }
 }
 
-static FM_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)\A---\r?\n(.*?)\r?\n---\r?\n?").unwrap());
+static FM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s)\A---\r?\n(.*?)\r?\n---\r?\n?").unwrap());
 
 /// Splits source into (frontmatter, body). If no frontmatter present, returns
 /// default Frontmatter and the full input as body.

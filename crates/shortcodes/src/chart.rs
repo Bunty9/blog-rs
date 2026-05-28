@@ -1,4 +1,4 @@
-use crate::{Asset, AssetKind, RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{Asset, AssetKind, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Chart;
 
@@ -7,9 +7,15 @@ const BLOCK_JS: &str = "/assets/blocks/chart.js";
 const BLOCK_CSS: &str = "/assets/blocks/chart.css";
 
 impl Shortcode for Chart {
-    fn name(&self) -> &'static str { "chart" }
+    fn name(&self) -> &'static str {
+        "chart"
+    }
 
-    fn render(&self, args: &ShortcodeArgs, _body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        _body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let kind = args.get("type").unwrap_or("line");
         if !matches!(kind, "line" | "bar" | "scatter" | "radar" | "doughnut") {
             return Err(RenderError::InvalidBody {
@@ -27,14 +33,18 @@ impl Shortcode for Chart {
             });
         }
 
-        let caption = args.get("caption").map(|c| {
-            format!("<figcaption>{}</figcaption>", html_escape(c))
-        }).unwrap_or_default();
+        let caption = args
+            .get("caption")
+            .map(|c| format!("<figcaption>{}</figcaption>", html_escape(c)))
+            .unwrap_or_default();
 
         let attrs = if let Some(s) = src {
             format!(r#"data-chart-src="{}""#, html_escape(s))
         } else {
-            format!(r#"data-chart-inline='{}'"#, data.unwrap().replace('\'', "&#39;"))
+            format!(
+                r#"data-chart-inline='{}'"#,
+                data.unwrap().replace('\'', "&#39;")
+            )
         };
 
         let id = next_block_id();
@@ -48,16 +58,31 @@ impl Shortcode for Chart {
         Ok(RenderedBlock {
             html,
             assets: vec![
-                Asset { kind: AssetKind::Css, src: BLOCK_CSS.into(), defer: false },
-                Asset { kind: AssetKind::Js,  src: CHART_JS.into(),  defer: true  },
-                Asset { kind: AssetKind::Js,  src: BLOCK_JS.into(),  defer: true  },
+                Asset {
+                    kind: AssetKind::Css,
+                    src: BLOCK_CSS.into(),
+                    defer: false,
+                },
+                Asset {
+                    kind: AssetKind::Js,
+                    src: CHART_JS.into(),
+                    defer: true,
+                },
+                Asset {
+                    kind: AssetKind::Js,
+                    src: BLOCK_JS.into(),
+                    defer: true,
+                },
             ],
         })
     }
 }
 
 fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn next_block_id() -> String {
@@ -70,7 +95,9 @@ fn next_block_id() -> String {
         s.push(std::char::from_digit(d, 36).unwrap());
         v /= 36;
     }
-    while s.len() < 8 { s.push('0'); }
+    while s.len() < 8 {
+        s.push('0');
+    }
     s
 }
 

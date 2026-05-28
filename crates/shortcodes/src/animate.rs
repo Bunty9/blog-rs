@@ -1,4 +1,4 @@
-use crate::{Asset, AssetKind, RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{Asset, AssetKind, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Animate;
 
@@ -6,13 +6,24 @@ const MOTION_JS: &str = "/assets/vendor/motion.min.js";
 const BLOCK_JS: &str = "/assets/blocks/animate.js";
 
 impl Shortcode for Animate {
-    fn name(&self) -> &'static str { "animate" }
-    fn paired(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "animate"
+    }
+    fn paired(&self) -> bool {
+        true
+    }
 
-    fn render(&self, args: &ShortcodeArgs, body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let inner = body.ok_or(RenderError::MissingBody("animate"))?;
         let preset = args.get("preset").unwrap_or("fade");
-        if !matches!(preset, "fade" | "slide-up" | "slide-left" | "scale" | "custom") {
+        if !matches!(
+            preset,
+            "fade" | "slide-up" | "slide-left" | "scale" | "custom"
+        ) {
             return Err(RenderError::InvalidBody {
                 name: "animate",
                 reason: format!("unknown preset `{preset}`"),
@@ -30,8 +41,16 @@ impl Shortcode for Animate {
         Ok(RenderedBlock {
             html,
             assets: vec![
-                Asset { kind: AssetKind::Js, src: MOTION_JS.into(), defer: true },
-                Asset { kind: AssetKind::Js, src: BLOCK_JS.into(),  defer: true },
+                Asset {
+                    kind: AssetKind::Js,
+                    src: MOTION_JS.into(),
+                    defer: true,
+                },
+                Asset {
+                    kind: AssetKind::Js,
+                    src: BLOCK_JS.into(),
+                    defer: true,
+                },
             ],
         })
     }

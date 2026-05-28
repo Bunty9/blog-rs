@@ -1,4 +1,4 @@
-use crate::{Asset, AssetKind, RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{Asset, AssetKind, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Code;
 
@@ -6,15 +6,27 @@ const CM_JS: &str = "/assets/blocks/code/codemirror.bundle.js";
 const CM_CSS: &str = "/assets/blocks/code/codemirror.css";
 
 impl Shortcode for Code {
-    fn name(&self) -> &'static str { "code" }
-    fn paired(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "code"
+    }
+    fn paired(&self) -> bool {
+        true
+    }
 
-    fn render(&self, args: &ShortcodeArgs, body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let source = body.ok_or(RenderError::MissingBody("code"))?;
         let lang = args.get("lang").unwrap_or("text");
         let playground = args.bool("playground") && lang == "rust";
         let escaped = html_escape(source);
-        let play_attr = if playground { r#" data-playground="rust""# } else { "" };
+        let play_attr = if playground {
+            r#" data-playground="rust""#
+        } else {
+            ""
+        };
 
         let html = format!(
             r#"<figure class="code-block" data-lang="{lang}"{play_attr}>
@@ -25,8 +37,16 @@ impl Shortcode for Code {
         Ok(RenderedBlock {
             html,
             assets: vec![
-                Asset { kind: AssetKind::Css, src: CM_CSS.into(), defer: false },
-                Asset { kind: AssetKind::Js,  src: CM_JS.into(),  defer: true  },
+                Asset {
+                    kind: AssetKind::Css,
+                    src: CM_CSS.into(),
+                    defer: false,
+                },
+                Asset {
+                    kind: AssetKind::Js,
+                    src: CM_JS.into(),
+                    defer: true,
+                },
             ],
         })
     }
@@ -34,10 +54,10 @@ impl Shortcode for Code {
 
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
-     .replace('<', "&lt;")
-     .replace('>', "&gt;")
-     .replace('"', "&quot;")
-     .replace('\'', "&#39;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 #[cfg(test)]

@@ -15,10 +15,18 @@ pub struct Asset {
 
 impl Asset {
     pub fn css(src: impl Into<String>) -> Self {
-        Self { kind: AssetKind::Css, src: src.into(), defer: false }
+        Self {
+            kind: AssetKind::Css,
+            src: src.into(),
+            defer: false,
+        }
     }
     pub fn js(src: impl Into<String>, defer: bool) -> Self {
-        Self { kind: AssetKind::Js, src: src.into(), defer }
+        Self {
+            kind: AssetKind::Js,
+            src: src.into(),
+            defer,
+        }
     }
 }
 

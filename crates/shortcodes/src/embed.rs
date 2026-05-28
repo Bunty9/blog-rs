@@ -1,17 +1,25 @@
-use crate::{RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Embed;
 
 impl Shortcode for Embed {
-    fn name(&self) -> &'static str { "embed" }
+    fn name(&self) -> &'static str {
+        "embed"
+    }
 
-    fn render(&self, args: &ShortcodeArgs, _body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        _body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let url = args.required("url")?;
         let (provider, inner) = classify(url);
 
         if let Some(p) = provider {
             Ok(RenderedBlock {
-                html: format!(r#"<figure class="embed-block" data-provider="{p}">{inner}</figure>"#),
+                html: format!(
+                    r#"<figure class="embed-block" data-provider="{p}">{inner}</figure>"#
+                ),
                 assets: vec![],
             })
         } else {
@@ -31,7 +39,8 @@ fn classify(url: &str) -> (Option<&'static str>, String) {
         return (Some("youtube"), html);
     }
     if url.contains("twitter.com/") || url.contains("x.com/") {
-        let html = format!(r#"<blockquote class="twitter-tweet"><a href="{url}">{url}</a></blockquote>"#);
+        let html =
+            format!(r#"<blockquote class="twitter-tweet"><a href="{url}">{url}</a></blockquote>"#);
         return (Some("twitter"), html);
     }
     (None, String::new())

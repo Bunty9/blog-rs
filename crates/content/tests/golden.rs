@@ -5,7 +5,9 @@ use regex::Regex;
 static CHART_ID_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"id="chart-[a-z0-9]+""#).unwrap());
 
 fn normalize(html: &str) -> String {
-    CHART_ID_RE.replace_all(html, r#"id="chart-XXXX""#).to_string()
+    CHART_ID_RE
+        .replace_all(html, r#"id="chart-XXXX""#)
+        .to_string()
 }
 
 #[test]

@@ -33,7 +33,12 @@ pub fn render_with_registry(src: &str, reg: &Registry) -> Result<RenderOutput, C
                 let block = resolve(reg, name, raw_args, None)?;
                 emit(&mut html, &mut manifest, block);
             }
-            shortcode_lexer::Token::Paired { name, raw_args, body: inner, .. } => {
+            shortcode_lexer::Token::Paired {
+                name,
+                raw_args,
+                body: inner,
+                ..
+            } => {
                 let inner_html = crate::markdown::to_html(inner);
                 let block = resolve(reg, name, raw_args, Some(&inner_html))?;
                 emit(&mut html, &mut manifest, block);
@@ -41,7 +46,11 @@ pub fn render_with_registry(src: &str, reg: &Registry) -> Result<RenderOutput, C
         }
     }
 
-    Ok(RenderOutput { frontmatter: fm, html, assets: manifest })
+    Ok(RenderOutput {
+        frontmatter: fm,
+        html,
+        assets: manifest,
+    })
 }
 
 fn resolve(
@@ -50,12 +59,15 @@ fn resolve(
     raw_args: &str,
     body: Option<&str>,
 ) -> Result<RenderedBlock, ContentError> {
-    let sc = reg.get(name).ok_or_else(|| ContentError::UnknownShortcode(name.into()))?;
+    let sc = reg
+        .get(name)
+        .ok_or_else(|| ContentError::UnknownShortcode(name.into()))?;
     let args = shortcodes::parse_args(raw_args).map_err(|e| ContentError::MalformedArgs {
         offset: 0,
         reason: e.to_string(),
     })?;
-    sc.render(&args, body).map_err(|e| ContentError::Render(e.to_string()))
+    sc.render(&args, body)
+        .map_err(|e| ContentError::Render(e.to_string()))
 }
 
 fn emit(html: &mut String, manifest: &mut crate::AssetManifest, block: RenderedBlock) {
@@ -65,7 +77,11 @@ fn emit(html: &mut String, manifest: &mut crate::AssetManifest, block: RenderedB
             shortcodes::AssetKind::Css => crate::asset::AssetKind::Css,
             shortcodes::AssetKind::Js => crate::asset::AssetKind::Js,
         };
-        manifest.add(crate::Asset { kind, src: sa.src, defer: sa.defer });
+        manifest.add(crate::Asset {
+            kind,
+            src: sa.src,
+            defer: sa.defer,
+        });
     }
 }
 

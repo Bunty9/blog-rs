@@ -17,7 +17,9 @@ pub enum ArgsError {
 }
 
 impl ShortcodeArgs {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn insert(&mut self, k: impl Into<String>, v: impl Into<String>) {
         self.map.insert(k.into(), v.into());
@@ -31,10 +33,17 @@ impl ShortcodeArgs {
         self.get(k).ok_or_else(|| ArgsError::Missing(k.into()))
     }
 
-    pub fn optional<T: std::str::FromStr>(&self, k: &str, ty: &'static str) -> Result<Option<T>, ArgsError> {
+    pub fn optional<T: std::str::FromStr>(
+        &self,
+        k: &str,
+        ty: &'static str,
+    ) -> Result<Option<T>, ArgsError> {
         match self.get(k) {
             None => Ok(None),
-            Some(s) => s.parse::<T>().map(Some).map_err(|_| ArgsError::Parse(k.into(), ty)),
+            Some(s) => s
+                .parse::<T>()
+                .map(Some)
+                .map_err(|_| ArgsError::Parse(k.into(), ty)),
         }
     }
 
@@ -51,11 +60,16 @@ pub fn parse(input: &str) -> Result<ShortcodeArgs, ArgsError> {
     let len = bytes.len();
 
     while i < len {
-        while i < len && bytes[i].is_ascii_whitespace() { i += 1; }
-        if i >= len { break; }
+        while i < len && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if i >= len {
+            break;
+        }
 
         let key_start = i;
-        while i < len && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'-') {
+        while i < len && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'-')
+        {
             i += 1;
         }
         if key_start == i {
@@ -66,7 +80,10 @@ pub fn parse(input: &str) -> Result<ShortcodeArgs, ArgsError> {
             .to_string();
 
         if i >= len || bytes[i] != b'=' {
-            return Err(ArgsError::Malformed(i, format!("expected `=` after `{}`", key)));
+            return Err(ArgsError::Malformed(
+                i,
+                format!("expected `=` after `{}`", key),
+            ));
         }
         i += 1;
 
@@ -78,7 +95,9 @@ pub fn parse(input: &str) -> Result<ShortcodeArgs, ArgsError> {
                 let quote = bytes[i];
                 i += 1;
                 let vstart = i;
-                while i < len && bytes[i] != quote { i += 1; }
+                while i < len && bytes[i] != quote {
+                    i += 1;
+                }
                 if i >= len {
                     return Err(ArgsError::Malformed(i, "unterminated quoted value".into()));
                 }
@@ -90,7 +109,9 @@ pub fn parse(input: &str) -> Result<ShortcodeArgs, ArgsError> {
             }
             _ => {
                 let vstart = i;
-                while i < len && !bytes[i].is_ascii_whitespace() { i += 1; }
+                while i < len && !bytes[i].is_ascii_whitespace() {
+                    i += 1;
+                }
                 std::str::from_utf8(&bytes[vstart..i])
                     .map_err(|_| ArgsError::Malformed(i, "non-utf8 value".into()))?
                     .to_string()
@@ -123,11 +144,17 @@ mod tests {
 
     #[test]
     fn rejects_unterminated_quote() {
-        assert!(matches!(parse(r#"src="oops"#), Err(ArgsError::Malformed(_, _))));
+        assert!(matches!(
+            parse(r#"src="oops"#),
+            Err(ArgsError::Malformed(_, _))
+        ));
     }
 
     #[test]
     fn rejects_missing_equals() {
-        assert!(matches!(parse("lang rust"), Err(ArgsError::Malformed(_, _))));
+        assert!(matches!(
+            parse("lang rust"),
+            Err(ArgsError::Malformed(_, _))
+        ));
     }
 }

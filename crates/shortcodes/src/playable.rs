@@ -1,13 +1,19 @@
-use crate::{RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Playable;
 
 const RUST_PLAYGROUND: &str = "https://play.rust-lang.org/?version=stable&mode=debug&edition=2021";
 
 impl Shortcode for Playable {
-    fn name(&self) -> &'static str { "playable" }
+    fn name(&self) -> &'static str {
+        "playable"
+    }
 
-    fn render(&self, args: &ShortcodeArgs, _body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        _body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let id = args.required("id")?;
         match id {
             "rust-playground" => {
@@ -20,7 +26,10 @@ impl Shortcode for Playable {
                 let html = format!(
                     r#"<iframe class="playable-block" src="{url}" loading="lazy" title="Rust Playground" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>"#
                 );
-                Ok(RenderedBlock { html, assets: vec![] })
+                Ok(RenderedBlock {
+                    html,
+                    assets: vec![],
+                })
             }
             other => Err(RenderError::Other(format!("unknown playable id `{other}`"))),
         }

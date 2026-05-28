@@ -1,14 +1,22 @@
-use crate::{Asset, AssetKind, RenderedBlock, RenderError, Shortcode, ShortcodeArgs};
+use crate::{Asset, AssetKind, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Callout;
 
 const CSS: &str = "/assets/blocks/callout.css";
 
 impl Shortcode for Callout {
-    fn name(&self) -> &'static str { "callout" }
-    fn paired(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "callout"
+    }
+    fn paired(&self) -> bool {
+        true
+    }
 
-    fn render(&self, args: &ShortcodeArgs, body: Option<&str>) -> Result<RenderedBlock, RenderError> {
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError> {
         let body = body.ok_or(RenderError::MissingBody("callout"))?;
         let kind = args.get("type").unwrap_or("info");
         if !matches!(kind, "info" | "warn" | "tip" | "danger") {
@@ -22,7 +30,11 @@ impl Shortcode for Callout {
         );
         Ok(RenderedBlock {
             html,
-            assets: vec![Asset { kind: AssetKind::Css, src: CSS.into(), defer: false }],
+            assets: vec![Asset {
+                kind: AssetKind::Css,
+                src: CSS.into(),
+                defer: false,
+            }],
         })
     }
 }

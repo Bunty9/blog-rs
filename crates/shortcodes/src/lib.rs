@@ -1,14 +1,14 @@
 //! Shortcode block registry. Each block type implements `Shortcode` and is
 //! registered into a `Registry`. The content render pipeline looks up by name.
 
+pub mod animate;
 pub mod args;
 pub mod callout;
-pub mod code;
-pub mod image;
 pub mod chart;
-pub mod animate;
-pub mod playable;
+pub mod code;
 pub mod embed;
+pub mod image;
+pub mod playable;
 
 use std::collections::HashMap;
 use thiserror::Error;
@@ -16,7 +16,10 @@ use thiserror::Error;
 pub use args::{parse as parse_args, ArgsError, ShortcodeArgs};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AssetKind { Css, Js }
+pub enum AssetKind {
+    Css,
+    Js,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Asset {
@@ -46,9 +49,15 @@ pub enum RenderError {
 
 pub trait Shortcode: Send + Sync {
     fn name(&self) -> &'static str;
-    fn render(&self, args: &ShortcodeArgs, body: Option<&str>) -> Result<RenderedBlock, RenderError>;
+    fn render(
+        &self,
+        args: &ShortcodeArgs,
+        body: Option<&str>,
+    ) -> Result<RenderedBlock, RenderError>;
     /// Whether this block requires a paired closing tag.
-    fn paired(&self) -> bool { false }
+    fn paired(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Default)]
@@ -57,7 +66,9 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn register<S: Shortcode + 'static>(&mut self, s: S) {
         self.map.insert(s.name(), Box::new(s));
