@@ -25,3 +25,10 @@ fn all_shortcodes_snapshot() {
     assets.sort_by(|a, b| a.1.cmp(&b.1));
     insta::assert_debug_snapshot!("assets", assets);
 }
+
+#[test]
+fn domain_1_snapshot() {
+    let src = include_str!("../../../tests/fixtures/domain-1-snippet.md");
+    let out = content::render(src).unwrap();
+    insta::assert_snapshot!("domain-1-html", normalize(&out.html));
+}

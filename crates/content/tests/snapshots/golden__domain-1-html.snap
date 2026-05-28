@@ -1,0 +1,19 @@
+---
+source: crates/content/tests/golden.rs
+expression: normalize(&out.html)
+---
+<aside class="callout callout-info" data-callout="info"><p>Bare-metal Rust drops the standard library entirely. You link against <code>core</code> and own the boot path yourself.</p>
+</aside><p>A bare-metal application must declare <code>no_std</code> + <code>no_main</code> and provide its own
+non-returning panic handler.</p>
+<figure class="code-block" data-lang="rust" data-playground="rust">
+<pre><code class="language-rust">&lt;p&gt;#![no_std]
+#![no_main]&lt;/p&gt;
+&lt;p&gt;#[panic_handler]
+fn panic(_info: &amp;amp;core::panic::PanicInfo) -&amp;gt; ! { loop {} }&lt;/p&gt;
+</code></pre>
+</figure><p>The boot sequence configures the hardware vector table at <code>0x00000000</code>,
+clears <code>.bss</code>, and copies <code>.data</code> from flash to SRAM before jumping to <code>main</code>.</p>
+<figure class="chart-block">
+<canvas id="chart-XXXX" data-chart-type="bar" data-chart-src="data/preempt-cycles.json"></canvas>
+<figcaption>RTIC priority preemption — measured handoff in CPU cycles</figcaption>
+</figure>
