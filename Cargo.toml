@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "crates/content",
     "crates/shortcodes",
-    "bins/blog-rs-render",
+    # "bins/blog-rs-render" — re-add in Task 17 when the binary crate is created.
 ]
 
 [workspace.package]
