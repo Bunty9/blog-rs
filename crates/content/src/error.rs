@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum ContentError {
     #[error("frontmatter parse failed: {0}")]
     Frontmatter(#[from] serde_yaml::Error),
