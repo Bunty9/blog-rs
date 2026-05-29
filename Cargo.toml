@@ -33,7 +33,7 @@ tokio = { version = "1", features = ["full"] }
 axum = { version = "0.7", features = ["macros"] }
 tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["catch-panic", "trace", "compression-gzip", "request-id", "util"] }
-sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "migrate", "macros", "time", "uuid"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "migrate", "macros", "time", "uuid"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
 argon2 = { version = "0.5", features = ["std"] }
