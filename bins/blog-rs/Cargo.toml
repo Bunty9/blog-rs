@@ -32,6 +32,7 @@ askama = { workspace = true }
 askama_axum = { workspace = true }
 urlencoding = { workspace = true }
 chrono = { workspace = true }
+csv = "1"
 
 db    = { path = "../../crates/db" }
 auth  = { path = "../../crates/auth" }
