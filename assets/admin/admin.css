@@ -1,2 +1,80 @@
-/* blog-rs admin theme — Phase 1d will replace this with the real dashboard. */
-.admin-shell { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+:root {
+    --ink: #1a1a1a;
+    --paper: #fafafa;
+    --rust: #b7410e;
+    --muted: #6b6b6b;
+    --line: #e3e3e3;
+    --ok: #1e7e34;
+    --warn: #b48700;
+    --danger: #b00020;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    --mono: ui-monospace, "JetBrains Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.4;
+}
+
+.admin-shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.admin-sidebar {
+    background: #fff; border-right: 1px solid var(--line); padding: 1rem;
+}
+.admin-sidebar h1 { font-size: 1rem; margin: 0 0 1rem; color: var(--rust); }
+.admin-sidebar nav a {
+    display: block; padding: 0.5rem 0.75rem; color: var(--ink);
+    text-decoration: none; border-radius: 4px;
+}
+.admin-sidebar nav a:hover, .admin-sidebar nav a.active { background: var(--line); }
+
+.admin-main { padding: 1.5rem 2rem; max-width: 1100px; }
+.admin-main h2 { margin-top: 0; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: #fff; padding: 1rem 1.25rem; border-radius: 8px; border: 1px solid var(--line); }
+.stat-card .n { font-size: 2rem; font-weight: 600; }
+.stat-card .label { color: var(--muted); font-size: 0.85rem; }
+
+.toolbar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+.toolbar input, .toolbar select {
+    padding: 0.4rem 0.6rem; border: 1px solid var(--line); border-radius: 4px;
+    font-family: var(--sans); font-size: 0.9rem;
+}
+.toolbar .grow { flex: 1; }
+
+table.posts { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; }
+table.posts th, table.posts td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--line); text-align: left; }
+table.posts th { font-size: 0.8rem; text-transform: uppercase; color: var(--muted); }
+.status-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 99px; font-size: 0.75rem; }
+.status-draft { background: #f0f0f0; color: var(--muted); }
+.status-published { background: #d8efd8; color: var(--ok); }
+.status-scheduled { background: #fff4d0; color: var(--warn); }
+
+.editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-height: 70vh; }
+.editor-pane, .preview-pane {
+    background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1rem;
+    overflow: auto;
+}
+.field { margin-bottom: 0.8rem; }
+.field label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem; }
+.field input, .field textarea, .field select {
+    width: 100%; padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: 4px;
+    font-family: var(--sans); font-size: 0.95rem;
+}
+.field textarea#body-md { font-family: var(--mono); min-height: 50vh; }
+
+.actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+button, .btn {
+    padding: 0.5rem 1rem; border: 1px solid var(--line); background: #fff;
+    border-radius: 4px; cursor: pointer; font-family: var(--sans); font-size: 0.9rem;
+}
+button.primary, .btn.primary { background: var(--rust); color: #fff; border-color: var(--rust); }
+button.danger, .btn.danger { color: var(--danger); border-color: var(--danger); }
+
+.flash { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+.flash.ok { background: #d8efd8; color: var(--ok); }
+.flash.error { background: #fde2e1; color: var(--danger); }
