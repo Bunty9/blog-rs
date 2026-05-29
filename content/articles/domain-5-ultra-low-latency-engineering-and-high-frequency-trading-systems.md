@@ -49,7 +49,7 @@ To operate within this budget, developers must bypass typical operating system o
 Once in user-space, a Single-Producer Single-Consumer (SPSC) ring buffer passes the packet to the decoder The decoder parses the binary market data, updates the order book, and triggers the trading strategy  
 If a signal is generated, the risk engine performs pre-trade validation before serializing the order and transmitting it via TCP This pipeline avoids the unpredictable tail latencies associated with garbage-collected languages
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Operational Latency Metric      | CPython Runtime (v3)                              | Optimized Rust Runtime (v1)                    |
 | :------------------------------ | :--------------------------------------------------- | :------------------------------------------------ |
 | **Mean Tick-to-Signal Latency** | **<!-- TODO: diagram? -->** 18                                  | <!-- TODO: diagram? --> (<!-- TODO: diagram? --> faster execution)   |
@@ -98,7 +98,7 @@ let handles \= core_ids.into_iter().map(|id| {
 
 To communicate between pinned threads without introducing lock contention, the system uses lock-free SPSC circular ring buffers
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | SPSC Crate Option | Architectural Library Implementation                             | Concurrency Safety Mechanics                                                                                         |
 | :---------------- | :--------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------- |
 | rtrb 20           | Lock-free, real-time safe SPSC ring buffer                    | Avoids memory synchronization locks using atomic memory ordering                                                  |

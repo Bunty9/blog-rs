@@ -24,7 +24,7 @@ Initializing microcontrollers, such as the ARM Cortex-M4, requires establishing 
 Once these registers are mapped, the runtime initializes global variables by clearing the .bss section to zero in physical memory and copying the initial values of the .data section from flash to SRAM With memory sections fully prepared, the initialization code executes a direct jump to the main application entry point  
 To manage task execution and hardware events on the microcontroller, developers select an appropriate concurrency model The chosen model dictates how interrupts, CPU cycles, and shared resources are handled
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Concurrency Paradigm                                | Architectural Mechanism                                                                                              | Safety & Deadlock Guarantees                                                                     | Inter-Process Compatibility                                                         |
 | :-------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
 | **Real-Time Interrupt-driven Concurrency (RTIC)** 4 | Bumps the preemption priority of a task above any other task sharing a locked mutex until the resource is released | Statically guarantees deadlock-free execution at compile time with zero runtime mutex overhead | Native Rust task priority mapping; primarily targeted at standalone MCU platforms |
@@ -47,7 +47,7 @@ async fn sensor_reader(mut rx: UARTRx, mut tx: UARTTx) {
 This task spawning macro (spawner.spawn()) registers the task's future with the executor When a task awaits an asynchronous resource, it yields execution, allowing the executor to poll other ready tasks The runtime uses a dedicated timer queue and interrupt controller to wake sleeping tasks when their associated hardware events complete  
 When safety-critical deployment is required, the underlying Rust toolchain can be validated using the Ferrocene Project Ferrocene, developed in collaboration with AdaCore, qualifies the Rust compiler and toolchain for high-integrity environments, positioning Rust as a robust alternative to MISRA C or Ada/SPARK in safety-critical systems
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Safety Standard | Target Domain               | Certification Level |
 | :-------------- | :-------------------------- | :------------------ |
 | **ISO 26262** 4 | Automotive Embedded Systems | ASIL-D 4            |
@@ -56,7 +56,7 @@ When safety-critical deployment is required, the underlying Rust toolchain can b
 
 To write, analyze, and deploy bare-metal firmware, developers rely on a specialized systems tooling ecosystem This ecosystem spans register-level generation, stack layout optimization, and hardware-in-the-loop diagnostics
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Utility Tooling        | Technical Operation                                                              | Diagnostic and Safety Value                                               |
 | :--------------------- | :------------------------------------------------------------------------------- | :------------------------------------------------------------------------ |
 | xargo / cargo-xbuild 6 | Compiles and builds custom target-specific core runtimes                       | Enables custom compilation flags for non-standard target architectures  |

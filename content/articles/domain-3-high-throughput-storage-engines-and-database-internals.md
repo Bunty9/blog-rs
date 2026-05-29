@@ -67,7 +67,7 @@ As SSTables accumulate on disk, read performance can degrade The engine addresse
 On startup, the engine reads the Manifest file—an append-only log that tracks the active SSTables, level mappings, and the WAL recovery sequence number—to reconstruct its state  
 While many storage architectures rely on standard disk-bound LSM designs, alternative approaches have emerged
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Database System | Architectural Foundation                                                       | Compaction & Storage Model                                                                         |
 | :-------------- | :----------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
 | **Sled** 11     | Lock-free B+ tree structured over a lock-free page cache and sequential log | Partial page fragments are scattered across the log and materialized using scatter-gather reads |

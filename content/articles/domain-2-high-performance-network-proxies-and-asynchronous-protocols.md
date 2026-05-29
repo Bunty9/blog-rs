@@ -48,7 +48,7 @@ To optimize memory usage and pipeline throughput, the proxy uses a compile-time 
 Proxy resilience is managed through a combination of passive and active health checks Passive health checks monitor runtime connection attempts, dynamically marking a backend node as offline (is_alive \= false) if a network-level connection fails The node remains isolated until a defined cooldown_seconds has elapsed, preventing ongoing traffic routing to failing servers  
 Complementing this, active health checks spawn background tasks that periodically poll each backend's /health endpoint When a node successfully responds, its status is atomically updated across all threads using lock-free AtomicBool flags
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Health Check Mode                              | Operational Trigger                                                           | System Recovery Lifecycle                                                                         | Thread Synchronization                                         |
 | :--------------------------------------------- | :---------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ | :------------------------------------------------------------- |
 | **Passive Health Check (Circuit Breaking)** 9  | Triggered by in-flight network communication failures during active routing | Isolates the failing backend node, preventing routing attempts for a configured cooldown period | Thread-safe state modification upon connection failure       |

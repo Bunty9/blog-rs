@@ -41,7 +41,7 @@ Here, <!-- TODO: diagram? --> represents the current state (e.g., balances, acco
 
 Modern blockchain networks leverage specialized ledger architectures, tailoring consensus and execution models to achieve specific performance and security profiles
 
-<!-- TODO: chart? -->
+<!-- editor's note: source had a numeric table here; consider converting to {{< chart >}} -->
 | Network Platform     | Consensus Model                                                                       | Transaction Sequence Execution                                                       | Smart Contract Runtime                                                                      |
 | :------------------- | :------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------ |
 | **Solana** 16        | Proof-of-History (PoH) coupled with Proof-of-Stake (PoS)                           | Timestamps and orders transactions sequentially before processing                 | Compiles smart contracts (programs) into low-level Berkeley Packet Filter (BPF) bytecode |
