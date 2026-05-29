@@ -3,7 +3,10 @@ resolver = "2"
 members = [
     "crates/content",
     "crates/shortcodes",
+    "crates/db",
+    "crates/auth",
     "bins/blog-rs-render",
+    "bins/blog-rs",
 ]
 
 [workspace.package]
@@ -13,6 +16,7 @@ license = "MIT"
 authors = ["vibingmanas <vibingmanas@gmail.com>"]
 
 [workspace.dependencies]
+# Phase 1a
 pulldown-cmark = { version = "0.10", default-features = false, features = ["html"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
@@ -22,3 +26,23 @@ thiserror = "1"
 clap = { version = "4", features = ["derive"] }
 insta = { version = "1", features = ["yaml"] }
 once_cell = "1"
+
+# Phase 1b additions
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["catch-panic", "trace", "compression-gzip", "request-id", "util"] }
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "migrate", "macros", "time", "uuid"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+argon2 = { version = "0.5", features = ["std"] }
+rand = "0.8"
+cookie = { version = "0.18", features = ["percent-encode"] }
+rust-embed = { version = "8", features = ["debug-embed"] }
+time = { version = "0.3", features = ["serde", "macros"] }
+figment = { version = "0.10", features = ["toml", "env"] }
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+uuid = { version = "1", features = ["v4", "serde"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
