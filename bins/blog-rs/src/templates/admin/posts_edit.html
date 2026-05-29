@@ -1,0 +1,94 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit · {{ title }}{% endblock %}
+{% block content %}
+<h2 style="display:flex;justify-content:space-between;align-items:center;">
+    <span>Edit post</span>
+    <span><a class="btn" href="/admin/posts">Back to list</a></span>
+</h2>
+
+<div id="flash-slot"></div>
+
+<form id="editor"
+      hx-post="/admin/posts/{{ id }}"
+      hx-trigger="change delay:500ms from:closest form"
+      hx-target="#flash-slot"
+      hx-swap="innerHTML"
+      hx-include="closest form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+
+    <div class="editor-grid">
+        <div class="editor-pane">
+            <div class="field">
+                <label for="title">Title</label>
+                <input id="title" name="title" type="text" value="{{ title }}" />
+            </div>
+            <div class="field">
+                <label for="slug">Slug</label>
+                <input id="slug" name="slug" type="text" value="{{ slug }}" />
+            </div>
+            <div class="field">
+                <label for="subtitle">Subtitle</label>
+                <input id="subtitle" name="subtitle" type="text" value="{{ subtitle }}" />
+            </div>
+            <div class="field">
+                <label for="excerpt">Excerpt</label>
+                <textarea id="excerpt" name="excerpt" rows="2">{{ excerpt }}</textarea>
+            </div>
+            <div class="field">
+                <label for="cover_image">Cover image URL</label>
+                <input id="cover_image" name="cover_image" type="text" value="{{ cover_image }}" />
+            </div>
+            <div class="field">
+                <label for="tags_csv">Tags (comma-separated)</label>
+                <input id="tags_csv" name="tags_csv" type="text" value="{{ tags_csv }}" />
+            </div>
+            <div class="field">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <option value="draft"     {% if status == "draft" %}selected{% endif %}>Draft</option>
+                    <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>Scheduled</option>
+                    <option value="published" {% if status == "published" %}selected{% endif %}>Published</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="scheduled_for">Scheduled for (unix seconds, blank = none)</label>
+                <input id="scheduled_for" name="scheduled_for" type="text" value="{{ scheduled_for }}" />
+            </div>
+            <div class="field">
+                <label for="body-md">Body (markdown + shortcodes)</label>
+                <textarea id="body-md" name="body_md" rows="20">{{ body_md }}</textarea>
+            </div>
+        </div>
+
+        <div class="preview-pane">
+            <h3 style="margin-top:0;">Preview</h3>
+            <div id="preview"
+                 hx-post="/admin/posts/{{ id }}/preview"
+                 hx-trigger="keyup changed delay:800ms from:#body-md"
+                 hx-include="#body-md, [name=csrf_token]"
+                 hx-swap="innerHTML">
+                {{ body_html|safe }}
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button type="submit" class="primary">Save now</button>
+        <button type="button"
+                class="primary"
+                hx-post="/admin/posts/{{ id }}/publish"
+                hx-include="[name=csrf_token]"
+                hx-target="#flash-slot"
+                hx-confirm="Publish this post? Newsletter will be queued.">
+            Publish
+        </button>
+        <button type="button"
+                class="danger"
+                hx-post="/admin/posts/{{ id }}/delete"
+                hx-include="[name=csrf_token]"
+                hx-confirm="Delete this post?">
+            Delete
+        </button>
+    </div>
+</form>
+{% endblock %}
