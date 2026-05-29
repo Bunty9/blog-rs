@@ -8,6 +8,8 @@ use crate::config::Config;
 pub struct AppState {
     pub pool: SqlitePool,
     pub config: Arc<Config>,
+    // Consumed in Plan 1c+ for member confirm/unsubscribe HMAC tokens.
+    #[allow(dead_code)]
     pub signing_key: Arc<Vec<u8>>,
 }
 

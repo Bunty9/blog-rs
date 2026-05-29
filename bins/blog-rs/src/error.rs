@@ -4,6 +4,8 @@ use axum::Json;
 use serde_json::json;
 use thiserror::Error;
 
+// Several variants are constructed by routes that land in Plan 1c+.
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("db: {0}")]

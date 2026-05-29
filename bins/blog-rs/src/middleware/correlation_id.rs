@@ -11,6 +11,9 @@ use uuid::Uuid;
 
 pub const HEADER: HeaderName = HeaderName::from_static("x-request-id");
 
+// Stashed on request extensions for handlers/middleware in Plan 1c+ that want
+// to log or echo the id beyond the response header.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct CorrelationId(pub String);
 

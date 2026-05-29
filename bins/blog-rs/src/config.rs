@@ -39,14 +39,14 @@ impl Default for Config {
     }
 }
 
-pub fn load(path: Option<PathBuf>) -> Result<Config, figment::Error> {
+pub fn load(path: Option<PathBuf>) -> Result<Config, Box<figment::Error>> {
     let mut fig = Figment::from(Serialized::defaults(Config::default()));
     if let Some(p) = path {
         fig = fig.merge(Toml::file(p));
     }
     // `BLOG_RS__BIND`, `BLOG_RS__ADMIN_BOOTSTRAP__EMAIL`, ...
     fig = fig.merge(Env::prefixed("BLOG_RS__").split("__"));
-    fig.extract()
+    fig.extract().map_err(Box::new)
 }
 
 #[cfg(test)]
@@ -55,15 +55,20 @@ mod tests {
 
     #[test]
     fn defaults_load() {
-        let c = load(None).expect("load");
-        assert_eq!(c.bind, "127.0.0.1:8080");
+        // Use Jail so this test serializes against other Jail-wrapped tests
+        // that set BLOG_RS__* env vars; otherwise parallel runs leak env state.
+        figment::Jail::expect_with(|_jail| {
+            let c = load(None).expect("load");
+            assert_eq!(c.bind, "127.0.0.1:8080");
+            Ok(())
+        });
     }
 
     #[test]
     fn env_overrides_default() {
         figment::Jail::expect_with(|jail| {
             jail.set_env("BLOG_RS__BIND", "0.0.0.0:9000");
-            let c = load(None)?;
+            let c = load(None).map_err(|e| *e)?;
             assert_eq!(c.bind, "0.0.0.0:9000");
             Ok(())
         });
@@ -74,7 +79,7 @@ mod tests {
         figment::Jail::expect_with(|jail| {
             jail.set_env("BLOG_RS__ADMIN_BOOTSTRAP__EMAIL", "root@example.com");
             jail.set_env("BLOG_RS__ADMIN_BOOTSTRAP__PASSWORD", "x");
-            let c = load(None)?;
+            let c = load(None).map_err(|e| *e)?;
             let a = c.admin_bootstrap.unwrap();
             assert_eq!(a.email, "root@example.com");
             Ok(())
