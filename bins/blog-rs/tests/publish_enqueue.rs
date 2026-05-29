@@ -115,14 +115,9 @@ async fn seed_post_and_members(st: &AppState) -> i64 {
     db::members::insert_fixture(&st.pool, "pending@example.com", None, None)
         .await
         .unwrap();
-    db::members::insert_fixture(
-        &st.pool,
-        "unsubscribed@example.com",
-        Some(now),
-        Some(now),
-    )
-    .await
-    .unwrap();
+    db::members::insert_fixture(&st.pool, "unsubscribed@example.com", Some(now), Some(now))
+        .await
+        .unwrap();
 
     post_id
 }
@@ -135,8 +130,8 @@ async fn publish_enqueues_for_confirmed_members_only() {
 
     // Extract the raw csrf value (after `XSRF-TOKEN=`) for the header.
     let csrf_value = csrf_c
-        .splitn(2, '=')
-        .nth(1)
+        .split_once('=')
+        .map(|x| x.1)
         .unwrap_or_default()
         .to_string();
 
@@ -171,7 +166,10 @@ async fn publish_enqueues_for_confirmed_members_only() {
     .fetch_one(&st.pool)
     .await
     .unwrap();
-    assert_eq!(count, 1, "only confirmed-and-subscribed member should be enqueued");
+    assert_eq!(
+        count, 1,
+        "only confirmed-and-subscribed member should be enqueued"
+    );
 
     let recipient: String = sqlx::query_scalar(
         "SELECT m.email FROM newsletter_outbox o
@@ -191,8 +189,8 @@ async fn republishing_is_idempotent() {
     let post_id = seed_post_and_members(&st).await;
     let (session_c, csrf_c) = login(&app).await;
     let csrf_value = csrf_c
-        .splitn(2, '=')
-        .nth(1)
+        .split_once('=')
+        .map(|x| x.1)
         .unwrap_or_default()
         .to_string();
 
@@ -213,12 +211,10 @@ async fn republishing_is_idempotent() {
     assert_eq!(r2.status(), StatusCode::OK);
 
     // Still exactly one row — UNIQUE(post_id, member_id) deduplicates.
-    let count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM newsletter_outbox WHERE post_id = ?",
-    )
-    .bind(post_id)
-    .fetch_one(&st.pool)
-    .await
-    .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM newsletter_outbox WHERE post_id = ?")
+        .bind(post_id)
+        .fetch_one(&st.pool)
+        .await
+        .unwrap();
     assert_eq!(count, 1);
 }

@@ -1,2 +1,2 @@
-pub mod parse;
 pub mod emit;
+pub mod parse;

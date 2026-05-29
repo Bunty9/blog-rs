@@ -12,6 +12,7 @@ pub mod outbox;
 use crate::state::AppState;
 use tokio_util::sync::CancellationToken;
 
+#[allow(dead_code)] // Called from main; tests drive outbox::tick directly.
 pub fn spawn_all(state: AppState, shutdown: CancellationToken) -> Vec<tokio::task::JoinHandle<()>> {
     vec![tokio::spawn(outbox::run(state, shutdown))]
 }

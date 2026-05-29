@@ -25,18 +25,30 @@ pub fn to_article(d: &Domain) -> String {
     }
 
     out.push_str(&d.body);
-    if !out.ends_with('\n') { out.push('\n'); }
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
     out
 }
 
 fn derive_tags(d: &Domain) -> Vec<String> {
     let mut tags = vec!["rust".to_string(), "level-4".to_string()];
     let lt = d.title.to_ascii_lowercase();
-    if lt.contains("bare-metal") || lt.contains("firmware") { tags.push("embedded".into()); }
-    if lt.contains("proxy") || lt.contains("network") { tags.push("networking".into()); }
-    if lt.contains("storage") || lt.contains("database") { tags.push("databases".into()); }
-    if lt.contains("ledger") || lt.contains("decentralized") || lt.contains("blockchain") { tags.push("blockchain".into()); }
-    if lt.contains("trading") || lt.contains("latency") || lt.contains("hft") { tags.push("hft".into()); }
+    if lt.contains("bare-metal") || lt.contains("firmware") {
+        tags.push("embedded".into());
+    }
+    if lt.contains("proxy") || lt.contains("network") {
+        tags.push("networking".into());
+    }
+    if lt.contains("storage") || lt.contains("database") {
+        tags.push("databases".into());
+    }
+    if lt.contains("ledger") || lt.contains("decentralized") || lt.contains("blockchain") {
+        tags.push("blockchain".into());
+    }
+    if lt.contains("trading") || lt.contains("latency") || lt.contains("hft") {
+        tags.push("hft".into());
+    }
     tags
 }
 

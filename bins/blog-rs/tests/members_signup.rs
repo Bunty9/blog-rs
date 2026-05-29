@@ -170,7 +170,10 @@ async fn signup_then_confirm_then_unsubscribe() {
     let raw_bytes = tokio::fs::read(&mailbox_path).await.unwrap();
     let raw = String::from_utf8_lossy(&raw_bytes).into_owned();
     let raw = qp_decode(&raw);
-    assert!(raw.contains("To: alice@example.com"), "to header missing:\n{raw}");
+    assert!(
+        raw.contains("To: alice@example.com"),
+        "to header missing:\n{raw}"
+    );
     assert!(raw.contains("Subject:"), "subject header missing");
     assert!(raw.contains("/confirm/"), "confirm URL missing");
 
@@ -192,10 +195,7 @@ async fn signup_then_confirm_then_unsubscribe() {
 
     // 5) Issue an unsubscribe token directly (the worker would normally emit it
     //    in a post email) and POST to /unsubscribe.
-    let unsub = st
-        .tokens
-        .issue(1, tokens::Purpose::Unsubscribe)
-        .unwrap();
+    let unsub = st.tokens.issue(1, tokens::Purpose::Unsubscribe).unwrap();
     let resp = app
         .oneshot(
             Request::builder()

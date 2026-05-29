@@ -103,17 +103,20 @@ async fn tick_sends_pending_confirm_rows() {
 
     for email in ["a@example.com", "b@example.com", "c@example.com"] {
         let (m, _) = db::members::signup(&state.pool, email).await.unwrap();
-        db::members::enqueue_confirm(&state.pool, m.id).await.unwrap();
+        db::members::enqueue_confirm(&state.pool, m.id)
+            .await
+            .unwrap();
     }
 
     let n = worker::outbox::tick(&state, 10, 3).await;
     assert_eq!(n, 3);
     assert_eq!(ok.count.load(Ordering::SeqCst), 3);
 
-    let sent: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM newsletter_outbox WHERE status='sent'")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap();
+    let sent: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM newsletter_outbox WHERE status='sent'")
+            .fetch_one(&state.pool)
+            .await
+            .unwrap();
     assert_eq!(sent, 3);
 }
 
@@ -121,8 +124,12 @@ async fn tick_sends_pending_confirm_rows() {
 async fn tick_marks_failures_back_to_pending_until_max_then_dead() {
     let fail: MailerHandle = Arc::new(AlwaysFails);
     let state = fresh_state(fail).await;
-    let (m, _) = db::members::signup(&state.pool, "x@example.com").await.unwrap();
-    db::members::enqueue_confirm(&state.pool, m.id).await.unwrap();
+    let (m, _) = db::members::signup(&state.pool, "x@example.com")
+        .await
+        .unwrap();
+    db::members::enqueue_confirm(&state.pool, m.id)
+        .await
+        .unwrap();
 
     // Attempt 1: failure → row flips back to pending (attempts=1).
     let n = worker::outbox::tick(&state, 10, 2).await;

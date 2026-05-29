@@ -24,10 +24,17 @@ use crate::templates::{ConfirmEmail, PostEmail};
 use crate::tokens::Purpose;
 use db::outbox;
 
+// Reachable only from main's `worker::spawn_all` (which itself is dead in
+// integration test compilation units). The `tick` / `dispatch` pair is what
+// integration tests exercise directly.
+#[allow(dead_code)]
 const DEFAULT_POLL: u64 = 5;
+#[allow(dead_code)]
 const DEFAULT_BATCH: i64 = 32;
+#[allow(dead_code)]
 const DEFAULT_MAX_ATTEMPTS: i64 = 5;
 
+#[allow(dead_code)]
 pub async fn run(state: AppState, shutdown: CancellationToken) {
     let poll = std::env::var("OUTBOX_POLL_INTERVAL")
         .ok()
@@ -64,6 +71,8 @@ pub async fn run(state: AppState, shutdown: CancellationToken) {
 }
 
 /// Run one batch. Returns the number of rows processed.
+#[allow(dead_code)] // Exercised by some integration tests; others pull this
+                    // module for the side-effect of compiling the worker tree.
 pub async fn tick(state: &AppState, batch: i64, max_attempts: i64) -> usize {
     let rows = match outbox::claim_pending(&state.pool, batch).await {
         Ok(r) => r,
@@ -83,9 +92,7 @@ pub async fn tick(state: &AppState, batch: i64, max_attempts: i64) -> usize {
             Err(e) => {
                 let msg = e.to_string();
                 tracing::warn!(error = %msg, id = row.id, "send failed");
-                if let Err(e) =
-                    outbox::mark_failed(&state.pool, row.id, &msg, max_attempts).await
-                {
+                if let Err(e) = outbox::mark_failed(&state.pool, row.id, &msg, max_attempts).await {
                     tracing::error!(error = ?e, id = row.id, "mark_failed failed");
                 }
             }
@@ -94,8 +101,10 @@ pub async fn tick(state: &AppState, batch: i64, max_attempts: i64) -> usize {
     count
 }
 
+#[allow(dead_code)]
 type DynErr = Box<dyn std::error::Error + Send + Sync>;
 
+#[allow(dead_code)]
 async fn dispatch(state: &AppState, row: &outbox::OutboxRow) -> Result<(), DynErr> {
     let member = db::members::find_by_id(&state.pool, row.member_id).await?;
     let member_id_u32 = u32::try_from(member.id).map_err(|_| "member_id overflow u32")?;
@@ -117,7 +126,10 @@ async fn dispatch(state: &AppState, row: &outbox::OutboxRow) -> Result<(), DynEr
         let msg = Message::builder()
             .from(state.site.admin_from.parse()?)
             .to(member.email.parse()?)
-            .subject(format!("Confirm your {} subscription", state.site.site_title))
+            .subject(format!(
+                "Confirm your {} subscription",
+                state.site.site_title
+            ))
             .header(ContentType::TEXT_HTML)
             .body(html)?;
         state.mailer.send(msg).await?;

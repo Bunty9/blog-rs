@@ -12,6 +12,10 @@ use crate::tokens::TokenSigner;
 pub struct AppState {
     pub pool: SqlitePool,
     pub config: Arc<Config>,
+    // Kept for future re-derivation of subsystem keys; the token signer
+    // already owns its working copy, so this field is read by no current
+    // code path. Drop or surface via accessor when a second consumer lands.
+    #[allow(dead_code)]
     pub signing_key: Arc<Vec<u8>>,
     pub tokens: TokenSigner,
     pub mailer: MailerHandle,
@@ -26,6 +30,7 @@ pub struct SiteConfig {
 }
 
 impl SiteConfig {
+    #[allow(dead_code)] // Called from main; tests use SiteConfig::default().
     pub fn from_env() -> Self {
         Self {
             base_url: std::env::var("BLOG_BASE_URL")
@@ -89,11 +94,13 @@ impl AppState {
     /// Builder-style override used by the binary entry point to swap in the
     /// real env-derived mailer + site config without breaking existing test
     /// call sites of `AppState::new`.
+    #[allow(dead_code)] // Used by main; tests construct AppState directly.
     pub fn with_mailer(mut self, mailer: MailerHandle) -> Self {
         self.mailer = mailer;
         self
     }
 
+    #[allow(dead_code)] // Used by main; tests construct AppState directly.
     pub fn with_site(mut self, site: SiteConfig) -> Self {
         self.site = site;
         self

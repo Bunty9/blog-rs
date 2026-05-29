@@ -60,7 +60,9 @@ pub fn split_domains(src: &str) -> Result<Vec<Domain>, ParseError> {
     let mut starts: Vec<(usize, u32, String)> = Vec::new();
     for cap in DOMAIN_HEADING.captures_iter(src) {
         let m = cap.get(0).unwrap();
-        let n: u32 = cap[1].parse().map_err(|_| ParseError::BadHeading(m.start()))?;
+        let n: u32 = cap[1]
+            .parse()
+            .map_err(|_| ParseError::BadHeading(m.start()))?;
         let title = cap[2].trim().to_string();
         starts.push((m.end(), n, title));
     }
@@ -100,7 +102,10 @@ fn clean_body(input: &str) -> String {
 
     // 2. wrap pseudo-fenced rust blocks.
     let s3 = RUST_FENCE_PROSE.replace_all(&s2, |caps: &regex::Captures| {
-        let body = caps.get(1).unwrap().as_str()
+        let body = caps
+            .get(1)
+            .unwrap()
+            .as_str()
             .replace("\\#", "#")
             .replace("\\!", "!")
             .replace("\\[", "[")
@@ -137,9 +142,13 @@ fn first_paragraph(body: &str) -> String {
         if line.starts_with('#') || line.starts_with('|') || line.starts_with("```") {
             continue;
         }
-        if !buf.is_empty() { buf.push(' '); }
+        if !buf.is_empty() {
+            buf.push(' ');
+        }
         buf.push_str(line.trim());
-        if buf.len() > 600 { break; }
+        if buf.len() > 600 {
+            break;
+        }
     }
     buf
 }
@@ -156,8 +165,12 @@ pub fn slugify(s: &str) -> String {
             last_dash = true;
         }
     }
-    while out.ends_with('-') { out.pop(); }
-    while out.starts_with('-') { out.remove(0); }
+    while out.ends_with('-') {
+        out.pop();
+    }
+    while out.starts_with('-') {
+        out.remove(0);
+    }
     out
 }
 
@@ -187,7 +200,9 @@ mod tests {
     #[test]
     fn wraps_rust_pseudo_fence() {
         let d = split_domains(TINY).unwrap();
-        assert!(d[0].body.contains(r#"{{< code lang="rust" playground="true" >}}"#));
+        assert!(d[0]
+            .body
+            .contains(r#"{{< code lang="rust" playground="true" >}}"#));
         assert!(d[0].body.contains(r#"{{< /code >}}"#));
         // backslash escapes removed
         assert!(d[0].body.contains("#[panic_handler]"));

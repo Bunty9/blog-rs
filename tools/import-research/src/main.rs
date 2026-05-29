@@ -6,10 +6,13 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use import_research::{parse, emit};
+use import_research::{emit, parse};
 
 #[derive(Parser)]
-#[command(name = "import-research", about = "Convert research markdown into seed articles")]
+#[command(
+    name = "import-research",
+    about = "Convert research markdown into seed articles"
+)]
 struct Cli {
     /// Path to the input markdown file (e.g. ../gemini-research.md)
     #[arg(short, long, default_value = "../gemini-research.md")]

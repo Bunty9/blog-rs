@@ -33,10 +33,7 @@ pub struct Input {
     pub new_email: Option<String>,
 }
 
-pub async fn submit(
-    State(st): State<AppState>,
-    Form(input): Form<Input>,
-) -> impl IntoResponse {
+pub async fn submit(State(st): State<AppState>, Form(input): Form<Input>) -> impl IntoResponse {
     let payload = match st.tokens.verify(&input.token, Purpose::Unsubscribe) {
         Ok(p) => p,
         Err(_) => {
@@ -65,10 +62,7 @@ pub async fn submit(
         if !trimmed.is_empty() {
             if let Err(e) = members::change_email(&st.pool, member_id, trimmed).await {
                 tracing::error!(error = ?e, "email change failed");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Could not change email.",
-                )
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Could not change email.")
                     .into_response();
             }
         }
@@ -122,10 +116,7 @@ mod tests {
         let mid = db::members::insert_fixture(&st.pool, "p@x.y", Some(now), None)
             .await
             .unwrap();
-        let token = st
-            .tokens
-            .issue(mid as u32, Purpose::Unsubscribe)
-            .unwrap();
+        let token = st.tokens.issue(mid as u32, Purpose::Unsubscribe).unwrap();
 
         let app = app(st.clone());
         let body = format!("token={}", urlencoding::encode(&token));
@@ -153,10 +144,7 @@ mod tests {
         let mid = db::members::insert_fixture(&st.pool, "p@x.y", Some(now - 100), Some(now - 10))
             .await
             .unwrap();
-        let token = st
-            .tokens
-            .issue(mid as u32, Purpose::Unsubscribe)
-            .unwrap();
+        let token = st.tokens.issue(mid as u32, Purpose::Unsubscribe).unwrap();
 
         let app = app(st.clone());
         let body = format!("token={}&subscribed=on", urlencoding::encode(&token));
@@ -184,10 +172,7 @@ mod tests {
         let mid = db::members::insert_fixture(&st.pool, "old@x.y", Some(now), None)
             .await
             .unwrap();
-        let token = st
-            .tokens
-            .issue(mid as u32, Purpose::Unsubscribe)
-            .unwrap();
+        let token = st.tokens.issue(mid as u32, Purpose::Unsubscribe).unwrap();
 
         let app = app(st.clone());
         let body = format!(

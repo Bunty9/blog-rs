@@ -11,6 +11,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[allow(dead_code)] // Smtp + Build are produced by the runtime impls only.
 pub enum MailError {
     #[error("smtp transport: {0}")]
     Smtp(String),
@@ -29,11 +30,13 @@ pub type MailerHandle = Arc<dyn Transport>;
 
 /// Build a mailer based on env: `BLOG_RS_MAIL=test` → file transport,
 /// anything else → SMTP from `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD`.
+#[allow(dead_code)] // Called from main; not reached by integration tests that
+                    // pull this module via `#[path]`.
 pub fn from_env() -> Result<MailerHandle, MailError> {
     match std::env::var("BLOG_RS_MAIL").as_deref() {
         Ok("test") => {
-            let path = std::env::var("BLOG_RS_MAIL_FILE")
-                .unwrap_or_else(|_| "./test-mailbox.eml".into());
+            let path =
+                std::env::var("BLOG_RS_MAIL_FILE").unwrap_or_else(|_| "./test-mailbox.eml".into());
             Ok(Arc::new(test_file::FileTransport::new(path)))
         }
         _ => Ok(Arc::new(smtp::SmtpTransport::from_env()?)),

@@ -126,7 +126,7 @@ mod tests {
     use crate::config::Config;
     use axum::body::{to_bytes, Body};
     use axum::http::Request;
-    use axum::routing::{get, post};
+    use axum::routing::get;
     use axum::Router;
     use tower::ServiceExt;
 
@@ -155,10 +155,7 @@ mod tests {
     async fn get_shows_interstitial_form_without_unsubscribing() {
         let (app, st) = test_app().await;
         let id = seed_member(&st, "alice@example.com").await;
-        let token = st
-            .tokens
-            .issue(id as u32, Purpose::Unsubscribe)
-            .unwrap();
+        let token = st.tokens.issue(id as u32, Purpose::Unsubscribe).unwrap();
 
         let res = app
             .clone()
@@ -184,10 +181,7 @@ mod tests {
     async fn get_with_confirm_one_click_unsubscribes() {
         let (app, st) = test_app().await;
         let id = seed_member(&st, "bob@example.com").await;
-        let token = st
-            .tokens
-            .issue(id as u32, Purpose::Unsubscribe)
-            .unwrap();
+        let token = st.tokens.issue(id as u32, Purpose::Unsubscribe).unwrap();
 
         let res = app
             .oneshot(
@@ -210,10 +204,7 @@ mod tests {
     async fn post_unsubscribes_and_is_idempotent() {
         let (app, st) = test_app().await;
         let id = seed_member(&st, "carol@example.com").await;
-        let token = st
-            .tokens
-            .issue(id as u32, Purpose::Unsubscribe)
-            .unwrap();
+        let token = st.tokens.issue(id as u32, Purpose::Unsubscribe).unwrap();
 
         let req = || {
             Request::builder()

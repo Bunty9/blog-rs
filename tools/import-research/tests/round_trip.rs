@@ -1,4 +1,4 @@
-use import_research::{parse, emit};
+use import_research::{emit, parse};
 
 const SRC: &str = include_str!("fixtures/mini-research.md");
 
@@ -14,8 +14,8 @@ fn split_then_emit_produces_two_articles() {
     assert!(a.contains("#![no_std]"));
     assert!(a.contains("<!-- TODO: chart? -->"));
     assert!(a.contains("<!-- TODO: diagram? -->"));
-    assert!(!a.contains(".1\n"));    // footnotes gone
-    assert!(!a.contains(".4 "));     // footnotes gone
+    assert!(!a.contains(".1\n")); // footnotes gone
+    assert!(!a.contains(".4 ")); // footnotes gone
 
     let b = emit::to_article(&domains[1]);
     assert!(b.contains("series_order: 2"));

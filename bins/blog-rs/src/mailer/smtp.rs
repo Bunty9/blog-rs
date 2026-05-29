@@ -1,5 +1,8 @@
 //! Real SMTP transport over rustls.
 
+#![allow(dead_code)] // Only constructed from main.rs; integration tests
+                     // substitute a file-based or in-memory transport.
+
 use super::{MailError, Transport};
 use async_trait::async_trait;
 use lettre::transport::smtp::authentication::Credentials;
