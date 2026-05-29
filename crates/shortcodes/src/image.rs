@@ -21,7 +21,7 @@ impl Shortcode for Image {
         let aspect = args.get("aspect");
 
         let aspect_style = aspect
-            .map(|a| format!(" style=\"aspect-ratio:{a};\""))
+            .map(|a| format!("aspect-ratio:{a};"))
             .unwrap_or_default();
 
         let caption_html = caption
@@ -29,7 +29,7 @@ impl Shortcode for Image {
             .unwrap_or_default();
 
         let html = format!(
-            r#"<figure class="img-block" style="--w:{width};"{aspect_style}>
+            r#"<figure class="img-block" style="--w:{width};{aspect_style}">
 <img src="{src}" alt="{alt}" loading="lazy" />
 {caption_html}
 </figure>"#,

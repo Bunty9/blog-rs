@@ -1,5 +1,6 @@
 ---
 source: crates/content/tests/golden.rs
+assertion_line: 19
 expression: normalize(&out.html)
 ---
 <h1>Heading</h1>
