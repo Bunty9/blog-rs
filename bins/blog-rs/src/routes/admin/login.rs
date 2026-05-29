@@ -13,6 +13,11 @@ use time::{Duration, OffsetDateTime};
 use crate::error::AppError;
 use crate::state::AppState;
 
+// Argon2id hash of the static string "blog-rs-dummy-password" using the
+// project parameters. Used to keep the unknown-user code path constant-time
+// against the known-user-wrong-password path so login is not a timing oracle.
+const DUMMY_HASH: &str = "$argon2id$v=19$m=65536,t=3,p=4$ZHVtbXlzYWx0ZHVtbXlzYWx0$8VV0qpsiBYBb3JoQwlGKqV3v9wmW7XAYqlh4RABh2EE";
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(form))
@@ -39,9 +44,16 @@ async fn submit(
     State(state): State<AppState>,
     Json(form): Json<LoginForm>,
 ) -> Result<axum::response::Response, AppError> {
-    let user = db::users::find_by_email(&state.pool, &form.email)
-        .await
-        .map_err(|_| AppError::Unauthorized)?;
+    let user = match db::users::find_by_email(&state.pool, &form.email).await {
+        Ok(u) => u,
+        Err(_) => {
+            // Spend an Argon2 verification on a dummy hash so the unknown-user
+            // path has the same wall-clock cost as the wrong-password path.
+            // Result is discarded; we always return Unauthorized here.
+            let _ = auth::password::verify(&form.password, DUMMY_HASH);
+            return Err(AppError::Unauthorized);
+        }
+    };
     auth::password::verify(&form.password, &user.password_hash)
         .map_err(|_| AppError::Unauthorized)?;
 
