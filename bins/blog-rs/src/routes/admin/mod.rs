@@ -30,10 +30,7 @@ pub fn router(state: AppState) -> Router<AppState> {
     let protected = Router::new()
         .route("/", get(dashboard::handler))
         .route("/posts", get(posts_list::handler))
-        .route(
-            "/posts/new",
-            get(posts_new::get).post(posts_new::post),
-        )
+        .route("/posts/new", get(posts_new::get).post(posts_new::post))
         .route(
             "/posts/:id",
             get(posts_edit::handler).post(posts_save::handler),
@@ -43,10 +40,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/posts/:id/preview", post(posts_preview::handler))
         .route("/members", get(members_list::handler))
         .route("/members/export.csv", get(members_list::export_csv))
-        .route(
-            "/settings",
-            get(settings::get).post(settings::post),
-        )
+        .route("/settings", get(settings::get).post(settings::post))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             csrf::layer,

@@ -470,26 +470,30 @@ pub async fn list_admin(
             .fetch_all(pool)
             .await?
         }
-        (s, None) => sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
-            "SELECT id, slug, title, status, published_at, updated_at
+        (s, None) => {
+            sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
+                "SELECT id, slug, title, status, published_at, updated_at
              FROM posts WHERE deleted_at IS NULL AND status = ?
              ORDER BY updated_at DESC LIMIT ?",
-        )
-        .bind(s.to_string())
-        .bind(limit)
-        .fetch_all(pool)
-        .await?,
-        (s, Some(qs)) => sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
-            "SELECT id, slug, title, status, published_at, updated_at
+            )
+            .bind(s.to_string())
+            .bind(limit)
+            .fetch_all(pool)
+            .await?
+        }
+        (s, Some(qs)) => {
+            sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
+                "SELECT id, slug, title, status, published_at, updated_at
              FROM posts WHERE deleted_at IS NULL AND status = ? AND (title LIKE ? OR slug LIKE ?)
              ORDER BY updated_at DESC LIMIT ?",
-        )
-        .bind(s.to_string())
-        .bind(qs)
-        .bind(qs)
-        .bind(limit)
-        .fetch_all(pool)
-        .await?,
+            )
+            .bind(s.to_string())
+            .bind(qs)
+            .bind(qs)
+            .bind(limit)
+            .fetch_all(pool)
+            .await?
+        }
     };
 
     Ok(rows
@@ -721,7 +725,9 @@ mod admin_tests {
 
     async fn make_post(pool: &SqlitePool, title: &str, status: &str) -> i64 {
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
-        users::bootstrap_admin(pool, "admin@test", "hash").await.ok();
+        users::bootstrap_admin(pool, "admin@test", "hash")
+            .await
+            .ok();
         let user_id: i64 = sqlx::query_scalar("SELECT id FROM users LIMIT 1")
             .fetch_one(pool)
             .await

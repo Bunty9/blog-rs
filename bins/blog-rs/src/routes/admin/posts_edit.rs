@@ -68,6 +68,9 @@ pub async fn handler(
         body_md: post.body_md,
         body_html: post.body_html,
         status: post.status,
-        scheduled_for: post.scheduled_for.map(|t| t.to_string()).unwrap_or_default(),
+        scheduled_for: post
+            .scheduled_for
+            .map(|t| t.to_string())
+            .unwrap_or_default(),
     })
 }

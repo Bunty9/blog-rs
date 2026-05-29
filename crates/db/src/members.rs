@@ -222,7 +222,9 @@ mod admin_tests {
     #[tokio::test]
     async fn count_buckets() {
         let pool = fresh_pool().await;
-        insert_fixture(&pool, "a@x.com", Some(1), None).await.unwrap();
+        insert_fixture(&pool, "a@x.com", Some(1), None)
+            .await
+            .unwrap();
         insert_fixture(&pool, "b@x.com", Some(1), Some(2))
             .await
             .unwrap();
@@ -236,7 +238,9 @@ mod admin_tests {
     #[tokio::test]
     async fn export_all_categorises_status() {
         let pool = fresh_pool().await;
-        insert_fixture(&pool, "a@x.com", Some(1), None).await.unwrap();
+        insert_fixture(&pool, "a@x.com", Some(1), None)
+            .await
+            .unwrap();
         insert_fixture(&pool, "b@x.com", Some(1), Some(2))
             .await
             .unwrap();

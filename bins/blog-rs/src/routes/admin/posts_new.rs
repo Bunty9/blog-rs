@@ -23,9 +23,7 @@ struct NewTpl {
     flash_kind: String,
 }
 
-pub async fn get(
-    Extension(session): Extension<SessionCtx>,
-) -> Result<impl IntoResponse, AppError> {
+pub async fn get(Extension(session): Extension<SessionCtx>) -> Result<impl IntoResponse, AppError> {
     Ok(NewTpl {
         csrf: session.csrf_token.clone(),
         flash: None,

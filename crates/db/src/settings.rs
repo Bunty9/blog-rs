@@ -132,7 +132,10 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(get(&pool, "site_title").await.unwrap().as_deref(), Some("A"));
+        assert_eq!(
+            get(&pool, "site_title").await.unwrap().as_deref(),
+            Some("A")
+        );
         assert_eq!(
             get(&pool, "site_subtitle").await.unwrap().as_deref(),
             Some("B")

@@ -28,8 +28,7 @@ pub async fn handler(
 ) -> Result<impl IntoResponse, AppError> {
     let (drafts, scheduled, published) = posts::dashboard_counts(&state.pool).await?;
     let (members_total, members_confirmed, _) = members::count_all(&state.pool).await?;
-    let recent =
-        posts::list_admin(&state.pool, posts::PostStatusFilter::All, None, 10).await?;
+    let recent = posts::list_admin(&state.pool, posts::PostStatusFilter::All, None, 10).await?;
 
     Ok(DashboardTpl {
         csrf: session.csrf_token,
@@ -114,10 +113,7 @@ mod tests {
         assert!(body.contains("Drafts"), "drafts label missing");
         assert!(body.contains("Scheduled"), "scheduled label missing");
         assert!(body.contains("Published"), "published label missing");
-        assert!(
-            body.contains("Confirmed members"),
-            "members label missing"
-        );
+        assert!(body.contains("Confirmed members"), "members label missing");
     }
 
     #[tokio::test]
