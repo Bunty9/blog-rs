@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard · blog-rs{% endblock %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<div class="stat-grid">
+    <div class="stat-card"><div class="n">{{ drafts }}</div><div class="label">Drafts</div></div>
+    <div class="stat-card"><div class="n">{{ scheduled }}</div><div class="label">Scheduled</div></div>
+    <div class="stat-card"><div class="n">{{ published }}</div><div class="label">Published</div></div>
+    <div class="stat-card"><div class="n">{{ members_confirmed }}</div><div class="label">Confirmed members ({{ members_total }} total)</div></div>
+</div>
+
+<h3>Recent activity</h3>
+<table class="posts">
+    <thead><tr><th>Title</th><th>Slug</th><th>Status</th><th>Updated</th></tr></thead>
+    <tbody>
+        {% for row in recent %}
+            {% include "admin/partials/post_row.html" %}
+        {% endfor %}
+    </tbody>
+</table>
+
+<p style="margin-top:1.5rem;"><a class="btn primary" href="/admin/posts/new">New draft</a></p>
+{% endblock %}
