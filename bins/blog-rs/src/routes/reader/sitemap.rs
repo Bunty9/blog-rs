@@ -12,7 +12,7 @@ pub struct SitemapEntry {
 }
 
 #[derive(Template)]
-#[template(path = "reader/sitemap.xml", escape = "xml")]
+#[template(path = "reader/sitemap.xml", escape = "html")]
 pub struct SitemapTemplate {
     pub site: SiteCtx,
     pub posts: Vec<SitemapEntry>,
@@ -31,11 +31,10 @@ pub async fn handler(State(state): State<AppState>) -> Result<Response, crate::e
         .collect();
 
     // `db::tags::list_all` doesn't exist yet — inline the scalar query.
-    let tag_slugs: Vec<(String,)> =
-        sqlx::query_as("SELECT slug FROM tags ORDER BY slug ASC")
-            .fetch_all(&state.pool)
-            .await
-            .map_err(db::DbError::from)?;
+    let tag_slugs: Vec<(String,)> = sqlx::query_as("SELECT slug FROM tags ORDER BY slug ASC")
+        .fetch_all(&state.pool)
+        .await
+        .map_err(db::DbError::from)?;
     let tags: Vec<String> = tag_slugs
         .into_iter()
         .map(|(s,)| urlencoding::encode(&s).to_string())

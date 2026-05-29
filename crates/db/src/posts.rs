@@ -380,7 +380,15 @@ mod reader_query_tests {
         seed_post(&pool, "x", "T", r#"{}"#).await;
         // None of these should produce a `SqliteError`; they should return 0 rows
         // or 1 if there happens to be a literal match.
-        for q in ["*", "(", ")", "AND", "rust*", "rust OR fast", "\"unterminated"] {
+        for q in [
+            "*",
+            "(",
+            ")",
+            "AND",
+            "rust*",
+            "rust OR fast",
+            "\"unterminated",
+        ] {
             let _ = search_fts(&pool, q, 10, 0).await.unwrap();
         }
     }

@@ -1,0 +1,18 @@
+{% extends "reader/base.html" %}
+
+{% block title %}Series: {{ series.slug }} — {{ site.title }}{% endblock %}
+
+{% block content %}
+<section class="series-page">
+<h1>Series: <span class="series-name">{{ series.slug }}</span></h1>
+{% if cards.is_empty() %}
+<p class="empty-feed">No posts in this series yet.</p>
+{% else %}
+<ol class="series-list">
+{% for post in cards %}
+<li>{% include "partials/post_card.html" %}</li>
+{% endfor %}
+</ol>
+{% endif %}
+</section>
+{% endblock %}

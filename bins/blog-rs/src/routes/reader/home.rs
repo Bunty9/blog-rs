@@ -50,11 +50,10 @@ pub async fn handler(
     Query(q): Query<HomeQuery>,
 ) -> Result<impl IntoResponse, crate::error::AppError> {
     // `count_published` doesn't exist in db::posts yet; inline the scalar query.
-    let total: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM posts WHERE status = 'published'")
-            .fetch_one(&state.pool)
-            .await
-            .map_err(db::DbError::from)?;
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM posts WHERE status = 'published'")
+        .fetch_one(&state.pool)
+        .await
+        .map_err(db::DbError::from)?;
     let page = clamp_page(q.page, total);
     let offset = (page - 1) * PAGE_SIZE;
     let rows = posts::list_published(&state.pool, PAGE_SIZE, offset).await?;
@@ -144,6 +143,9 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(body.contains("No posts yet."), "empty marker missing: {body}");
+        assert!(
+            body.contains("No posts yet."),
+            "empty marker missing: {body}"
+        );
     }
 }

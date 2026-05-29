@@ -1,0 +1,30 @@
+{% extends "reader/base.html" %}
+
+{% block title %}Search — {{ site.title }}{% endblock %}
+
+{% block content %}
+<section class="search-page">
+<form class="search-form" method="get" action="/search">
+<input type="search" name="q" value="{{ query }}" placeholder="Search posts..." autofocus />
+<button type="submit">Search</button>
+</form>
+
+{% if query.is_empty() %}
+<p class="search-hint">Enter a query to search published posts.</p>
+{% else if hits.is_empty() %}
+<p class="search-empty">No matches for <strong>{{ query }}</strong>.</p>
+{% else %}
+<ol class="search-results">
+{% for hit in hits %}
+<li class="search-hit">
+<a href="/posts/{{ hit.slug }}"><h2>{{ hit.title }}</h2></a>
+<p class="search-snippet">{{ hit.snippet|safe }}</p>
+{% if let Some(d) = hit.published_date %}<time>{{ d }}</time>{% endif %}
+</li>
+{% endfor %}
+</ol>
+{% endif %}
+
+{% include "partials/pagination.html" %}
+</section>
+{% endblock %}

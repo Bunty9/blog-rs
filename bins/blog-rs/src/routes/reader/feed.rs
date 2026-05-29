@@ -18,7 +18,7 @@ pub struct FeedItem {
 }
 
 #[derive(Template)]
-#[template(path = "xml/feed.xml", escape = "xml")]
+#[template(path = "xml/feed.xml", escape = "html")]
 pub struct FeedTemplate {
     pub site: SiteCtx,
     pub items: Vec<FeedItem>,

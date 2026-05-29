@@ -127,7 +127,8 @@ mod tests {
     #[tokio::test]
     async fn renders_post_with_body_html_and_assets() {
         let (app, pool) = test_app().await;
-        let assets = r#"{"assets":[{"kind":"Css","src":"/assets/blocks/callout.css","defer":false}]}"#;
+        let assets =
+            r#"{"assets":[{"kind":"Css","src":"/assets/blocks/callout.css","defer":false}]}"#;
         sqlx::query(
             r#"
             INSERT INTO posts (slug, title, subtitle, status, author_id, published_at,

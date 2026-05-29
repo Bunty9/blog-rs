@@ -373,6 +373,7 @@ dependencies = [
  "cookie",
  "db",
  "figment",
+ "http-body-util",
  "reqwest",
  "rust-embed",
  "serde",

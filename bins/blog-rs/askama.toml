@@ -1,19 +1,6 @@
 [general]
 dirs = ["src/templates"]
 
-[[syntax]]
-name = "default"
-block_start = "{%"
-block_end = "%}"
-expr_start = "{{"
-expr_end = "}}"
-comment_start = "{#"
-comment_end = "#}"
-
-[escaper]
+[[escaper]]
 path = "askama::Html"
-extensions = ["html"]
-
-[escaper]
-path = "askama::Xml"
-extensions = ["xml"]
+extensions = ["html", "xml"]

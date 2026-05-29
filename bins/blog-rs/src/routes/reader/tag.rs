@@ -13,6 +13,7 @@ pub struct TagQuery {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // `slug` referenced by templates; rustc dead-code analysis misses askama
 pub struct TagView {
     pub slug: String,
     pub name: String,

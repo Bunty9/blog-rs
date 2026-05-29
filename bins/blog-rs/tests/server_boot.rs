@@ -19,6 +19,8 @@ mod middleware;
 mod routes;
 #[path = "../src/state.rs"]
 mod state;
+#[path = "../src/view.rs"]
+mod view;
 
 #[tokio::test]
 async fn healthz_returns_ok_through_full_stack() {

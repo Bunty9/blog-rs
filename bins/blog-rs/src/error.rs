@@ -11,6 +11,9 @@ pub enum AppError {
     #[error("db: {0}")]
     Db(#[from] db::DbError),
 
+    #[error("sqlx: {0}")]
+    Sqlx(#[from] sqlx::Error),
+
     #[error("auth: {0}")]
     Auth(#[from] auth::AuthError),
 
@@ -39,7 +42,7 @@ impl AppError {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Db(db::DbError::NotFound) => StatusCode::NOT_FOUND,
             Self::Db(db::DbError::Conflict(_)) => StatusCode::CONFLICT,
-            Self::Db(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Db(_) | Self::Sqlx(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Auth(auth::AuthError::BadPassword)
             | Self::Auth(auth::AuthError::CsrfMismatch)
             | Self::Auth(auth::AuthError::TokenSignature)
