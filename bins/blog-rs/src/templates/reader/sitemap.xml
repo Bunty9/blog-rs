@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>{{ site.base_url }}/</loc><changefreq>daily</changefreq></url>
+{% for entry in posts %}
+<url>
+<loc>{{ site.base_url }}/posts/{{ entry.slug }}</loc>
+{% if let Some(d) = entry.lastmod %}<lastmod>{{ d }}</lastmod>{% endif %}
+<changefreq>monthly</changefreq>
+</url>
+{% endfor %}
+{% for tag in tags %}
+<url><loc>{{ site.base_url }}/tags/{{ tag }}</loc><changefreq>weekly</changefreq></url>
+{% endfor %}
+{% for series in series_list %}
+<url><loc>{{ site.base_url }}/series/{{ series }}</loc><changefreq>weekly</changefreq></url>
+{% endfor %}
+</urlset>
