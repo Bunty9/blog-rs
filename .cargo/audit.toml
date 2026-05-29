@@ -1,0 +1,12 @@
+[advisories]
+ignore = [
+    # rsa 0.9 - Marvin Attack timing sidechannel. No upstream fix available.
+    # Used by sqlx-mysql's password-auth path (pulled in transitively even
+    # though blog-rs only enables the sqlite backend feature). Mitigated by:
+    # (a) blog-rs does not connect to MySQL at all, so the rsa code path is
+    # never executed at runtime, and (b) any future SMTP TLS path via lettre
+    # writes mail outbound at low frequency, making timing extraction
+    # impractical. Revisit when an rsa-rustls release ships the fix or when
+    # sqlx allows fully gating the mysql backend out of the dep graph.
+    "RUSTSEC-2023-0071",
+]
