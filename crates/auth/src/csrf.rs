@@ -7,6 +7,9 @@ use crate::AuthError;
 /// Constant-time compare. Tokens are URL-safe base64 ASCII so byte-wise compare
 /// is sufficient; we still use a non-shortcircuiting comparison.
 pub fn validate(expected: &str, submitted: &str) -> Result<(), AuthError> {
+    if expected.is_empty() {
+        return Err(AuthError::CsrfMismatch);
+    }
     if expected.len() != submitted.len() {
         return Err(AuthError::CsrfMismatch);
     }
@@ -44,9 +47,10 @@ mod tests {
 
     #[test]
     fn empty_pair_rejected() {
-        // Two empty strings would match by accident; reject explicitly by
-        // refusing zero-length tokens at the caller. For this primitive, equal
-        // empties are equal - document via this test that callers must guard.
-        validate("", "").unwrap(); // documents current behaviour
+        // Empty tokens are never valid: an absent or zero-length expected
+        // token must not authorize a request, even when the submitted value
+        // is also empty.
+        let err = validate("", "").unwrap_err();
+        assert!(matches!(err, AuthError::CsrfMismatch));
     }
 }
