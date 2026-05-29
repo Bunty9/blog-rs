@@ -11,6 +11,11 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: Coverage
+        # adjust threshold after first run
+        run: cargo llvm-cov --workspace --fail-under-lines 70
   e2e:
     runs-on: ubuntu-latest
     needs: rust

@@ -14,3 +14,6 @@ lint:
 
 snap-review:
     cargo insta review
+
+coverage:
+    cargo llvm-cov --workspace --fail-under-lines 70
