@@ -44,8 +44,19 @@ pub struct Input {
 }
 
 pub async fn show(State(st): State<AppState>, headers: axum::http::HeaderMap) -> Response {
-    let csrf = csrf_from_cookie(&headers).unwrap_or_default();
-    SignupPage {
+    // Mint a fresh CSRF token on every visit that arrives without one. The
+    // submit handler requires the cookie unconditionally, so a real browser
+    // visit must always leave with one set.
+    let (csrf, set_cookie) = match csrf_from_cookie(&headers) {
+        Some(v) if !v.is_empty() => (v, None),
+        _ => {
+            let token = auth::session::mint_token();
+            let lifetime = time::Duration::seconds(st.config.session_lifetime_seconds);
+            let cookie = auth::session::csrf_cookie(&token, lifetime);
+            (token, Some(cookie.to_string()))
+        }
+    };
+    let mut res = SignupPage {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
         site_title: &st.site.site_title,
@@ -55,7 +66,13 @@ pub async fn show(State(st): State<AppState>, headers: axum::http::HeaderMap) ->
         pending: false,
         ttl_hours: 0,
     }
-    .into_response()
+    .into_response();
+    if let Some(c) = set_cookie {
+        if let Ok(v) = axum::http::HeaderValue::from_str(&c) {
+            res.headers_mut().append(axum::http::header::SET_COOKIE, v);
+        }
+    }
+    res
 }
 
 pub async fn submit(
