@@ -73,6 +73,77 @@ pub async fn count_active(pool: &SqlitePool) -> Result<i64, DbError> {
     Ok(n)
 }
 
+// ---------------------------------------------------------------------------
+// Admin queries (Plan 1d)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+pub struct AdminMemberRow {
+    pub id: i64,
+    pub email: String,
+    pub confirmed_at: Option<i64>,
+    pub unsubscribed_at: Option<i64>,
+    pub created_at: i64,
+}
+
+pub async fn list_admin(pool: &SqlitePool, limit: i64) -> Result<Vec<AdminMemberRow>, DbError> {
+    let rows = sqlx::query_as::<_, (i64, String, Option<i64>, Option<i64>, i64)>(
+        "SELECT id, email, confirmed_at, unsubscribed_at, created_at
+         FROM members ORDER BY created_at DESC LIMIT ?",
+    )
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, email, confirmed_at, unsubscribed_at, created_at)| AdminMemberRow {
+                id,
+                email,
+                confirmed_at,
+                unsubscribed_at,
+                created_at,
+            },
+        )
+        .collect())
+}
+
+pub async fn count_all(pool: &SqlitePool) -> Result<(i64, i64, i64), DbError> {
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM members")
+        .fetch_one(pool)
+        .await?;
+    let confirmed: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM members WHERE confirmed_at IS NOT NULL AND unsubscribed_at IS NULL",
+    )
+    .fetch_one(pool)
+    .await?;
+    let unsubscribed: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM members WHERE unsubscribed_at IS NOT NULL")
+            .fetch_one(pool)
+            .await?;
+    Ok((total, confirmed, unsubscribed))
+}
+
+/// Snapshot every member email + status + created timestamp for CSV export.
+pub async fn export_all(pool: &SqlitePool) -> Result<Vec<(String, &'static str, i64)>, DbError> {
+    let rows = sqlx::query_as::<_, (String, Option<i64>, Option<i64>, i64)>(
+        "SELECT email, confirmed_at, unsubscribed_at, created_at FROM members ORDER BY created_at ASC",
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(email, conf, unsub, created)| {
+            let status: &'static str = match (conf, unsub) {
+                (_, Some(_)) => "unsubscribed",
+                (Some(_), None) => "confirmed",
+                (None, None) => "pending",
+            };
+            (email, status, created)
+        })
+        .collect())
+}
+
 #[cfg(any(test, feature = "test-helpers"))]
 pub async fn insert_fixture(
     pool: &SqlitePool,
@@ -118,5 +189,63 @@ mod tests {
         create_pending(&pool, "x@y.z").await.unwrap();
         let err = create_pending(&pool, "x@y.z").await.unwrap_err();
         assert!(matches!(err, DbError::Conflict(_)));
+    }
+}
+
+#[cfg(test)]
+mod admin_tests {
+    use super::*;
+    use crate::test_support::fresh_pool;
+
+    #[tokio::test]
+    async fn list_admin_orders_by_created_at_desc() {
+        let pool = fresh_pool().await;
+        insert_fixture(&pool, "old@x.com", Some(1000), None)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE members SET created_at = 1000 WHERE email='old@x.com'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        insert_fixture(&pool, "new@x.com", Some(2000), None)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE members SET created_at = 2000 WHERE email='new@x.com'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rows = list_admin(&pool, 10).await.unwrap();
+        assert_eq!(rows[0].email, "new@x.com");
+        assert_eq!(rows[1].email, "old@x.com");
+    }
+
+    #[tokio::test]
+    async fn count_buckets() {
+        let pool = fresh_pool().await;
+        insert_fixture(&pool, "a@x.com", Some(1), None).await.unwrap();
+        insert_fixture(&pool, "b@x.com", Some(1), Some(2))
+            .await
+            .unwrap();
+        insert_fixture(&pool, "c@x.com", None, None).await.unwrap();
+        let (total, confirmed, unsub) = count_all(&pool).await.unwrap();
+        assert_eq!(total, 3);
+        assert_eq!(confirmed, 1);
+        assert_eq!(unsub, 1);
+    }
+
+    #[tokio::test]
+    async fn export_all_categorises_status() {
+        let pool = fresh_pool().await;
+        insert_fixture(&pool, "a@x.com", Some(1), None).await.unwrap();
+        insert_fixture(&pool, "b@x.com", Some(1), Some(2))
+            .await
+            .unwrap();
+        insert_fixture(&pool, "c@x.com", None, None).await.unwrap();
+        let rows = export_all(&pool).await.unwrap();
+        let statuses: std::collections::HashMap<_, _> =
+            rows.iter().map(|(e, s, _)| (e.as_str(), *s)).collect();
+        assert_eq!(statuses["a@x.com"], "confirmed");
+        assert_eq!(statuses["b@x.com"], "unsubscribed");
+        assert_eq!(statuses["c@x.com"], "pending");
     }
 }
