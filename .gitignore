@@ -8,3 +8,9 @@ target/
 .idea/
 .vscode/
 .DS_Store
+
+# Internal planning artifacts kept outside the public repo
+docs/
+test-mailbox.eml
+content/articles/
+.superpowers/

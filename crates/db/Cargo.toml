@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+test-helpers = []
+
 [dependencies]
 sqlx = { workspace = true }
 thiserror = { workspace = true }

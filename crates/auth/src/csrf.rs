@@ -46,7 +46,7 @@ mod tests {
     fn empty_pair_rejected() {
         // Two empty strings would match by accident; reject explicitly by
         // refusing zero-length tokens at the caller. For this primitive, equal
-        // empties are equal — document via this test that callers must guard.
+        // empties are equal - document via this test that callers must guard.
         validate("", "").unwrap(); // documents current behaviour
     }
 }

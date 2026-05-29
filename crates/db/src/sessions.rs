@@ -107,7 +107,10 @@ mod tests {
         assert_eq!(got, s);
         let n = destroy(&pool, "tok-1").await.unwrap();
         assert_eq!(n, 1);
-        assert!(matches!(find_active(&pool, "tok-1").await, Err(DbError::NotFound)));
+        assert!(matches!(
+            find_active(&pool, "tok-1").await,
+            Err(DbError::NotFound)
+        ));
     }
 
     #[tokio::test]
@@ -116,7 +119,10 @@ mod tests {
         let uid = seed_user(&pool).await;
         let past = OffsetDateTime::now_utc().unix_timestamp() - 10;
         create(&pool, "old", uid, "csrf", past).await.unwrap();
-        assert!(matches!(find_active(&pool, "old").await, Err(DbError::NotFound)));
+        assert!(matches!(
+            find_active(&pool, "old").await,
+            Err(DbError::NotFound)
+        ));
     }
 
     #[tokio::test]

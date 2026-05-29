@@ -5,7 +5,7 @@ pub mod error;
 pub mod migrations;
 pub mod pool;
 
-// Tables — filled in by later tasks.
+// Tables - filled in by later tasks.
 pub mod members;
 pub mod outbox;
 pub mod posts;

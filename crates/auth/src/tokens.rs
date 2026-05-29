@@ -36,8 +36,7 @@ pub fn sign(key: &[u8], sub: i64, purpose: Purpose, ttl_seconds: i64) -> Result<
         purpose,
         exp: OffsetDateTime::now_utc().unix_timestamp() + ttl_seconds,
     };
-    let payload =
-        serde_json::to_vec(&claims).map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    let payload = serde_json::to_vec(&claims).map_err(|e| AuthError::TokenDecode(e.to_string()))?;
     let payload_b64 = URL_SAFE_NO_PAD.encode(&payload);
 
     let mut mac = HmacSha256::new_from_slice(key).map_err(|_| AuthError::BadKey)?;
@@ -130,11 +129,7 @@ mod tests {
         let (pl, sig) = t.split_once('.').unwrap();
         let mut tampered_pl = URL_SAFE_NO_PAD.decode(pl).unwrap();
         tampered_pl[0] ^= 0x01;
-        let bad = format!(
-            "{}.{}",
-            URL_SAFE_NO_PAD.encode(&tampered_pl),
-            sig
-        );
+        let bad = format!("{}.{}", URL_SAFE_NO_PAD.encode(&tampered_pl), sig);
         let err = verify(KEY, &bad, Purpose::Confirm).unwrap_err();
         assert!(matches!(err, AuthError::TokenSignature));
     }

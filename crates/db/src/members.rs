@@ -37,11 +37,12 @@ pub async fn create_pending(pool: &SqlitePool, email: &str) -> Result<i64, DbErr
 
 pub async fn confirm(pool: &SqlitePool, id: i64) -> Result<u64, DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
-    let r = sqlx::query("UPDATE members SET confirmed_at = ? WHERE id = ? AND confirmed_at IS NULL")
-        .bind(now)
-        .bind(id)
-        .execute(pool)
-        .await?;
+    let r =
+        sqlx::query("UPDATE members SET confirmed_at = ? WHERE id = ? AND confirmed_at IS NULL")
+            .bind(now)
+            .bind(id)
+            .execute(pool)
+            .await?;
     Ok(r.rows_affected())
 }
 

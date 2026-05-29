@@ -15,5 +15,5 @@ fn panic(_info: &amp;amp;core::panic::PanicInfo) -&amp;gt; ! { loop {} }&lt;/p&g
 clears <code>.bss</code>, and copies <code>.data</code> from flash to SRAM before jumping to <code>main</code>.</p>
 <figure class="chart-block">
 <canvas id="chart-XXXX" data-chart-type="bar" data-chart-src="data/preempt-cycles.json"></canvas>
-<figcaption>RTIC priority preemption — measured handoff in CPU cycles</figcaption>
+<figcaption>RTIC priority preemption - measured handoff in CPU cycles</figcaption>
 </figure>

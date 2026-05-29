@@ -8,7 +8,7 @@ pub struct RenderOutput {
     pub assets: crate::AssetManifest,
 }
 
-/// Public entry point — uses the default registry of v1 shortcodes.
+/// Public entry point - uses the default registry of v1 shortcodes.
 pub fn render(src: &str) -> Result<RenderOutput, ContentError> {
     render_with_registry(src, &default_registry())
 }

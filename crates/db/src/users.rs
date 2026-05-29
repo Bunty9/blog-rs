@@ -30,29 +30,35 @@ pub async fn bootstrap_admin(
         return Ok(false);
     }
     let now = OffsetDateTime::now_utc().unix_timestamp();
-    sqlx::query("INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, 'admin', ?)")
-        .bind(email)
-        .bind(password_hash)
-        .bind(now)
-        .execute(pool)
-        .await?;
+    sqlx::query(
+        "INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, 'admin', ?)",
+    )
+    .bind(email)
+    .bind(password_hash)
+    .bind(now)
+    .execute(pool)
+    .await?;
     Ok(true)
 }
 
 pub async fn find_by_email(pool: &SqlitePool, email: &str) -> Result<User, DbError> {
-    sqlx::query_as::<_, User>("SELECT id, email, password_hash, role, created_at FROM users WHERE email = ?")
-        .bind(email)
-        .fetch_one(pool)
-        .await
-        .map_err(DbError::from_row)
+    sqlx::query_as::<_, User>(
+        "SELECT id, email, password_hash, role, created_at FROM users WHERE email = ?",
+    )
+    .bind(email)
+    .fetch_one(pool)
+    .await
+    .map_err(DbError::from_row)
 }
 
 pub async fn find_by_id(pool: &SqlitePool, id: i64) -> Result<User, DbError> {
-    sqlx::query_as::<_, User>("SELECT id, email, password_hash, role, created_at FROM users WHERE id = ?")
-        .bind(id)
-        .fetch_one(pool)
-        .await
-        .map_err(DbError::from_row)
+    sqlx::query_as::<_, User>(
+        "SELECT id, email, password_hash, role, created_at FROM users WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .map_err(DbError::from_row)
 }
 
 pub async fn count(pool: &SqlitePool) -> Result<i64, DbError> {
@@ -89,13 +95,15 @@ mod tests {
         let pool = fresh_pool().await;
         bootstrap_admin(&pool, "a@b.c", "h").await.unwrap();
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
-        let err = sqlx::query("INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, 'admin', ?)")
-            .bind("a@b.c")
-            .bind("h2")
-            .bind(now)
-            .execute(&pool)
-            .await
-            .unwrap_err();
+        let err = sqlx::query(
+            "INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, 'admin', ?)",
+        )
+        .bind("a@b.c")
+        .bind("h2")
+        .bind(now)
+        .execute(&pool)
+        .await
+        .unwrap_err();
         assert!(matches!(err, sqlx::Error::Database(_)));
     }
 }

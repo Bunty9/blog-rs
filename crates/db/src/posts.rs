@@ -1,4 +1,4 @@
-//! Post CRUD + list queries. `body_html` is always set by the caller — the
+//! Post CRUD + list queries. `body_html` is always set by the caller - the
 //! `content` crate renders it before persistence (spec §4.2 invariant).
 
 use serde::{Deserialize, Serialize};
@@ -90,7 +90,11 @@ pub async fn find_by_id(pool: &SqlitePool, id: i64) -> Result<Post, DbError> {
         .map_err(DbError::from_row)
 }
 
-pub async fn list_published(pool: &SqlitePool, limit: i64, offset: i64) -> Result<Vec<Post>, DbError> {
+pub async fn list_published(
+    pool: &SqlitePool,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<Post>, DbError> {
     let rows = sqlx::query_as::<_, Post>(
         "SELECT * FROM posts
          WHERE status = 'published'

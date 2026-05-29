@@ -1,5 +1,5 @@
 ---
-title: Bare-Metal Rust — Cortex-M4 Runtimes from Scratch
+title: Bare-Metal Rust - Cortex-M4 Runtimes from Scratch
 subtitle: no_std, vector tables, and deadlock-free concurrency
 tags: [rust, embedded, systems]
 series: rust-level-4
@@ -25,4 +25,4 @@ fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 The boot sequence configures the hardware vector table at `0x00000000`,
 clears `.bss`, and copies `.data` from flash to SRAM before jumping to `main`.
 
-{{< chart type="bar" src="data/preempt-cycles.json" caption="RTIC priority preemption — measured handoff in CPU cycles" >}}
+{{< chart type="bar" src="data/preempt-cycles.json" caption="RTIC priority preemption - measured handoff in CPU cycles" >}}
