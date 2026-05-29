@@ -33,6 +33,15 @@ askama_axum = { workspace = true }
 urlencoding = { workspace = true }
 chrono = { workspace = true }
 csv = "1"
+lettre = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+base64ct = { workspace = true }
+getrandom = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
+url = "2"
+percent-encoding = "2"
 
 db    = { path = "../../crates/db" }
 auth  = { path = "../../crates/auth" }
@@ -47,3 +56,4 @@ tower = { workspace = true }
 figment = { workspace = true, features = ["test"] }
 http-body-util = "0.1"
 db = { path = "../../crates/db", features = ["test-helpers"] }
+tempfile = "3"

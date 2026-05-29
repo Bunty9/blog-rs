@@ -52,3 +52,13 @@ askama = { version = "0.12", default-features = false, features = ["with-axum", 
 askama_axum = "0.4"
 urlencoding = "2"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+# Phase 1e additions
+lettre = { version = "0.11", default-features = false, features = [
+    "smtp-transport", "tokio1-rustls-tls", "builder", "hostname", "pool",
+] }
+base64ct = { version = "1.6", features = ["alloc"] }
+getrandom = "0.2"
+tokio-util = { version = "0.7", features = ["rt"] }
+walkdir = "2"
+async-trait = "0.1"
