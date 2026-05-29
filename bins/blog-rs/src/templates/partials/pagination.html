@@ -1,0 +1,15 @@
+{% if pagination.total > 1 %}
+<nav class="pagination" aria-label="Pagination">
+{% if pagination.has_prev() %}
+<a class="pagination-prev" href="{{ pagination.prev_url() }}">&larr; Newer</a>
+{% else %}
+<span class="pagination-prev disabled">&larr; Newer</span>
+{% endif %}
+<span class="pagination-status">Page {{ pagination.current }} of {{ pagination.total }}</span>
+{% if pagination.has_next() %}
+<a class="pagination-next" href="{{ pagination.next_url() }}">Older &rarr;</a>
+{% else %}
+<span class="pagination-next disabled">Older &rarr;</span>
+{% endif %}
+</nav>
+{% endif %}
