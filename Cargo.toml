@@ -7,6 +7,7 @@ members = [
     "crates/auth",
     "bins/blog-rs-render",
     "bins/blog-rs",
+    "tools/import-research",
 ]
 
 [workspace.package]
