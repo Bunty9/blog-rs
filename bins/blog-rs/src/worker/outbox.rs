@@ -99,6 +99,12 @@ pub async fn run(state: AppState, shutdown: CancellationToken) {
 #[allow(dead_code)] // Exercised by some integration tests; others pull this
                     // module for the side-effect of compiling the worker tree.
 pub async fn tick(state: &AppState, batch: i64, max_attempts: i64) -> usize {
+    {
+        // Record liveness before doing any work so a slow DB or claim error
+        // still surfaces "worker is alive" to /readyz.
+        let mut hb = state.worker_heartbeat.lock().await;
+        *hb = Some(std::time::Instant::now());
+    }
     let rows = match outbox::claim_pending(&state.pool, batch).await {
         Ok(r) => r,
         Err(e) => {

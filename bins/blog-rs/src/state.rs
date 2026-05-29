@@ -1,8 +1,10 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use async_trait::async_trait;
 use db::SqlitePool;
 use lettre::Message;
+use tokio::sync::Mutex;
 
 use crate::config::Config;
 use crate::mailer::{MailError, MailerHandle, Transport};
@@ -20,6 +22,13 @@ pub struct AppState {
     pub tokens: TokenSigner,
     pub mailer: MailerHandle,
     pub site: SiteConfig,
+    /// Last time the outbox worker completed a tick. `None` until the first
+    /// tick lands. `/readyz` treats a stale value as a not-ready signal.
+    pub worker_heartbeat: Arc<Mutex<Option<Instant>>>,
+    /// When `AppState` was constructed. `/readyz` uses this to grant the
+    /// worker a small warm-up grace window before failing on a `None`
+    /// heartbeat.
+    pub started_at: Instant,
 }
 
 #[derive(Clone, Debug)]
@@ -88,6 +97,8 @@ impl AppState {
             tokens,
             mailer,
             site: SiteConfig::default(),
+            worker_heartbeat: Arc::new(Mutex::new(None)),
+            started_at: Instant::now(),
         }
     }
 
