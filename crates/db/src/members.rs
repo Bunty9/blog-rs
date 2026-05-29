@@ -48,11 +48,16 @@ pub async fn confirm(pool: &SqlitePool, id: i64) -> Result<u64, DbError> {
 
 pub async fn unsubscribe(pool: &SqlitePool, id: i64) -> Result<u64, DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
-    let r = sqlx::query("UPDATE members SET unsubscribed_at = ? WHERE id = ?")
-        .bind(now)
-        .bind(id)
-        .execute(pool)
-        .await?;
+    // COALESCE keeps the first unsubscribe timestamp on a repeated call so the
+    // operation is truly idempotent (re-clicking the unsubscribe link does not
+    // bump the audit trail forward).
+    let r = sqlx::query(
+        "UPDATE members SET unsubscribed_at = COALESCE(unsubscribed_at, ?) WHERE id = ?",
+    )
+    .bind(now)
+    .bind(id)
+    .execute(pool)
+    .await?;
     Ok(r.rows_affected())
 }
 
@@ -294,6 +299,27 @@ mod tests {
         create_pending(&pool, "x@y.z").await.unwrap();
         let err = create_pending(&pool, "x@y.z").await.unwrap_err();
         assert!(matches!(err, DbError::Conflict(_)));
+    }
+
+    #[tokio::test]
+    async fn unsubscribe_is_truly_idempotent() {
+        let pool = fresh_pool().await;
+        let id = create_pending(&pool, "x@y.z").await.unwrap();
+        confirm(&pool, id).await.unwrap();
+
+        unsubscribe(&pool, id).await.unwrap();
+        let first = find_by_id(&pool, id).await.unwrap().unsubscribed_at;
+        assert!(first.is_some(), "first unsubscribe should stamp a timestamp");
+
+        // Sleep just long enough that the second call would observe a strictly
+        // greater `now`, then re-run. COALESCE should keep the original value.
+        tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+        unsubscribe(&pool, id).await.unwrap();
+        let second = find_by_id(&pool, id).await.unwrap().unsubscribed_at;
+        assert_eq!(
+            second, first,
+            "second unsubscribe must not overwrite original timestamp"
+        );
     }
 }
 
