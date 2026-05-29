@@ -66,7 +66,10 @@ pub async fn show(
     let member = match members::find_by_id(&st.pool, payload.member_id as i64).await {
         Ok(m) => m,
         Err(_) => {
-            return (StatusCode::NOT_FOUND, "Unknown subscriber.").into_response();
+            // Collapse unknown-member into the same response as bad-token so
+            // an attacker cannot distinguish "token forged" from "token valid
+            // for a deleted account".
+            return (StatusCode::BAD_REQUEST, "Invalid or expired link.").into_response();
         }
     };
 
@@ -107,7 +110,10 @@ pub async fn submit(
     let member = match members::find_by_id(&st.pool, payload.member_id as i64).await {
         Ok(m) => m,
         Err(_) => {
-            return (StatusCode::NOT_FOUND, "Unknown subscriber.").into_response();
+            // Collapse unknown-member into the same response as bad-token so
+            // an attacker cannot distinguish "token forged" from "token valid
+            // for a deleted account".
+            return (StatusCode::BAD_REQUEST, "Invalid or expired link.").into_response();
         }
     };
     let _ = members::unsubscribe(&st.pool, member.id).await;
