@@ -46,3 +46,9 @@ sha2 = "0.10"
 base64 = "0.22"
 uuid = { version = "1", features = ["v4", "serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
+# Phase 1c additions
+askama = { version = "0.12", default-features = false, features = ["with-axum", "config", "humansize", "urlencode"] }
+askama_axum = "0.4"
+urlencoding = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

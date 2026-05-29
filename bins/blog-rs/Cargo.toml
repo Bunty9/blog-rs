@@ -28,9 +28,16 @@ uuid = { workspace = true }
 clap = { workspace = true }
 base64 = { workspace = true }
 sqlx = { workspace = true }
+askama = { workspace = true }
+askama_axum = { workspace = true }
+urlencoding = { workspace = true }
+chrono = { workspace = true }
 
 db    = { path = "../../crates/db" }
 auth  = { path = "../../crates/auth" }
+content = { path = "../../crates/content" }
+
+[build-dependencies]
 
 [dev-dependencies]
 tokio = { workspace = true }
