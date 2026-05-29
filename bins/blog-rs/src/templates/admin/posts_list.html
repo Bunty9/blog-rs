@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% block title %}Posts · blog-rs{% endblock %}
+{% block content %}
+<h2>Posts</h2>
+
+<form class="toolbar" method="get" action="/admin/posts">
+    <select name="status" onchange="this.form.submit()">
+        <option value="all"       {% if status == "all" %}selected{% endif %}>All</option>
+        <option value="draft"     {% if status == "draft" %}selected{% endif %}>Drafts</option>
+        <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>Scheduled</option>
+        <option value="published" {% if status == "published" %}selected{% endif %}>Published</option>
+    </select>
+    <input class="grow" type="search" name="q" placeholder="Search title or slug…" value="{{ q }}" />
+    <button type="submit">Search</button>
+    <a class="btn primary" href="/admin/posts/new">New draft</a>
+</form>
+
+<table class="posts">
+    <thead><tr><th>Title</th><th>Slug</th><th>Status</th><th>Updated</th></tr></thead>
+    <tbody>
+        {% for row in rows %}
+            {% include "admin/partials/post_row.html" %}
+        {% endfor %}
+        {% if rows.is_empty() %}
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);">No posts match.</td></tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}
