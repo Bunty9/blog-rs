@@ -58,6 +58,8 @@ pub enum TokenError {
     Expired,
     #[error("system clock before UNIX epoch")]
     Clock,
+    #[error("rng failure")]
+    Rng,
 }
 
 #[derive(Clone)]
@@ -81,7 +83,7 @@ impl TokenSigner {
     pub fn issue(&self, member_id: u32, purpose: Purpose) -> Result<String, TokenError> {
         let issued_at = now_epoch()?;
         let mut nonce_bytes = [0u8; 4];
-        getrandom::getrandom(&mut nonce_bytes).map_err(|_| TokenError::Clock)?;
+        getrandom::getrandom(&mut nonce_bytes).map_err(|_| TokenError::Rng)?;
         let nonce = u32::from_le_bytes(nonce_bytes);
         let payload = TokenPayload {
             member_id,
