@@ -212,14 +212,15 @@ pub async fn change_email(pool: &SqlitePool, id: i64, new_email: &str) -> Result
     Ok(())
 }
 
-/// Enqueue confirm-email rows. Uses `post_id = 0` as the synthetic "confirm"
-/// marker (no FK enforcement on the test schema slice; production callers
-/// should use `crate::outbox::enqueue` once a real post is published).
+/// Enqueue confirm-email rows. Confirm-purpose rows carry `post_id = NULL`
+/// since no real post exists yet (migration 0007 widened the column to allow
+/// this). The worker treats NULL as the confirm slot. Post fan-out should use
+/// `crate::outbox::enqueue` once a real post is published.
 pub async fn enqueue_confirm(pool: &SqlitePool, member_id: i64) -> Result<(), DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     sqlx::query(
         "INSERT OR IGNORE INTO newsletter_outbox(post_id, member_id, status, attempts, created_at)
-         VALUES (0, ?, 'pending', 0, ?)",
+         VALUES (NULL, ?, 'pending', 0, ?)",
     )
     .bind(member_id)
     .bind(now)
@@ -363,8 +364,8 @@ mod signup_tests {
     use super::*;
     use sqlx::sqlite::SqlitePoolOptions;
 
-    // Inline schema slice — no FK on outbox.post_id, so the synthetic post_id=0
-    // used by enqueue_confirm round-trips without needing a real post.
+    // Inline schema slice mirrors the post-0007 production shape: `post_id` is
+    // nullable so `enqueue_confirm` can write NULL for confirm-purpose rows.
     async fn pool() -> SqlitePool {
         let p = SqlitePoolOptions::new()
             .max_connections(1)
@@ -386,7 +387,7 @@ mod signup_tests {
         sqlx::query(
             "CREATE TABLE newsletter_outbox (
                 id INTEGER PRIMARY KEY,
-                post_id INTEGER NOT NULL,
+                post_id INTEGER,
                 member_id INTEGER NOT NULL,
                 status TEXT NOT NULL,
                 attempts INTEGER NOT NULL DEFAULT 0,
@@ -395,6 +396,14 @@ mod signup_tests {
                 created_at INTEGER NOT NULL,
                 UNIQUE(post_id, member_id)
              );",
+        )
+        .execute(&p)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE UNIQUE INDEX outbox_confirm_unique_idx
+                ON newsletter_outbox(member_id)
+                WHERE post_id IS NULL;",
         )
         .execute(&p)
         .await

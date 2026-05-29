@@ -45,28 +45,8 @@ use state::{AppState, SiteConfig};
 async fn boot() -> (axum::Router, AppState, std::path::PathBuf) {
     let pool = db::test_support::fresh_pool().await;
 
-    // FK placeholder so enqueue_confirm (post_id=0) satisfies the schema.
-    let now = time::OffsetDateTime::now_utc().unix_timestamp();
-    sqlx::query(
-        "INSERT INTO users (id, email, password_hash, role, created_at)
-         VALUES (1, '__placeholder__', '', 'admin', ?)
-         ON CONFLICT(id) DO NOTHING",
-    )
-    .bind(now)
-    .execute(&pool)
-    .await
-    .unwrap();
-    sqlx::query(
-        "INSERT INTO posts (id, slug, title, status, author_id, updated_at, created_at,
-                            body_md, body_html, deleted_at)
-         VALUES (0, '__confirm_marker__', '', 'draft', 1, ?, ?, '', '', ?)",
-    )
-    .bind(now)
-    .bind(now)
-    .bind(now)
-    .execute(&pool)
-    .await
-    .unwrap();
+    // Migration 0007 lets `enqueue_confirm` write NULL for post_id, so we no
+    // longer need a placeholder posts(id = 0) row to satisfy the FK.
 
     let tmp = tempfile::NamedTempFile::new().unwrap();
     let mailbox_path = tmp.path().to_owned();

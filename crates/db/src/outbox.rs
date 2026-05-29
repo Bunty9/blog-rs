@@ -32,7 +32,9 @@ impl OutboxStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, PartialEq, Eq)]
 pub struct OutboxRow {
     pub id: i64,
-    pub post_id: i64,
+    /// `None` marks a confirm-purpose row (no post yet exists); `Some(id)` is a
+    /// per-post fan-out row. See migration 0007.
+    pub post_id: Option<i64>,
     pub member_id: i64,
     pub status: String,
     pub attempts: i64,

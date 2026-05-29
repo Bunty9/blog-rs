@@ -60,31 +60,8 @@ impl Transport for AlwaysFails {
 
 async fn fresh_state(mailer: MailerHandle) -> AppState {
     let pool = db::test_support::fresh_pool().await;
-    // The outbox.post_id column has an FK to posts(id). The confirm-email path
-    // uses post_id = 0 as a synthetic marker, so we insert a placeholder
-    // posts row with id=0 to satisfy the FK without otherwise polluting any
-    // listings (status='draft', deleted_at set so admin queries hide it).
-    let now = time::OffsetDateTime::now_utc().unix_timestamp();
-    sqlx::query(
-        "INSERT INTO users (id, email, password_hash, role, created_at)
-         VALUES (1, '__placeholder__', '', 'admin', ?)
-         ON CONFLICT(id) DO NOTHING",
-    )
-    .bind(now)
-    .execute(&pool)
-    .await
-    .unwrap();
-    sqlx::query(
-        "INSERT INTO posts (id, slug, title, status, author_id, updated_at, created_at,
-                            body_md, body_html, deleted_at)
-         VALUES (0, '__confirm_marker__', '', 'draft', 1, ?, ?, '', '', ?)",
-    )
-    .bind(now)
-    .bind(now)
-    .bind(now)
-    .execute(&pool)
-    .await
-    .unwrap();
+    // Migration 0007 made outbox.post_id nullable. Confirm-purpose rows now
+    // carry NULL there, so no placeholder posts(id = 0) row is required.
     AppState::new(pool, config::Config::default(), vec![0u8; 32])
         .with_mailer(mailer)
         .with_site(SiteConfig {

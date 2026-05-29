@@ -109,38 +109,41 @@ async fn dispatch(state: &AppState, row: &outbox::OutboxRow) -> Result<(), DynEr
     let member = db::members::find_by_id(&state.pool, row.member_id).await?;
     let member_id_u32 = u32::try_from(member.id).map_err(|_| "member_id overflow u32")?;
 
-    // post_id = 0 is the synthetic confirm slot (see db::members::enqueue_confirm).
-    if row.post_id == 0 {
-        let token = state.tokens.issue(member_id_u32, Purpose::Confirm)?;
-        let confirm_url = format!(
-            "{}/confirm/{}",
-            state.site.base_url.trim_end_matches('/'),
-            token
-        );
-        let html = ConfirmEmail {
-            site_title: &state.site.site_title,
-            confirm_url,
-            ttl_hours: (state.tokens.ttl() / 3600).max(1),
+    // post_id IS NULL marks a confirm-purpose row (see db::members::enqueue_confirm).
+    let post_id = match row.post_id {
+        None => {
+            let token = state.tokens.issue(member_id_u32, Purpose::Confirm)?;
+            let confirm_url = format!(
+                "{}/confirm/{}",
+                state.site.base_url.trim_end_matches('/'),
+                token
+            );
+            let html = ConfirmEmail {
+                site_title: &state.site.site_title,
+                confirm_url,
+                ttl_hours: (state.tokens.ttl() / 3600).max(1),
+            }
+            .render()?;
+            let msg = Message::builder()
+                .from(state.site.admin_from.parse()?)
+                .to(member.email.parse()?)
+                .subject(format!(
+                    "Confirm your {} subscription",
+                    state.site.site_title
+                ))
+                .header(ContentType::TEXT_HTML)
+                .body(html)?;
+            state.mailer.send(msg).await?;
+            return Ok(());
         }
-        .render()?;
-        let msg = Message::builder()
-            .from(state.site.admin_from.parse()?)
-            .to(member.email.parse()?)
-            .subject(format!(
-                "Confirm your {} subscription",
-                state.site.site_title
-            ))
-            .header(ContentType::TEXT_HTML)
-            .body(html)?;
-        state.mailer.send(msg).await?;
-        return Ok(());
-    }
+        Some(id) => id,
+    };
 
     // Post dispatch: fetch the post, render the email, issue an unsubscribe
     // token, send. `find_by_id` returns a full Post row; we only use a handful
     // of fields, but reusing the existing accessor keeps the worker free of
     // bespoke SQL.
-    let post = db::posts::find_by_id(&state.pool, row.post_id).await?;
+    let post = db::posts::find_by_id(&state.pool, post_id).await?;
     let unsub_token = state.tokens.issue(member_id_u32, Purpose::Unsubscribe)?;
     let post_url = format!(
         "{}/posts/{}",
