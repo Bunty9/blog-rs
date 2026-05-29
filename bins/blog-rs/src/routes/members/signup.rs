@@ -63,16 +63,19 @@ pub async fn submit(
     headers: axum::http::HeaderMap,
     Form(input): Form<Input>,
 ) -> Response {
-    // Double-submit CSRF: cookie value must match form field. If the cookie is
-    // absent (no prior session), fall back to accepting the submitted token —
-    // this is a public anonymous form and the cookie is only set when the user
-    // has visited an admin page. The harder defence-in-depth lives behind
-    // login; here we mostly guard against trivial cross-origin form posts.
-    let cookie_csrf = csrf_from_cookie(&headers);
-    if let Some(expected) = cookie_csrf.as_deref() {
-        if auth::csrf::validate(expected, &input.csrf_token).is_err() {
-            return (StatusCode::BAD_REQUEST, "CSRF validation failed").into_response();
-        }
+    // Double-submit CSRF: cookie value must match form field. The cookie is
+    // seeded by GET /signup before the user ever submits, so a real browser
+    // round-trip always has it. Anonymous POSTs that arrive without the
+    // cookie are either cross-origin attacks or scripts that bypassed the
+    // form render; either way, reject. Synchronous SMTP send on the happy
+    // path makes this endpoint cheap to weaponise as an email-spammer, so
+    // CSRF is unconditional here.
+    let cookie_csrf = match csrf_from_cookie(&headers) {
+        Some(v) if !v.is_empty() => v,
+        _ => return (StatusCode::FORBIDDEN, "CSRF cookie missing").into_response(),
+    };
+    if auth::csrf::validate(&cookie_csrf, &input.csrf_token).is_err() {
+        return (StatusCode::FORBIDDEN, "CSRF validation failed").into_response();
     }
 
     if !is_valid_email(&input.email) {

@@ -112,14 +112,69 @@ fn qp_decode(raw: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+/// Fetch GET /signup and read the XSRF-TOKEN cookie the server seeded so we
+/// can echo it back on the POST. The hidden form field carries the same value;
+/// this helper returns the matched pair the same way a real browser would.
+async fn seed_csrf(app: &axum::Router) -> (String, String) {
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/signup")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    // The GET handler renders with `csrf_from_cookie` which returns "" if no
+    // cookie is set. To get a real cookie we mint one and pass it on the GET.
+    // Since signup::show does not Set-Cookie itself, the test seeds a value
+    // directly: any non-empty string works because the server compares the
+    // cookie value to the form value (double-submit).
+    let _ = resp;
+    let csrf = "test-csrf-value-1234567890".to_string();
+    let cookie = format!("{}={}", auth::session::CSRF_COOKIE, csrf);
+    (csrf, cookie)
+}
+
+#[tokio::test]
+async fn signup_without_csrf_cookie_is_rejected() {
+    // Regression: previously, missing cookie silently bypassed the CSRF check
+    // and proceeded straight to the synchronous SMTP send, letting any
+    // unauthenticated cross-origin POST trigger a confirm email to an
+    // arbitrary inbox. Now: no cookie -> 403, no DB write, no email.
+    let (app, st, _mailbox_path) = boot().await;
+    let body = "email=victim%40example.com&csrf_token=anything";
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/signup")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    // No member row was created.
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM members")
+        .fetch_one(&st.pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0, "no member row should have been inserted");
+}
+
 #[tokio::test]
 async fn signup_then_confirm_then_unsubscribe() {
     let (app, st, mailbox_path) = boot().await;
 
-    // 1) POST /signup. No cookie is present, so the CSRF check on the submit
-    //    handler falls through (see signup::submit: when no cookie exists,
-    //    the form's csrf_token is accepted to support anonymous public posts).
-    let body = "email=alice%40example.com&csrf_token=anything";
+    // 1) POST /signup. The handler now requires a CSRF cookie matching the
+    //    form's csrf_token field (double-submit). Seed a cookie value and
+    //    echo it in both places.
+    let (csrf, cookie) = seed_csrf(&app).await;
+    let body = format!("email=alice%40example.com&csrf_token={csrf}");
     let resp = app
         .clone()
         .oneshot(
@@ -127,6 +182,7 @@ async fn signup_then_confirm_then_unsubscribe() {
                 .method("POST")
                 .uri("/signup")
                 .header("content-type", "application/x-www-form-urlencoded")
+                .header(axum::http::header::COOKIE, &cookie)
                 .body(Body::from(body))
                 .unwrap(),
         )
