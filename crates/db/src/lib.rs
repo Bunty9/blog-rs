@@ -10,12 +10,14 @@ pub mod members;
 pub mod outbox;
 pub mod posts;
 pub mod search;
+pub mod series;
 pub mod sessions;
 pub mod tags;
 pub mod users;
 
 pub use error::DbError;
 pub use pool::connect;
+pub use series::SeriesMeta;
 pub use sqlx::SqlitePool;
 
 /// Bring up a fresh pool and run migrations. The public entry point used by

@@ -17,6 +17,7 @@ serde_json = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+content = { path = "../content" }
 
 [dev-dependencies]
 tokio = { workspace = true }
