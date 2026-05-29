@@ -1,0 +1,13 @@
+{% extends "admin/base.html" %}
+{% block title %}New draft · blog-rs{% endblock %}
+{% block content %}
+<h2>New draft</h2>
+
+<p>Create a blank draft. You can fill in title, body, and metadata on the next screen.</p>
+
+<form method="post" action="/admin/posts/new">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+    <button class="btn primary" type="submit">Create draft</button>
+    <a class="btn" href="/admin/posts">Cancel</a>
+</form>
+{% endblock %}
