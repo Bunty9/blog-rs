@@ -1,0 +1,5 @@
+{% if let Some(msg) = error %}
+<div class="flash error">Preview error: {{ msg }}</div>
+{% else %}
+{{ html|safe }}
+{% endif %}
