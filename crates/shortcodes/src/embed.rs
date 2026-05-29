@@ -42,9 +42,8 @@ fn classify(url: &str) -> (Option<&'static str>, String) {
     }
     if url.contains("twitter.com/") || url.contains("x.com/") {
         let esc = html_attr_escape(url);
-        let html = format!(
-            r#"<blockquote class="twitter-tweet"><a href="{esc}">{esc}</a></blockquote>"#
-        );
+        let html =
+            format!(r#"<blockquote class="twitter-tweet"><a href="{esc}">{esc}</a></blockquote>"#);
         return (Some("twitter"), html);
     }
     (None, String::new())

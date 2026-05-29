@@ -309,7 +309,10 @@ mod tests {
 
         unsubscribe(&pool, id).await.unwrap();
         let first = find_by_id(&pool, id).await.unwrap().unsubscribed_at;
-        assert!(first.is_some(), "first unsubscribe should stamp a timestamp");
+        assert!(
+            first.is_some(),
+            "first unsubscribe should stamp a timestamp"
+        );
 
         // Sleep just long enough that the second call would observe a strictly
         // greater `now`, then re-run. COALESCE should keep the original value.
