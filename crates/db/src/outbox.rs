@@ -59,9 +59,12 @@ pub async fn enqueue(pool: &SqlitePool, post_id: i64, member_id: i64) -> Result<
     Ok(r.rows_affected() == 1)
 }
 
-/// Atomically claim up to `n` pending rows by flipping them to `sending`.
+/// Atomically claim up to `n` pending rows by flipping them to `sending`
+/// and stamping `claimed_at` with the current epoch. The timestamp lets
+/// `reclaim_stale` find rows whose worker crashed mid-dispatch.
 /// Returns the rows that were claimed.
 pub async fn claim_pending(pool: &SqlitePool, n: i64) -> Result<Vec<OutboxRow>, DbError> {
+    let now = OffsetDateTime::now_utc().unix_timestamp();
     let mut tx = pool.begin().await?;
     let rows = sqlx::query_as::<_, OutboxRow>(
         "SELECT * FROM newsletter_outbox WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?",
@@ -70,7 +73,8 @@ pub async fn claim_pending(pool: &SqlitePool, n: i64) -> Result<Vec<OutboxRow>, 
     .fetch_all(&mut *tx)
     .await?;
     for r in &rows {
-        sqlx::query("UPDATE newsletter_outbox SET status = 'sending' WHERE id = ?")
+        sqlx::query("UPDATE newsletter_outbox SET status = 'sending', claimed_at = ? WHERE id = ?")
+            .bind(now)
             .bind(r.id)
             .execute(&mut *tx)
             .await?;
@@ -83,6 +87,26 @@ pub async fn claim_pending(pool: &SqlitePool, n: i64) -> Result<Vec<OutboxRow>, 
             r
         })
         .collect())
+}
+
+/// Rotate `sending` rows older than `stale_after_seconds` back to `pending`
+/// and clear their `claimed_at`. The worker calls this once per tick before
+/// claiming a new batch so a crash between `mailer.send` returning Ok and
+/// `mark_sent` committing does not silently swallow the message.
+///
+/// Returns the number of rows reclaimed.
+pub async fn reclaim_stale(pool: &SqlitePool, stale_after_seconds: i64) -> Result<u64, DbError> {
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    let cutoff = now - stale_after_seconds;
+    let r = sqlx::query(
+        "UPDATE newsletter_outbox
+         SET status = 'pending', claimed_at = NULL
+         WHERE status = 'sending' AND claimed_at IS NOT NULL AND claimed_at < ?",
+    )
+    .bind(cutoff)
+    .execute(pool)
+    .await?;
+    Ok(r.rows_affected())
 }
 
 pub async fn mark_sent(pool: &SqlitePool, id: i64) -> Result<u64, DbError> {
@@ -163,6 +187,62 @@ mod tests {
         assert_eq!(claimed.len(), 1);
         assert_eq!(claimed[0].status, "sending");
         assert_eq!(mark_sent(&pool, claimed[0].id).await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn reclaim_stale_rotates_old_sending_rows_back_to_pending() {
+        // Seed a row in 'sending' with a claimed_at well past any reasonable
+        // stale-after window. `reclaim_stale` must flip it back to 'pending'
+        // and clear claimed_at so the next worker tick re-claims it.
+        let pool = fresh_pool().await;
+        let (pid, mid) = seed_post_member(&pool).await;
+        enqueue(&pool, pid, mid).await.unwrap();
+        let claimed = claim_pending(&pool, 10).await.unwrap();
+        assert_eq!(claimed.len(), 1);
+        let id = claimed[0].id;
+
+        // Backdate claimed_at to one hour ago to simulate a stuck row.
+        let one_hour_ago = OffsetDateTime::now_utc().unix_timestamp() - 3600;
+        sqlx::query("UPDATE newsletter_outbox SET claimed_at = ? WHERE id = ?")
+            .bind(one_hour_ago)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let n = reclaim_stale(&pool, 60).await.unwrap();
+        assert_eq!(n, 1, "one row should have been reclaimed");
+
+        let (status, claimed_at): (String, Option<i64>) =
+            sqlx::query_as("SELECT status, claimed_at FROM newsletter_outbox WHERE id = ?")
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(status, "pending");
+        assert!(claimed_at.is_none(), "claimed_at should be cleared");
+    }
+
+    #[tokio::test]
+    async fn reclaim_stale_leaves_fresh_sending_rows_alone() {
+        // A row just claimed must not be reclaimed; only rows older than the
+        // stale-after window are eligible.
+        let pool = fresh_pool().await;
+        let (pid, mid) = seed_post_member(&pool).await;
+        enqueue(&pool, pid, mid).await.unwrap();
+        let claimed = claim_pending(&pool, 10).await.unwrap();
+        assert_eq!(claimed.len(), 1);
+
+        let n = reclaim_stale(&pool, 300).await.unwrap();
+        assert_eq!(n, 0, "fresh sending row must not be reclaimed");
+
+        let (status,): (String,) =
+            sqlx::query_as("SELECT status FROM newsletter_outbox WHERE id = ?")
+                .bind(claimed[0].id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(status, "sending");
     }
 
     #[tokio::test]

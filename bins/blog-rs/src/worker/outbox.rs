@@ -33,6 +33,12 @@ const DEFAULT_POLL: u64 = 5;
 const DEFAULT_BATCH: i64 = 32;
 #[allow(dead_code)]
 const DEFAULT_MAX_ATTEMPTS: i64 = 5;
+/// How long a row may sit in `sending` before the next tick rotates it back
+/// to `pending`. The default of five minutes is comfortably longer than any
+/// realistic single-SMTP-delivery timeout while still short enough to recover
+/// from a crash within one human-noticeable polling cycle.
+#[allow(dead_code)]
+const DEFAULT_RECLAIM_AFTER: i64 = 300;
 
 #[allow(dead_code)]
 pub async fn run(state: AppState, shutdown: CancellationToken) {
@@ -48,10 +54,29 @@ pub async fn run(state: AppState, shutdown: CancellationToken) {
         .ok()
         .and_then(|s| s.parse::<i64>().ok())
         .unwrap_or(DEFAULT_MAX_ATTEMPTS);
+    let reclaim_after = std::env::var("OUTBOX_RECLAIM_AFTER")
+        .ok()
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(DEFAULT_RECLAIM_AFTER);
 
-    tracing::info!(poll, batch, max_attempts, "outbox worker starting");
+    tracing::info!(
+        poll,
+        batch,
+        max_attempts,
+        reclaim_after,
+        "outbox worker starting"
+    );
 
     loop {
+        // Reclaim before claiming: rows whose previous worker died between
+        // `mailer.send` returning Ok and `mark_sent` committing get rotated
+        // back to `pending` so this tick can re-claim them.
+        match outbox::reclaim_stale(&state.pool, reclaim_after).await {
+            Ok(n) if n > 0 => tracing::warn!(reclaimed = n, "reclaimed stale outbox rows"),
+            Ok(_) => {}
+            Err(e) => tracing::error!(error = ?e, "reclaim_stale failed"),
+        }
+
         tokio::select! {
             _ = shutdown.cancelled() => {
                 tracing::info!("outbox worker shutting down");
