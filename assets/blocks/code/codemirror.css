@@ -1,0 +1,7 @@
+.code-block { margin: 1.5rem 0; }
+.code-block pre { position: relative; }
+.code-block[data-playground="rust"] pre::after {
+    content: "▶ Run on play.rust-lang.org";
+    position: absolute; top: 0.5rem; right: 0.75rem;
+    font-family: var(--sans); font-size: 0.75rem; color: #f4ece0; opacity: 0.7;
+}

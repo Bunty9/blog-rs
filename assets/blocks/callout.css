@@ -1,0 +1,7 @@
+.callout { border-left: 4px solid; padding: 0.875rem 1rem; margin: 1.25rem 0; border-radius: 4px; }
+.callout-info   { background: #eef4ff; border-color: #4a7ec3; }
+.callout-tip    { background: #ecf8ec; border-color: #4ca94c; }
+.callout-warn   { background: #fff5d6; border-color: #c39c2e; }
+.callout-danger { background: #ffe7e3; border-color: #c34a3a; }
+.callout p:first-child { margin-top: 0; }
+.callout p:last-child  { margin-bottom: 0; }
