@@ -125,3 +125,45 @@ async fn embedded_asset_served() {
     let ct = res.headers().get("content-type").unwrap().to_str().unwrap();
     assert!(ct.starts_with("text/css"));
 }
+
+#[tokio::test]
+async fn embedded_admin_css_served() {
+    let pool = db::test_support::fresh_pool().await;
+    let cfg = config::Config::default();
+    let st = state::AppState::new(pool, cfg, vec![0u8; 32]);
+    let app = routes::router(st);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/assets/admin/admin.css")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), axum::http::StatusCode::OK);
+    let ct = res.headers().get("content-type").unwrap().to_str().unwrap();
+    assert!(ct.starts_with("text/css"));
+}
+
+#[tokio::test]
+async fn embedded_admin_js_served() {
+    let pool = db::test_support::fresh_pool().await;
+    let cfg = config::Config::default();
+    let st = state::AppState::new(pool, cfg, vec![0u8; 32]);
+    let app = routes::router(st);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/assets/admin/htmx.min.js")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), axum::http::StatusCode::OK);
+    let ct = res.headers().get("content-type").unwrap().to_str().unwrap();
+    assert!(ct.contains("javascript"));
+}
