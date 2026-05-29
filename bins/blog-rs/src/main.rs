@@ -10,6 +10,7 @@ mod state;
 mod templates;
 mod tokens;
 mod view;
+mod worker;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -97,7 +98,13 @@ async fn main() -> ExitCode {
     let state = AppState::new(pool, cfg.clone(), signing_key)
         .with_mailer(mailer)
         .with_site(site);
-    let app = routes::router(state);
+    let app = routes::router(state.clone());
+
+    // Spawn the outbox dispatcher. The shutdown token is cancelled when the
+    // axum graceful-shutdown future resolves so the worker stops polling
+    // instead of being killed mid-tick by the runtime tear-down.
+    let shutdown = tokio_util::sync::CancellationToken::new();
+    let worker_handles = worker::spawn_all(state.clone(), shutdown.clone());
 
     let listener = match tokio::net::TcpListener::bind(&cfg.bind).await {
         Ok(l) => l,
@@ -107,10 +114,14 @@ async fn main() -> ExitCode {
         }
     };
     tracing::info!(addr = %cfg.bind, "listening");
-    if let Err(e) = axum::serve(listener, app)
+    let serve_result = axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
-        .await
-    {
+        .await;
+    shutdown.cancel();
+    for h in worker_handles {
+        let _ = h.await;
+    }
+    if let Err(e) = serve_result {
         tracing::error!(error = %e, "axum::serve returned");
         return ExitCode::from(1);
     }
