@@ -1,0 +1,17 @@
+{% extends "reader/base.html" %}
+
+{% block title %}{{ site.title }}{% endblock %}
+
+{% block content %}
+<section class="home-feed">
+{% if cards.is_empty() %}
+<p class="empty-feed">No posts yet. Check back soon.</p>
+{% else %}
+{% for post in cards %}
+{% include "partials/post_card.html" %}
+{% endfor %}
+{% endif %}
+</section>
+
+{% include "partials/pagination.html" %}
+{% endblock %}
