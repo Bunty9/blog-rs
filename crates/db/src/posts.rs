@@ -49,8 +49,8 @@ pub async fn create(pool: &SqlitePool, p: NewPost<'_>) -> Result<i64, DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     let res = sqlx::query(
         "INSERT INTO posts (slug, title, subtitle, status, author_id, updated_at, created_at,
-                            excerpt, cover_image, body_md, body_html, meta_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            excerpt, cover_image, body_md, body_html, body_html_version, meta_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(p.slug)
     .bind(p.title)
@@ -63,6 +63,7 @@ pub async fn create(pool: &SqlitePool, p: NewPost<'_>) -> Result<i64, DbError> {
     .bind(p.cover_image)
     .bind(p.body_md)
     .bind(p.body_html)
+    .bind(content::RENDER_VERSION as i64)
     .bind(p.meta_json)
     .execute(pool)
     .await
@@ -589,9 +590,12 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result
             .await?;
     }
     if let (Some(md), Some(html)) = (&u.body_md, &u.body_html) {
-        sqlx::query("UPDATE posts SET body_md = ?, body_html = ?, updated_at = ? WHERE id = ?")
+        sqlx::query(
+            "UPDATE posts SET body_md = ?, body_html = ?, body_html_version = ?, updated_at = ? WHERE id = ?",
+        )
             .bind(md)
             .bind(html)
+            .bind(content::RENDER_VERSION as i64)
             .bind(now)
             .bind(id)
             .execute(&mut *tx)
