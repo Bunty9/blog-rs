@@ -26,12 +26,45 @@ static OPEN_RE: Lazy<Regex> =
 
 const CLOSE_RE_FMT: &str = r"\{\{<\s*/\s*{name}\s*>\}\}";
 
+/// Scan `src` once and collect (start, end) byte ranges for every HTML comment
+/// (`<!-- ... -->`). Shortcode tokens whose offset falls inside any such range
+/// are ignored by `tokenize`.
+fn comment_ranges(src: &str) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let bytes = src.as_bytes();
+    let mut i = 0;
+    while i + 4 <= bytes.len() {
+        if &bytes[i..i + 4] == b"<!--" {
+            let start = i;
+            let mut j = i + 4;
+            let mut end = bytes.len();
+            while j + 3 <= bytes.len() {
+                if &bytes[j..j + 3] == b"-->" {
+                    end = j + 3;
+                    break;
+                }
+                j += 1;
+            }
+            out.push((start, end));
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+fn in_any_range(offset: usize, ranges: &[(usize, usize)]) -> bool {
+    ranges.iter().any(|(s, e)| offset >= *s && offset < *e)
+}
+
 /// Tokenize source into interleaved Text and shortcode tokens.
 /// A shortcode is treated as paired iff its name appears in `paired_names`
 /// and a matching close tag exists later. Otherwise it is self-closing.
 pub fn tokenize<'a>(src: &'a str, paired_names: &[&str]) -> Result<Vec<Token<'a>>, ContentError> {
     let mut out = Vec::new();
     let mut cursor = 0usize;
+    let comments = comment_ranges(src);
 
     for cap in OPEN_RE.captures_iter(src) {
         let m_all = cap.get(0).unwrap();
@@ -40,6 +73,9 @@ pub fn tokenize<'a>(src: &'a str, paired_names: &[&str]) -> Result<Vec<Token<'a>
         let offset = m_all.start();
 
         if offset < cursor {
+            continue;
+        }
+        if in_any_range(offset, &comments) {
             continue;
         }
         if offset > cursor {
@@ -125,5 +161,13 @@ mod tests {
         let src = "{{< callout type=\"warn\" >}}oops";
         let err = tokenize(src, &["callout"]).unwrap_err();
         assert!(matches!(err, ContentError::UnterminatedShortcode { .. }));
+    }
+
+    #[test]
+    fn ignores_shortcode_tokens_inside_html_comments() {
+        let src = "before <!-- mention of {{< chart >}} --> after";
+        let toks = tokenize(src, &[]).unwrap();
+        assert_eq!(toks.len(), 1);
+        assert!(matches!(&toks[0], Token::Text(_)));
     }
 }
