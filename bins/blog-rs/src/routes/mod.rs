@@ -19,7 +19,7 @@ pub fn router(state: AppState) -> Router {
 
     Router::new()
         .merge(health::router())
-        .nest("/admin", admin::router())
+        .nest("/admin", admin::router(state.clone()))
         .route("/assets/*path", axum::routing::get(crate::embed::handler))
         .layer(service)
         .with_state(state)
