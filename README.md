@@ -76,16 +76,29 @@ cargo run -p blog-rs-render -- \
 Boot the server locally with an SQLite database in the current directory:
 
 ```
-export BLOG_ADMIN_EMAIL=admin@example.com
-export BLOG_ADMIN_PASSWORD=changeme
-export DATABASE_URL=sqlite://./blog.db?mode=rwc
+# 32-byte URL-safe-base64 secret for HMAC signing of member tokens
+export BLOG_RS__SIGNING_KEY=$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=')
+
+# First-boot admin seed (ignored after the users table is populated)
+export BLOG_RS__ADMIN_BOOTSTRAP__EMAIL=admin@example.com
+export BLOG_RS__ADMIN_BOOTSTRAP__PASSWORD=changeme
+
+# SQLite URL (default is sqlite://blog-rs.db)
+export BLOG_RS__DATABASE_URL=sqlite://./blog.db?mode=rwc
+
+# Public-facing URL used in RSS, sitemap, canonical links, og:url
+export BLOG_BASE_URL=http://127.0.0.1:8080
+export BLOG_TITLE='blog-rs'
+
+# Mail goes to ./test-mailbox.eml instead of SMTP
+export BLOG_RS_MAIL=test
 
 cargo run -p blog-rs
 ```
 
-On first boot the server seeds the admin row from those environment variables and applies the migration set. After that, the environment variables are ignored and the password lives only as an argon2id hash in the `users` table.
+On first boot the server seeds the admin row from `BLOG_RS__ADMIN_BOOTSTRAP__*` and applies the migration set. After that, those bootstrap variables are ignored and the password lives only as an argon2id hash in the `users` table. `BLOG_RS__SIGNING_KEY` is mandatory; the server refuses to start with an empty or non-base64 value.
 
-Open `http://127.0.0.1:8080/admin/login` to access the dashboard, or `http://127.0.0.1:8080/` for the reader side. Healthcheck endpoints live at `/healthz` and `/readyz`.
+Open `http://127.0.0.1:8080/admin/login` to log in as JSON (`POST {"email","password"}` returns the session cookies). Reader side at `http://127.0.0.1:8080/`. Healthchecks at `/healthz` and `/readyz` (the latter also verifies the outbox worker heartbeat).
 
 ## Sample posts
 
@@ -142,16 +155,24 @@ Runtime configuration is layered via `figment`: built-in defaults, then a TOML f
 
 Important environment variables:
 
-| Variable              | Purpose                                                              |
-| --------------------- | -------------------------------------------------------------------- |
-| `DATABASE_URL`        | SQLite URL, e.g. `sqlite://./blog.db?mode=rwc`                       |
-| `BLOG_ADMIN_EMAIL`    | First-boot admin email (ignored after the `users` table is seeded)   |
-| `BLOG_ADMIN_PASSWORD` | First-boot admin password (ignored after seed)                       |
-| `SESSION_LIFETIME`    | Session cookie lifetime in seconds                                   |
-| `CONFIRM_TOKEN_TTL`   | HMAC-signed member token TTL in seconds                              |
-| `OUTBOX_POLL_INTERVAL`| Outbox worker poll interval in seconds                               |
-| `BLOG_RS_MAIL`        | `test` writes mail to `./test-mailbox.eml`; unset uses SMTP          |
-| `BLOG_SMTP_*`         | SMTP host, port, username, password, from address                    |
+| Variable                                | Purpose                                                            |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `BLOG_RS__BIND`                         | Address to bind, default `127.0.0.1:8080`                          |
+| `BLOG_RS__DATABASE_URL`                 | SQLite URL, default `sqlite://blog-rs.db`                          |
+| `BLOG_RS__SIGNING_KEY`                  | URL-safe-base64, >= 32 bytes. Mandatory; server refuses empty      |
+| `BLOG_RS__ADMIN_BOOTSTRAP__EMAIL`       | First-boot admin email (ignored after the `users` table is seeded) |
+| `BLOG_RS__ADMIN_BOOTSTRAP__PASSWORD`    | First-boot admin password (ignored after seed)                     |
+| `BLOG_RS__SESSION_LIFETIME_SECONDS`     | Session cookie lifetime, default 14 days                           |
+| `BLOG_RS__CONFIRM_TOKEN_TTL_SECONDS`    | HMAC-signed member token TTL, default 24 hours                     |
+| `BLOG_RS__LOG_LEVEL`                    | tracing EnvFilter expression                                       |
+| `BLOG_RS__MAX_DB_CONNECTIONS`           | SQLx pool size, default 8                                          |
+| `BLOG_BASE_URL`                         | Public URL used in RSS, sitemap, canonical, `og:url`               |
+| `BLOG_TITLE`                            | Site title shown in templates and RSS                              |
+| `BLOG_DESCRIPTION`                      | Site description for RSS and meta tags                             |
+| `BLOG_RS_MAIL`                          | `test` writes mail to `./test-mailbox.eml`; unset uses SMTP        |
+| `BLOG_SMTP_HOST`, `BLOG_SMTP_PORT`, `BLOG_SMTP_USERNAME`, `BLOG_SMTP_PASSWORD`, `BLOG_SMTP_FROM` | SMTP transport |
+| `OUTBOX_POLL_INTERVAL`                  | Outbox worker poll interval in seconds, default 5                  |
+| `OUTBOX_RECLAIM_AFTER`                  | Stale-claim recovery threshold, default 300 seconds                |
 
 ## Testing
 

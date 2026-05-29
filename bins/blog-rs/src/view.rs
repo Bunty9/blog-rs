@@ -46,11 +46,16 @@ pub struct SiteCtx {
 }
 
 impl SiteCtx {
+    /// Build a site-wide context. Reads `BLOG_BASE_URL`, `BLOG_TITLE`,
+    /// `BLOG_DESCRIPTION` from the environment so a deployment can override
+    /// without touching code. Defaults match the server's default bind.
     pub fn placeholder() -> Self {
         Self {
-            title: "blog-rs".into(),
-            base_url: "http://localhost:3000".into(),
-            description: "A personal Rust blog".into(),
+            title: std::env::var("BLOG_TITLE").unwrap_or_else(|_| "blog-rs".into()),
+            base_url: std::env::var("BLOG_BASE_URL")
+                .unwrap_or_else(|_| "http://localhost:8080".into()),
+            description: std::env::var("BLOG_DESCRIPTION")
+                .unwrap_or_else(|_| "A personal Rust blog".into()),
         }
     }
 }
