@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf }}" />
+    <title>{% block title %}Admin · blog-rs{% endblock %}</title>
+    <link rel="stylesheet" href="/assets/admin/admin.css" />
+    <script src="/assets/admin/htmx.min.js" defer></script>
+    <script src="/assets/admin/alpine.min.js" defer></script>
+    <script src="/assets/admin/admin.js" defer></script>
+</head>
+<body>
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <h1>blog-rs</h1>
+        <nav>
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/posts">Posts</a>
+            <a href="/admin/members">Members</a>
+            <a href="/admin/settings">Settings</a>
+        </nav>
+        <form action="/admin/logout" method="post" style="margin-top:1.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+            <button type="submit">Log out</button>
+        </form>
+    </aside>
+    <main class="admin-main">
+        {% block flash %}{% endblock %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+</body>
+</html>

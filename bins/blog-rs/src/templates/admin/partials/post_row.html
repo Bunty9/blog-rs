@@ -1,0 +1,6 @@
+<tr id="post-row-{{ row.id }}">
+    <td><a href="/admin/posts/{{ row.id }}">{{ row.title }}</a></td>
+    <td><code>{{ row.slug }}</code></td>
+    <td><span class="status-badge status-{{ row.status }}">{{ row.status }}</span></td>
+    <td>{{ row.updated_at }}</td>
+</tr>

@@ -1,0 +1,3 @@
+{% if let Some(msg) = flash %}
+    <div class="flash {{ flash_kind }}" data-autohide>{{ msg }}</div>
+{% endif %}
