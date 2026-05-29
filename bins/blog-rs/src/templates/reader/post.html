@@ -1,0 +1,35 @@
+{% extends "reader/base.html" %}
+
+{% block title %}{{ post.title }} — {{ site.title }}{% endblock %}
+{% block description %}{% if let Some(sub) = post.subtitle %}{{ sub }}{% else %}{{ site.description }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+<meta property="og:title" content="{{ post.title }}" />
+<meta property="og:type" content="article" />
+{% if let Some(c) = post.cover_image %}<meta property="og:image" content="{{ c }}" />{% endif %}
+<link rel="canonical" href="{{ site.base_url }}/posts/{{ post.slug }}" />
+{% endblock %}
+
+{% block content %}
+<article class="post">
+<header class="post-header">
+<h1 class="post-title">{{ post.title }}</h1>
+{% if let Some(sub) = post.subtitle %}<p class="post-subtitle">{{ sub }}</p>{% endif %}
+<p class="post-meta">
+{% if let Some(d) = post.published_date %}<time datetime="{{ d }}">{{ d }}</time>{% endif %}
+{% if let Some(m) = post.reading_minutes %}<span> · {{ m }} min read</span>{% endif %}
+{% for tag in tags %}
+<a class="post-tag" href="/tags/{{ tag.slug }}">#{{ tag.name }}</a>
+{% endfor %}
+</p>
+</header>
+
+<div class="post-body">{{ post.body_html|safe }}</div>
+
+{% if let Some(s) = series %}
+<aside class="post-series">
+<p>Part of the series <a href="/series/{{ s.slug }}">{{ s.slug }}</a>.</p>
+</aside>
+{% endif %}
+</article>
+{% endblock %}
