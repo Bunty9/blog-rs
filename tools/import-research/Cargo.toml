@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[lib]
+name = "import_research"
+path = "src/lib.rs"
+
 [[bin]]
 name = "import-research"
 path = "src/main.rs"

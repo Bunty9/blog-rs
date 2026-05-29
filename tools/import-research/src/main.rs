@@ -6,8 +6,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-mod parse;
-mod emit;
+use import_research::{parse, emit};
 
 #[derive(Parser)]
 #[command(name = "import-research", about = "Convert research markdown into seed articles")]
