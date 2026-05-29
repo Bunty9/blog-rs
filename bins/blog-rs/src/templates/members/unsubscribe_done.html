@@ -1,0 +1,9 @@
+{% extends "reader/base.html" %}
+{% block title %}Unsubscribed — {{ site.title }}{% endblock %}
+{% block content %}
+<section class="unsubscribed">
+  <h1>You're unsubscribed</h1>
+  <p>{{ email }} will no longer receive emails from {{ site_title }}.</p>
+  <p><a href="/signup">Resubscribe</a></p>
+</section>
+{% endblock %}

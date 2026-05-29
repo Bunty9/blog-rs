@@ -1,0 +1,11 @@
+{% extends "reader/base.html" %}
+{% block title %}Unsubscribe — {{ site.title }}{% endblock %}
+{% block content %}
+<section class="unsubscribe">
+  <h1>Unsubscribe from {{ site_title }}</h1>
+  <p>You're unsubscribing <strong>{{ email }}</strong>. Click the button below to confirm.</p>
+  <form method="post" action="/unsubscribe/{{ token }}">
+    <button type="submit">Unsubscribe</button>
+  </form>
+</section>
+{% endblock %}
