@@ -1,0 +1,22 @@
+{% extends "reader/base.html" %}
+{% block title %}Subscribe — {{ site.title }}{% endblock %}
+{% block content %}
+{% if pending %}
+<section class="signup-pending">
+  <h1>Check your inbox</h1>
+  <p>We sent a confirmation link to <strong>{{ email }}</strong>. It expires in {{ ttl_hours }} hours.</p>
+</section>
+{% else %}
+<section class="signup">
+  <h1>Subscribe to {{ site_title }}</h1>
+  <p>One email per published post. Unsubscribe with one click.</p>
+  <form method="post" action="/signup" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required autocomplete="email" value="{{ email }}" />
+    <button type="submit">Subscribe</button>
+    {% if let Some(err) = error %}<p class="error">{{ err }}</p>{% endif %}
+  </form>
+</section>
+{% endif %}
+{% endblock %}

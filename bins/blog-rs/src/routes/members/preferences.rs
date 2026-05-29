@@ -89,8 +89,7 @@ mod tests {
     use tower::ServiceExt;
 
     async fn test_state() -> AppState {
-        let pool = db::SqlitePool::connect("sqlite::memory:").await.unwrap();
-        db::migrate(&pool).await.unwrap();
+        let pool = db::test_support::fresh_pool().await;
         let cfg = Config::default();
         AppState::new(pool, cfg, b"unit-test-signing-key".to_vec())
     }

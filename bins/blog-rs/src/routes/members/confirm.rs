@@ -25,33 +25,38 @@ pub struct ConfirmDone<'a> {
 pub async fn confirm(
     State(st): State<AppState>,
     Path(token): Path<String>,
-) -> impl IntoResponse {
+) -> axum::response::Response {
+    let site_title = st.site.site_title.clone();
     match st.tokens.verify(&token, Purpose::Confirm) {
         Ok(payload) => match members::confirm(&st.pool, payload.member_id as i64).await {
             Ok(_) => ConfirmDone {
-                site_title: &st.site.site_title,
+                site_title: &site_title,
                 ok: true,
                 message: "",
-            },
+            }
+            .into_response(),
             Err(e) => {
                 tracing::error!(error = ?e, "confirm db update failed");
                 ConfirmDone {
-                    site_title: &st.site.site_title,
+                    site_title: &site_title,
                     ok: false,
                     message: "We could not complete confirmation. Please try again.",
                 }
+                .into_response()
             }
         },
         Err(TokenError::Expired) => ConfirmDone {
-            site_title: &st.site.site_title,
+            site_title: &site_title,
             ok: false,
             message: "This confirmation link has expired. Sign up again to receive a new one.",
-        },
+        }
+        .into_response(),
         Err(_) => ConfirmDone {
-            site_title: &st.site.site_title,
+            site_title: &site_title,
             ok: false,
             message: "This link is invalid.",
-        },
+        }
+        .into_response(),
     }
 }
 
