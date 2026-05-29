@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Preferences — {{ site_title }}</title>
+<link rel="stylesheet" href="/assets/reader/base.css" />
+</head>
+<body>
+<header class="site-header">
+<a class="site-title" href="/">{{ site_title }}</a>
+</header>
+
+<main class="container">
+<section class="preferences">
+  <h1>Preferences</h1>
+  <form method="post" action="/preferences">
+    <input type="hidden" name="token" value="{{ token }}" />
+    <fieldset>
+      <legend>Subscription</legend>
+      <label>
+        <input type="checkbox" name="subscribed" {% if subscribed %}checked{% endif %} />
+        Receive new posts by email
+      </label>
+    </fieldset>
+    <button type="submit">Save</button>
+  </form>
+</section>
+</main>
+</body>
+</html>
