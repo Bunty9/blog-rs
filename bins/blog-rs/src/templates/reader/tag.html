@@ -1,0 +1,18 @@
+{% extends "reader/base.html" %}
+
+{% block title %}#{{ tag.name }} — {{ site.title }}{% endblock %}
+
+{% block content %}
+<section class="tag-page">
+<h1>Posts tagged <span class="tag-name">#{{ tag.name }}</span></h1>
+{% if cards.is_empty() %}
+<p class="empty-feed">No posts under this tag yet.</p>
+{% else %}
+{% for post in cards %}
+{% include "partials/post_card.html" %}
+{% endfor %}
+{% endif %}
+</section>
+
+{% include "partials/pagination.html" %}
+{% endblock %}
