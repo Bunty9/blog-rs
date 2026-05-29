@@ -394,6 +394,469 @@ mod reader_query_tests {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Admin queries (Plan 1d)
+// ---------------------------------------------------------------------------
+
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostStatusFilter {
+    All,
+    Draft,
+    Published,
+    Scheduled,
+}
+
+impl PostStatusFilter {
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "draft" => Self::Draft,
+            "published" => Self::Published,
+            "scheduled" => Self::Scheduled,
+            _ => Self::All,
+        }
+    }
+}
+
+impl fmt::Display for PostStatusFilter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::All => "all",
+            Self::Draft => "draft",
+            Self::Published => "published",
+            Self::Scheduled => "scheduled",
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AdminPostRow {
+    pub id: i64,
+    pub slug: String,
+    pub title: String,
+    pub status: String,
+    pub published_at: Option<i64>,
+    pub updated_at: i64,
+}
+
+pub async fn list_admin(
+    pool: &SqlitePool,
+    status: PostStatusFilter,
+    query: Option<&str>,
+    limit: i64,
+) -> Result<Vec<AdminPostRow>, DbError> {
+    let q = query.map(|q| format!("%{}%", q.replace('%', r"\%")));
+    let rows = match (status, q.as_deref()) {
+        (PostStatusFilter::All, None) => {
+            sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
+                "SELECT id, slug, title, status, published_at, updated_at
+                 FROM posts WHERE deleted_at IS NULL
+                 ORDER BY updated_at DESC LIMIT ?",
+            )
+            .bind(limit)
+            .fetch_all(pool)
+            .await?
+        }
+        (PostStatusFilter::All, Some(qs)) => {
+            sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
+                "SELECT id, slug, title, status, published_at, updated_at
+                 FROM posts WHERE deleted_at IS NULL AND (title LIKE ? OR slug LIKE ?)
+                 ORDER BY updated_at DESC LIMIT ?",
+            )
+            .bind(qs)
+            .bind(qs)
+            .bind(limit)
+            .fetch_all(pool)
+            .await?
+        }
+        (s, None) => sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
+            "SELECT id, slug, title, status, published_at, updated_at
+             FROM posts WHERE deleted_at IS NULL AND status = ?
+             ORDER BY updated_at DESC LIMIT ?",
+        )
+        .bind(s.to_string())
+        .bind(limit)
+        .fetch_all(pool)
+        .await?,
+        (s, Some(qs)) => sqlx::query_as::<_, (i64, String, String, String, Option<i64>, i64)>(
+            "SELECT id, slug, title, status, published_at, updated_at
+             FROM posts WHERE deleted_at IS NULL AND status = ? AND (title LIKE ? OR slug LIKE ?)
+             ORDER BY updated_at DESC LIMIT ?",
+        )
+        .bind(s.to_string())
+        .bind(qs)
+        .bind(qs)
+        .bind(limit)
+        .fetch_all(pool)
+        .await?,
+    };
+
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, slug, title, status, published_at, updated_at)| AdminPostRow {
+                id,
+                slug,
+                title,
+                status,
+                published_at,
+                updated_at,
+            },
+        )
+        .collect())
+}
+
+pub async fn dashboard_counts(pool: &SqlitePool) -> Result<(i64, i64, i64), DbError> {
+    let drafts: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM posts WHERE status='draft' AND deleted_at IS NULL",
+    )
+    .fetch_one(pool)
+    .await?;
+    let scheduled: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM posts WHERE status='scheduled' AND deleted_at IS NULL",
+    )
+    .fetch_one(pool)
+    .await?;
+    let published: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM posts WHERE status='published' AND deleted_at IS NULL",
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok((drafts, scheduled, published))
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PostUpdate {
+    pub title: Option<String>,
+    pub slug: Option<String>,
+    pub subtitle: Option<String>,
+    pub excerpt: Option<String>,
+    pub cover_image: Option<String>,
+    pub body_md: Option<String>,
+    pub body_html: Option<String>,
+    pub status: Option<String>,
+    pub scheduled_for: Option<Option<i64>>,
+    pub tags_csv: Option<String>,
+}
+
+pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result<(), DbError> {
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    let mut tx = pool.begin().await?;
+
+    if let Some(v) = &u.title {
+        sqlx::query("UPDATE posts SET title = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.slug {
+        sqlx::query("UPDATE posts SET slug = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.subtitle {
+        sqlx::query("UPDATE posts SET subtitle = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.excerpt {
+        sqlx::query("UPDATE posts SET excerpt = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.cover_image {
+        sqlx::query("UPDATE posts SET cover_image = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let (Some(md), Some(html)) = (&u.body_md, &u.body_html) {
+        sqlx::query("UPDATE posts SET body_md = ?, body_html = ?, updated_at = ? WHERE id = ?")
+            .bind(md)
+            .bind(html)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.status {
+        sqlx::query("UPDATE posts SET status = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.scheduled_for {
+        sqlx::query("UPDATE posts SET scheduled_for = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(csv) = &u.tags_csv {
+        // Replace tag set
+        sqlx::query("DELETE FROM post_tags WHERE post_id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        for raw in csv.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+            let slug = slugify(raw);
+            sqlx::query("INSERT OR IGNORE INTO tags (slug, name) VALUES (?, ?)")
+                .bind(&slug)
+                .bind(raw)
+                .execute(&mut *tx)
+                .await?;
+            let tag_id: i64 = sqlx::query_scalar("SELECT id FROM tags WHERE slug = ?")
+                .bind(&slug)
+                .fetch_one(&mut *tx)
+                .await?;
+            sqlx::query("INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)")
+                .bind(id)
+                .bind(tag_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        sqlx::query("UPDATE posts SET updated_at = ? WHERE id = ?")
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+fn slugify(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut prev_dash = false;
+    for ch in s.chars().flat_map(|c| c.to_lowercase()) {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+            prev_dash = false;
+        } else if !prev_dash && !out.is_empty() {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+    if out.ends_with('-') {
+        out.pop();
+    }
+    if out.is_empty() {
+        out.push_str("tag");
+    }
+    out
+}
+
+/// Publish a post: flip status, set published_at, and enqueue one newsletter_outbox
+/// row per confirmed, non-unsubscribed member. INSERT OR IGNORE guarantees
+/// at-most-once even on duplicate clicks.
+///
+/// Returns the number of newly-enqueued outbox rows.
+pub async fn publish(pool: &SqlitePool, id: i64) -> Result<u64, DbError> {
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "UPDATE posts SET status = 'published',
+                          published_at = COALESCE(published_at, ?),
+                          updated_at = ?
+         WHERE id = ? AND deleted_at IS NULL",
+    )
+    .bind(now)
+    .bind(now)
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+
+    let result = sqlx::query(
+        "INSERT OR IGNORE INTO newsletter_outbox
+            (post_id, member_id, status, attempts, created_at)
+         SELECT ?, id, 'pending', 0, ?
+         FROM members
+         WHERE confirmed_at IS NOT NULL AND unsubscribed_at IS NULL",
+    )
+    .bind(id)
+    .bind(now)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(result.rows_affected())
+}
+
+pub async fn soft_delete(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    sqlx::query("UPDATE posts SET deleted_at = ?, updated_at = ? WHERE id = ?")
+        .bind(now)
+        .bind(now)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod admin_tests {
+    use super::*;
+    use crate::members;
+    use crate::test_support::fresh_pool;
+    use crate::users;
+
+    async fn make_post(pool: &SqlitePool, title: &str, status: &str) -> i64 {
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        users::bootstrap_admin(pool, "admin@test", "hash").await.ok();
+        let user_id: i64 = sqlx::query_scalar("SELECT id FROM users LIMIT 1")
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        let slug = slugify(title);
+        sqlx::query(
+            "INSERT INTO posts (slug, title, status, author_id, updated_at, created_at, body_md, body_html)
+             VALUES (?, ?, ?, ?, ?, ?, '', '')",
+        )
+        .bind(&slug).bind(title).bind(status).bind(user_id).bind(now).bind(now)
+        .execute(pool).await.unwrap();
+        sqlx::query_scalar::<_, i64>("SELECT id FROM posts WHERE slug = ?")
+            .bind(&slug)
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn list_admin_filters_status() {
+        let pool = fresh_pool().await;
+        make_post(&pool, "A", "draft").await;
+        make_post(&pool, "B", "published").await;
+        make_post(&pool, "C", "draft").await;
+        let drafts = list_admin(&pool, PostStatusFilter::Draft, None, 50)
+            .await
+            .unwrap();
+        assert_eq!(drafts.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn list_admin_search_matches_title_or_slug() {
+        let pool = fresh_pool().await;
+        make_post(&pool, "Rust patterns", "draft").await;
+        make_post(&pool, "Go patterns", "draft").await;
+        let r = list_admin(&pool, PostStatusFilter::All, Some("rust"), 50)
+            .await
+            .unwrap();
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].title, "Rust patterns");
+    }
+
+    #[tokio::test]
+    async fn update_fields_round_trip() {
+        let pool = fresh_pool().await;
+        let id = make_post(&pool, "Original", "draft").await;
+        update_fields(
+            &pool,
+            id,
+            &PostUpdate {
+                title: Some("Changed".into()),
+                slug: Some("changed".into()),
+                body_md: Some("# Hello".into()),
+                body_html: Some("<h1>Hello</h1>".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        let row: (String, String, String, String) =
+            sqlx::query_as("SELECT title, slug, body_md, body_html FROM posts WHERE id = ?")
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(row.0, "Changed");
+        assert_eq!(row.1, "changed");
+        assert_eq!(row.2, "# Hello");
+        assert_eq!(row.3, "<h1>Hello</h1>");
+    }
+
+    #[tokio::test]
+    async fn publish_fans_out_outbox_to_confirmed_members() {
+        let pool = fresh_pool().await;
+        let id = make_post(&pool, "Newsletter", "draft").await;
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        // 3 confirmed, 1 unsubscribed, 1 unconfirmed
+        for (email, confirmed, unsub) in [
+            ("a@x.com", Some(now), None),
+            ("b@x.com", Some(now), None),
+            ("c@x.com", Some(now), None),
+            ("d@x.com", Some(now), Some(now)),
+            ("e@x.com", None, None),
+        ] {
+            members::insert_fixture(&pool, email, confirmed, unsub)
+                .await
+                .unwrap();
+        }
+
+        let enqueued = publish(&pool, id).await.unwrap();
+        assert_eq!(enqueued, 3);
+
+        let status: String = sqlx::query_scalar("SELECT status FROM posts WHERE id = ?")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(status, "published");
+
+        let pending: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM newsletter_outbox WHERE post_id = ? AND status = 'pending'",
+        )
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(pending, 3);
+    }
+
+    #[tokio::test]
+    async fn publish_is_idempotent() {
+        let pool = fresh_pool().await;
+        let id = make_post(&pool, "Idem", "draft").await;
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        members::insert_fixture(&pool, "a@x.com", Some(now), None)
+            .await
+            .unwrap();
+        let first = publish(&pool, id).await.unwrap();
+        let second = publish(&pool, id).await.unwrap();
+        assert_eq!(first, 1);
+        assert_eq!(second, 0);
+    }
+
+    #[tokio::test]
+    async fn soft_delete_hides_post_from_list_admin() {
+        let pool = fresh_pool().await;
+        let id = make_post(&pool, "Ghost", "draft").await;
+        soft_delete(&pool, id).await.unwrap();
+        let rows = list_admin(&pool, PostStatusFilter::All, None, 50)
+            .await
+            .unwrap();
+        assert!(rows.iter().all(|r| r.id != id));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

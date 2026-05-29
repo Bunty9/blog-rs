@@ -73,6 +73,30 @@ pub async fn count_active(pool: &SqlitePool) -> Result<i64, DbError> {
     Ok(n)
 }
 
+#[cfg(any(test, feature = "test-helpers"))]
+pub async fn insert_fixture(
+    pool: &SqlitePool,
+    email: &str,
+    confirmed_at: Option<i64>,
+    unsubscribed_at: Option<i64>,
+) -> Result<i64, DbError> {
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    sqlx::query(
+        "INSERT INTO members (email, confirmed_at, unsubscribed_at, created_at)
+         VALUES (?, ?, ?, ?)",
+    )
+    .bind(email)
+    .bind(confirmed_at)
+    .bind(unsubscribed_at)
+    .bind(now)
+    .execute(pool)
+    .await?;
+    Ok(sqlx::query_scalar("SELECT id FROM members WHERE email = ?")
+        .bind(email)
+        .fetch_one(pool)
+        .await?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
