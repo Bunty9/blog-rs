@@ -1,0 +1,3 @@
+/* blog-rs reset.css — Phase 1c will replace this with the real reader theme. */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; }
