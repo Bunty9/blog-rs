@@ -17,24 +17,30 @@ pub fn mint_token() -> String {
     URL_SAFE_NO_PAD.encode(buf)
 }
 
-/// Build a `__Host-sid` cookie. `Secure`, `HttpOnly`, `SameSite=Lax`, root path.
+/// Build a `__Host-sid` cookie. `Secure`, `HttpOnly`, `SameSite=Strict`, root path.
+///
+/// `Strict` (vs `Lax`) prevents the session cookie from being sent on any
+/// cross-site navigation, including top-level GET. Combined with the CSRF
+/// double-submit, this closes the residual cross-site request hole.
 pub fn session_cookie(token: &str, lifetime: Duration) -> Cookie<'static> {
     Cookie::build((SESSION_COOKIE, token.to_string()))
         .path("/")
         .http_only(true)
         .secure(true)
-        .same_site(SameSite::Lax)
+        .same_site(SameSite::Strict)
         .max_age(lifetime)
         .build()
 }
 
 /// Build the CSRF cookie. Readable by JS so HTMX can echo it as a header.
+/// `SameSite=Strict` matches the session cookie so the double-submit pair is
+/// only ever presented on same-site requests.
 pub fn csrf_cookie(token: &str, lifetime: Duration) -> Cookie<'static> {
     Cookie::build((CSRF_COOKIE, token.to_string()))
         .path("/")
         .http_only(false)
         .secure(true)
-        .same_site(SameSite::Lax)
+        .same_site(SameSite::Strict)
         .max_age(lifetime)
         .build()
 }
@@ -66,7 +72,7 @@ mod tests {
         assert!(c.http_only().unwrap_or(false));
         assert!(c.secure().unwrap_or(false));
         assert_eq!(c.name(), SESSION_COOKIE);
-        assert_eq!(c.same_site(), Some(SameSite::Lax));
+        assert_eq!(c.same_site(), Some(SameSite::Strict));
     }
 
     #[test]
