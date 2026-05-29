@@ -48,7 +48,8 @@ async fn submit(
     let session_token = auth::session::mint_token();
     let csrf = auth::session::mint_token();
     let lifetime = Duration::seconds(state.config.session_lifetime_seconds);
-    let expires_at = OffsetDateTime::now_utc().unix_timestamp() + state.config.session_lifetime_seconds;
+    let expires_at =
+        OffsetDateTime::now_utc().unix_timestamp() + state.config.session_lifetime_seconds;
 
     db::sessions::create(&state.pool, &session_token, user.id, &csrf, expires_at).await?;
 
@@ -62,7 +63,10 @@ async fn submit(
     Ok((
         StatusCode::OK,
         headers,
-        Json(LoginOk { user_id: user.id, csrf_token: csrf }),
+        Json(LoginOk {
+            user_id: user.id,
+            csrf_token: csrf,
+        }),
     )
         .into_response())
 }
@@ -78,7 +82,9 @@ mod tests {
     async fn state() -> AppState {
         let pool = fresh_pool().await;
         let hash = auth::password::hash("hunter2").unwrap();
-        db::users::bootstrap_admin(&pool, "admin@example.com", &hash).await.unwrap();
+        db::users::bootstrap_admin(&pool, "admin@example.com", &hash)
+            .await
+            .unwrap();
         let cfg = crate::config::Config::default();
         AppState::new(pool, cfg, vec![0u8; 32])
     }

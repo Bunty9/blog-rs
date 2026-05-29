@@ -8,14 +8,14 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub bind: String,                       // e.g. "127.0.0.1:8080"
-    pub database_url: String,               // sqlx URL
+    pub bind: String,         // e.g. "127.0.0.1:8080"
+    pub database_url: String, // sqlx URL
     pub session_lifetime_seconds: i64,
     pub confirm_token_ttl_seconds: i64,
-    pub log_level: String,                  // tracing EnvFilter expression
+    pub log_level: String, // tracing EnvFilter expression
     pub max_db_connections: u32,
     pub admin_bootstrap: Option<AdminBootstrap>,
-    pub signing_key: String,                // base64 url-safe, >= 32 bytes
+    pub signing_key: String, // base64 url-safe, >= 32 bytes
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

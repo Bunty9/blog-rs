@@ -35,11 +35,15 @@ async fn main() -> ExitCode {
         }
     };
 
-    let filter = EnvFilter::try_new(&cfg.log_level)
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_new(&cfg.log_level).unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::registry()
         .with(filter)
-        .with(fmt::layer().json().with_current_span(true).with_span_list(false))
+        .with(
+            fmt::layer()
+                .json()
+                .with_current_span(true)
+                .with_span_list(false),
+        )
         .init();
 
     tracing::info!(bind = %cfg.bind, db = %cfg.database_url, "blog-rs starting");
@@ -52,15 +56,14 @@ async fn main() -> ExitCode {
         }
     };
 
-    let signing_key = match base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(cfg.signing_key.as_bytes())
-    {
-        Ok(k) if !k.is_empty() => k,
-        _ => {
-            tracing::error!("signing_key missing or invalid base64; refusing to boot");
-            return ExitCode::from(2);
-        }
-    };
+    let signing_key =
+        match base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(cfg.signing_key.as_bytes()) {
+            Ok(k) if !k.is_empty() => k,
+            _ => {
+                tracing::error!("signing_key missing or invalid base64; refusing to boot");
+                return ExitCode::from(2);
+            }
+        };
 
     if let Some(ab) = cfg.admin_bootstrap.clone() {
         match auth::password::hash(&ab.password) {

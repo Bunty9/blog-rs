@@ -9,16 +9,16 @@ use tower::ServiceExt;
 
 #[path = "../src/config.rs"]
 mod config;
-#[path = "../src/state.rs"]
-mod state;
-#[path = "../src/error.rs"]
-mod error;
 #[path = "../src/embed.rs"]
 mod embed;
+#[path = "../src/error.rs"]
+mod error;
 #[path = "../src/middleware/mod.rs"]
 mod middleware;
 #[path = "../src/routes/mod.rs"]
 mod routes;
+#[path = "../src/state.rs"]
+mod state;
 
 #[tokio::test]
 async fn healthz_returns_ok_through_full_stack() {
