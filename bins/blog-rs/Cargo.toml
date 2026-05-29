@@ -27,6 +27,7 @@ rust-embed = { workspace = true }
 uuid = { workspace = true }
 clap = { workspace = true }
 base64 = { workspace = true }
+sqlx = { workspace = true }
 
 db    = { path = "../../crates/db" }
 auth  = { path = "../../crates/auth" }
@@ -36,3 +37,4 @@ tokio = { workspace = true }
 reqwest = { workspace = true }
 tower = { workspace = true }
 figment = { workspace = true, features = ["test"] }
+db = { path = "../../crates/db", features = ["test-helpers"] }
