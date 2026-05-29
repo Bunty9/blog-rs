@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+{% block title %}Members · blog-rs{% endblock %}
+{% block content %}
+<h2 style="display:flex;justify-content:space-between;align-items:center;">
+    <span>Members</span>
+    <a class="btn" href="/admin/members/export.csv">Export CSV</a>
+</h2>
+
+<div class="stat-grid">
+    <div class="stat-card"><div class="n">{{ total }}</div><div class="label">Total</div></div>
+    <div class="stat-card"><div class="n">{{ confirmed }}</div><div class="label">Confirmed</div></div>
+    <div class="stat-card"><div class="n">{{ unsubscribed }}</div><div class="label">Unsubscribed</div></div>
+</div>
+
+<table class="posts">
+    <thead><tr><th>Email</th><th>Status</th><th>Joined</th></tr></thead>
+    <tbody>
+        {% for m in rows %}
+            <tr>
+                <td>{{ m.email }}</td>
+                <td>
+                    {% if m.unsubscribed_at.is_some() %}<span class="status-badge status-draft">unsubscribed</span>
+                    {% else if m.confirmed_at.is_some() %}<span class="status-badge status-published">confirmed</span>
+                    {% else %}<span class="status-badge status-scheduled">pending</span>{% endif %}
+                </td>
+                <td>{{ m.created_at }}</td>
+            </tr>
+        {% endfor %}
+        {% if rows.is_empty() %}
+            <tr><td colspan="3" style="text-align:center;color:var(--muted);">No members yet.</td></tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}
