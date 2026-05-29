@@ -3,6 +3,7 @@
 mod config;
 mod embed;
 mod error;
+mod mailer;
 mod middleware;
 mod routes;
 mod state;
