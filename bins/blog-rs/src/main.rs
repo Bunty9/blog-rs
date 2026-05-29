@@ -6,6 +6,7 @@ mod error;
 mod middleware;
 mod routes;
 mod state;
+mod view;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
