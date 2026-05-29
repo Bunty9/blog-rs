@@ -85,7 +85,17 @@ async fn main() -> ExitCode {
         }
     }
 
-    let state = AppState::new(pool, cfg.clone(), signing_key);
+    let mailer = match mailer::from_env() {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(error = %e, "mailer init failed");
+            return ExitCode::from(2);
+        }
+    };
+    let site = state::SiteConfig::from_env();
+    let state = AppState::new(pool, cfg.clone(), signing_key)
+        .with_mailer(mailer)
+        .with_site(site);
     let app = routes::router(state);
 
     let listener = match tokio::net::TcpListener::bind(&cfg.bind).await {
