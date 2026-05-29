@@ -1,22 +1,23 @@
 # blog-rs
 
-A self-hosted blog engine written in Rust. Each post is a composable document of typed content blocks: markdown plus a small registry of interactive shortcodes (code playgrounds, charts, animations, callouts, images, embeds). The engine is designed to run as a single binary on a small VPS, with SQLite for storage and per-block JavaScript loaded only on the pages that need it.
-
-The repository is the build target of a phased plan. Current code ships the rendering pipeline, the data layer, the cryptographic primitives, and a markdown-to-HTML CLI. The HTTP server, admin dashboard, public reader, and newsletter are scoped and planned but not yet implemented.
+A self-hosted blog engine written in Rust. Each post is a composable document of typed content blocks: markdown plus a small registry of interactive shortcodes (code playgrounds, charts, animations, callouts, images, embeds). The engine runs as a single binary on a small VPS, with SQLite for storage, an htmx admin dashboard, a free-member newsletter, and per-block JavaScript loaded only on the pages that need it.
 
 ## Status
 
-| Subsystem                       | Status        | Notes                                                              |
-| ------------------------------- | ------------- | ------------------------------------------------------------------ |
-| Content pipeline                | Implemented   | Frontmatter, CommonMark, shortcode lexer, render pipeline          |
-| Shortcode registry              | Implemented   | callout, code, image, chart, animate, playable, embed              |
-| CLI renderer (`blog-rs-render`) | Implemented   | Markdown file in, HTML plus asset manifest out                     |
-| SQLite data layer               | Implemented   | Users, posts, tags, sessions, members, outbox, FTS5 search         |
-| Auth primitives                 | Partial       | argon2id passwords, CSRF validator, HMAC tokens. Session work next |
-| HTTP server                     | Not yet built | Axum binary scaffolded; routes pending                             |
-| Admin dashboard                 | Not yet built | Plan written                                                       |
-| Public reader                   | Not yet built | Plan written                                                       |
-| Members and newsletter          | Not yet built | Plan written                                                       |
+| Subsystem                       | Status      | Notes                                                                                |
+| ------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| Content pipeline                | Implemented | Frontmatter, CommonMark, shortcode lexer, render pipeline                            |
+| Shortcode registry              | Implemented | callout, code, image, chart, animate, playable, embed                                |
+| CLI renderer (`blog-rs-render`) | Implemented | Markdown file in, HTML plus asset manifest out                                       |
+| SQLite data layer               | Implemented | Users, posts, tags, sessions, members, outbox, settings, FTS5 search                 |
+| Auth                            | Implemented | argon2id passwords, sessions, double-submit CSRF, HMAC-signed member tokens          |
+| HTTP server                     | Implemented | Axum, tower middleware stack, healthz, readyz, embedded assets, correlation IDs      |
+| Public reader                   | Implemented | Home, post detail, tags, series, search (FTS5), RSS, sitemap, robots                 |
+| Admin dashboard                 | Implemented | htmx editor, post CRUD, publish + fan-out, settings, member list, CSV export         |
+| Members and newsletter          | Implemented | Signup, HMAC-confirm, one-click unsubscribe, preferences, background outbox worker   |
+| Research importer               | Implemented | `tools/import-research` converts a markdown research dump into per-domain posts      |
+| End-to-end test                 | Scaffolded  | Playwright spec covers bootstrap, publish, signup, confirm, public page              |
+| CI                              | Configured  | GitHub Actions: fmt, clippy, workspace tests, Playwright e2e                         |
 
 ## Workspace layout
 
@@ -25,27 +26,36 @@ blog-rs/
   Cargo.toml                       workspace manifest
   rust-toolchain.toml              pins stable channel
   justfile                         build, test, lint recipes
-  migrations/                      SQLx migration files
+  migrations/                      SQLx migration files (0001..0004)
+  assets/                          static CSS / JS / fonts embedded at build time
+  content/
+    samples/                       three showcase posts that exercise every shortcode
+    articles/                      seed articles generated by the research importer
   crates/
     content/                       markdown plus shortcode parser and render pipeline
     shortcodes/                    Shortcode trait, args parser, seven block types
     db/                            SQLx pool, queries, FTS5 triggers
-    auth/                          argon2id, CSRF, HMAC tokens
+    auth/                          argon2id, sessions, CSRF, HMAC tokens
   bins/
+    blog-rs/                       the server binary (Axum, htmx admin, members, worker)
     blog-rs-render/                CLI that renders one markdown file to HTML
-    blog-rs/                       server binary (scaffold only at this point)
+  tools/
+    import-research/               markdown research dump to seed-articles converter
   tests/
     fixtures/                      input markdown used by golden tests
+    e2e/                           Playwright end-to-end scaffold
+  .github/workflows/ci.yml         CI: fmt, clippy, workspace tests, Playwright
 ```
 
 ## Requirements
 
 - Rust 1.78 or newer (the toolchain file pins stable)
-- SQLite (linked statically through the `sqlx` features; no system install required for build)
+- SQLite is linked through `sqlx` features; no system install required for build
+- Node 20+ if you want to run the Playwright end-to-end test locally
 
 ## Quick start
 
-Clone the repository and run the test suite:
+Clone and run the test suite:
 
 ```
 git clone https://github.com/Bunty9/blog-rs
@@ -53,17 +63,39 @@ cd blog-rs
 cargo test --workspace
 ```
 
-Render the included Rust Level 4 research fixture to HTML:
+Render any markdown file to HTML through the CLI:
 
 ```
 cargo run -p blog-rs-render -- \
-    tests/fixtures/domain-1-snippet.md \
+    content/samples/markdown-shortcode-tour.md \
     --assets-out /tmp/assets.json \
     --frontmatter-out /tmp/fm.yaml \
     > /tmp/out.html
 ```
 
-The HTML output contains the rendered post body. The JSON manifest lists the CSS and JavaScript assets that the page needs, deduplicated, in the order they were first emitted by the shortcodes.
+Boot the server locally with an SQLite database in the current directory:
+
+```
+export BLOG_ADMIN_EMAIL=admin@example.com
+export BLOG_ADMIN_PASSWORD=changeme
+export DATABASE_URL=sqlite://./blog.db?mode=rwc
+
+cargo run -p blog-rs
+```
+
+On first boot the server seeds the admin row from those environment variables and applies the migration set. After that, the environment variables are ignored and the password lives only as an argon2id hash in the `users` table.
+
+Open `http://127.0.0.1:8080/admin/login` to access the dashboard, or `http://127.0.0.1:8080/` for the reader side. Healthcheck endpoints live at `/healthz` and `/readyz`.
+
+## Sample posts
+
+Three runnable showcase posts live under `content/samples/`:
+
+- `hello-world.md` short intro post with a callout, a Rust playground block, and an image.
+- `interactive-blog-platform.md` meta-post about the engine itself; demonstrates a chart with both inline `data` and an external `src`, an animation block, and an embedded Rust playground.
+- `markdown-shortcode-tour.md` exhaustive tour that exercises every shortcode and every preset.
+
+Render any of them through the CLI or import them into the running server's database to see the full reader pipeline.
 
 ## Authoring model
 
@@ -92,32 +124,51 @@ Bare-metal Rust drops the standard library entirely.
 
 Built-in shortcode names and the assets they pull in:
 
-| Name       | Body     | Notable args                          | Assets                |
-| ---------- | -------- | ------------------------------------- | --------------------- |
-| `callout`  | required | `type` (info, warn, tip, danger)      | one CSS file          |
-| `code`     | required | `lang`, `playground` (bool)           | CodeMirror bundle     |
-| `image`    | none     | `src`, `alt`, `caption`, `aspect`     | one CSS file          |
-| `chart`    | none     | `type`, `src` or `data`, `caption`    | Chart.js plus glue    |
-| `animate`  | required | `preset`, `keyframes`                 | Motion One plus glue  |
-| `playable` | none     | `id` (currently `rust-playground`)    | none                  |
-| `embed`    | none     | `url` (YouTube, Twitter, fallback)    | none                  |
+| Name       | Body     | Notable args                                                                  | Assets               |
+| ---------- | -------- | ----------------------------------------------------------------------------- | -------------------- |
+| `callout`  | required | `type` (info, warn, tip, danger)                                              | one CSS file         |
+| `code`     | required | `lang`, `playground` (rust-only, bool)                                        | CodeMirror bundle    |
+| `image`    | none     | `src`, `alt`, `caption`, `width`, `aspect`                                    | one CSS file         |
+| `chart`    | none     | `type`, `src` or `data`, `caption`                                            | Chart.js plus glue   |
+| `animate`  | required | `preset` (fade, slide-up, slide-left, scale, custom), `keyframes`             | Motion One plus glue |
+| `playable` | none     | `id` (currently `rust-playground`), `gist`                                    | none                 |
+| `embed`    | none     | `url` (YouTube, Twitter, link fallback)                                       | none                 |
 
-Adding a new block type means writing a struct that implements the `Shortcode` trait in `crates/shortcodes/src/` and registering it in `default_registry()`. The render pipeline picks it up automatically; the page templates pick up its asset manifest entries automatically.
+Adding a new block type means writing a struct that implements the `Shortcode` trait in `crates/shortcodes/src/` and registering it in `default_registry()`. The render pipeline picks it up automatically; the page templates pick up its asset manifest entries automatically through the per-page injection helper.
+
+## Configuration
+
+Runtime configuration is layered via `figment`: built-in defaults, then a TOML file at `BLOG_CONFIG_PATH` (optional), then environment variables prefixed `BLOG_RS__`.
+
+Important environment variables:
+
+| Variable              | Purpose                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`        | SQLite URL, e.g. `sqlite://./blog.db?mode=rwc`                       |
+| `BLOG_ADMIN_EMAIL`    | First-boot admin email (ignored after the `users` table is seeded)   |
+| `BLOG_ADMIN_PASSWORD` | First-boot admin password (ignored after seed)                       |
+| `SESSION_LIFETIME`    | Session cookie lifetime in seconds                                   |
+| `CONFIRM_TOKEN_TTL`   | HMAC-signed member token TTL in seconds                              |
+| `OUTBOX_POLL_INTERVAL`| Outbox worker poll interval in seconds                               |
+| `BLOG_RS_MAIL`        | `test` writes mail to `./test-mailbox.eml`; unset uses SMTP          |
+| `BLOG_SMTP_*`         | SMTP host, port, username, password, from address                    |
 
 ## Testing
 
-The workspace has 74 tests across four crates:
+The workspace ships 447 tests across the crates, integration test binaries, and the importer:
 
 ```
 cargo test --workspace
 ```
 
-Breakdown:
+Breakdown (counts grow as `#[path]`-included modules are re-tested in each integration binary):
 
-- `content`: 17 unit tests covering frontmatter parsing, markdown rendering, the shortcode lexer, the render pipeline, and the asset manifest, plus 2 integration tests that snapshot the rendered HTML for the seven-block fixture and a research-derived fixture.
-- `shortcodes`: 22 unit tests covering the args parser and each shortcode implementation.
-- `db`: 19 integration tests against an in-memory SQLite database, covering every table module (users, sessions, posts, tags, members, outbox, search) and the migrations runner.
-- `auth`: 14 unit tests covering argon2id round-trips, CSRF double-submit validation, and HMAC token signing.
+- `content` frontmatter, CommonMark, the shortcode lexer, the render pipeline, the asset manifest, golden snapshots.
+- `shortcodes` args parser plus each shortcode implementation.
+- `db` every table module against an in-memory SQLite pool, the migrations runner, and the FTS5 triggers.
+- `auth` argon2id round-trips, CSRF double-submit, HMAC tokens with TTL and tamper-detection.
+- `bins/blog-rs` unit tests on each route handler, plus integration tests that boot the full router (health, embedded assets, signup to confirm to unsubscribe, publish fan-out to confirmed members, outbox worker tick).
+- `tools/import-research` parse plus emit unit tests plus a synthetic-fixture round-trip integration test.
 
 Snapshot tests use `insta`. To accept regenerated snapshots after an intentional output change, run `INSTA_UPDATE=always cargo test -p content --test golden` and inspect the diff in the `.snap` files before committing.
 
@@ -134,6 +185,23 @@ just lint       # cargo clippy --workspace --all-targets -- -D warnings
 ```
 
 The clippy bar is set to `-D warnings`. The current workspace is clean.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+1. `cargo fmt --all -- --check`
+2. `cargo clippy --workspace --all-targets -- -D warnings`
+3. `cargo test --workspace`
+4. Playwright end-to-end against a release build of the server
+
+The Playwright job needs `tests/e2e/package-lock.json` for `npm ci`. Generate it once with `(cd tests/e2e && npm install)` and commit the lockfile before the e2e job will go green.
+
+## Known follow-ups
+
+- `db::members::enqueue_confirm` writes the confirm-purpose outbox row with `post_id = 0`. Integration tests seed a sentinel `posts(id = 0)` row; production needs either a sentinel migration or a schema change that allows null `post_id` on confirm-purpose rows.
+- The `members::unsubscribe` SQL overwrites `unsubscribed_at` on every call; observable behaviour is idempotent but the timestamp is bumped on repeats. A `COALESCE` keeps the original.
+- Five seed articles under `content/articles/` retain `<!-- TODO: chart? -->` markers where the source research had numeric tables; author review is intended before public publish.
 
 ## License
 
