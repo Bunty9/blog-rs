@@ -7,6 +7,7 @@ mod mailer;
 mod middleware;
 mod routes;
 mod state;
+mod templates;
 mod tokens;
 mod view;
 

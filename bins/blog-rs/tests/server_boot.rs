@@ -13,12 +13,18 @@ mod config;
 mod embed;
 #[path = "../src/error.rs"]
 mod error;
+#[path = "../src/mailer/mod.rs"]
+mod mailer;
 #[path = "../src/middleware/mod.rs"]
 mod middleware;
 #[path = "../src/routes/mod.rs"]
 mod routes;
 #[path = "../src/state.rs"]
 mod state;
+#[path = "../src/templates.rs"]
+mod templates;
+#[path = "../src/tokens.rs"]
+mod tokens;
 #[path = "../src/view.rs"]
 mod view;
 
