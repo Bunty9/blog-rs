@@ -9,7 +9,6 @@ use askama_axum::IntoResponse;
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::{header, HeaderValue, Response, StatusCode};
-use axum::response::IntoResponse as _;
 use axum::Extension;
 
 use crate::error::AppError;
@@ -19,6 +18,7 @@ use db::members::{self, AdminMemberRow};
 
 #[derive(Template)]
 #[template(path = "admin/members_list.html")]
+#[allow(dead_code)] // flash + flash_kind reserved for Plan 1e flash messaging
 struct MembersTpl {
     csrf: String,
     flash: Option<String>,

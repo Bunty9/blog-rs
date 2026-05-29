@@ -17,6 +17,7 @@ use db::posts::{self, NewPost};
 
 #[derive(Template)]
 #[template(path = "admin/posts_new.html")]
+#[allow(dead_code)] // flash + flash_kind reserved for Plan 1e flash messaging
 struct NewTpl {
     csrf: String,
     flash: Option<String>,

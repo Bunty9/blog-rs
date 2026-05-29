@@ -24,6 +24,7 @@ pub struct ListQuery {
 
 #[derive(Template)]
 #[template(path = "admin/posts_list.html")]
+#[allow(dead_code)] // flash + flash_kind reserved for Plan 1e flash messaging
 struct PostsListTpl {
     csrf: String,
     flash: Option<String>,

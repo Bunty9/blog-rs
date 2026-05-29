@@ -15,6 +15,7 @@ use crate::state::AppState;
 
 #[derive(Template)]
 #[template(path = "admin/posts_edit.html")]
+#[allow(dead_code)] // flash + flash_kind reserved for Plan 1e flash messaging
 struct EditTpl {
     csrf: String,
     flash: Option<String>,
