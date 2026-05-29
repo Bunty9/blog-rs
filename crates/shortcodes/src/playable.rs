@@ -1,4 +1,4 @@
-use crate::{RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
+use crate::{html_attr_escape, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Playable;
 
@@ -23,8 +23,9 @@ impl Shortcode for Playable {
                 } else {
                     format!("{RUST_PLAYGROUND}&gist={gist}")
                 };
+                let url_esc = html_attr_escape(&url);
                 let html = format!(
-                    r#"<iframe class="playable-block" src="{url}" loading="lazy" title="Rust Playground" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>"#
+                    r#"<iframe class="playable-block" src="{url_esc}" loading="lazy" title="Rust Playground" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>"#
                 );
                 Ok(RenderedBlock {
                     html,

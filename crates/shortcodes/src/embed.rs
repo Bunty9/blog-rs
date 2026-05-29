@@ -1,4 +1,4 @@
-use crate::{RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
+use crate::{html_attr_escape, RenderError, RenderedBlock, Shortcode, ShortcodeArgs};
 
 pub struct Embed;
 
@@ -23,8 +23,9 @@ impl Shortcode for Embed {
                 assets: vec![],
             })
         } else {
+            let esc = html_attr_escape(url);
             Ok(RenderedBlock {
-                html: format!(r#"<p><a href="{url}" rel="noopener">{url}</a></p>"#),
+                html: format!(r#"<p><a href="{esc}" rel="noopener">{esc}</a></p>"#),
                 assets: vec![],
             })
         }
@@ -33,14 +34,17 @@ impl Shortcode for Embed {
 
 fn classify(url: &str) -> (Option<&'static str>, String) {
     if let Some(id) = youtube_id(url) {
+        let id_esc = html_attr_escape(id);
         let html = format!(
-            r#"<iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/{id}" title="YouTube video" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>"#
+            r#"<iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/{id_esc}" title="YouTube video" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>"#
         );
         return (Some("youtube"), html);
     }
     if url.contains("twitter.com/") || url.contains("x.com/") {
-        let html =
-            format!(r#"<blockquote class="twitter-tweet"><a href="{url}">{url}</a></blockquote>"#);
+        let esc = html_attr_escape(url);
+        let html = format!(
+            r#"<blockquote class="twitter-tweet"><a href="{esc}">{esc}</a></blockquote>"#
+        );
         return (Some("twitter"), html);
     }
     (None, String::new())

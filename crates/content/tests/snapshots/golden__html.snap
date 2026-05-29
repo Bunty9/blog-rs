@@ -20,4 +20,4 @@ fn main() {
 </div><figure class="img-block" style="--w:100%;aspect-ratio:16/9;">
 <img src="/m/a.png" alt="A" loading="lazy" />
 <figcaption>Cap</figcaption>
-</figure><iframe class="playable-block" src="https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=abc123" loading="lazy" title="Rust Playground" sandbox="allow-scripts allow-same-origin allow-forms"></iframe><figure class="embed-block" data-provider="youtube"><iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube video" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></figure>
+</figure><iframe class="playable-block" src="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2021&amp;gist=abc123" loading="lazy" title="Rust Playground" sandbox="allow-scripts allow-same-origin allow-forms"></iframe><figure class="embed-block" data-provider="youtube"><iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube video" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></figure>

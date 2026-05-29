@@ -15,6 +15,12 @@ use thiserror::Error;
 
 pub use args::{parse as parse_args, ArgsError, ShortcodeArgs};
 
+/// Minimal HTML attribute-value escape: handles `&` and `"` only.
+/// Use for URLs and other strings that go inside double-quoted attributes.
+pub fn html_attr_escape(s: &str) -> String {
+    s.replace('&', "&amp;").replace('"', "&quot;")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetKind {
     Css,
