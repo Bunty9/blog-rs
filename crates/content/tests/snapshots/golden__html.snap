@@ -6,9 +6,10 @@ expression: normalize(&out.html)
 <p>Paragraph with <strong>bold</strong> and <code>inline code</code>.</p>
 <aside class="callout callout-tip" data-callout="tip"><p>Tip body with <a href="https://example.com">a link</a>.</p>
 </aside><figure class="code-block" data-lang="rust" data-playground="rust">
-<pre><code class="language-rust">&lt;p&gt;fn main() {
-println!(&quot;hi&quot;);
-}&lt;/p&gt;
+<pre><code class="language-rust">
+fn main() {
+    println!(&quot;hi&quot;);
+}
 </code></pre>
 </figure><figure class="chart-block">
 <canvas id="chart-XXXX" data-chart-type="line" data-chart-src="data/x.json"></canvas>

@@ -39,8 +39,15 @@ pub fn render_with_registry(src: &str, reg: &Registry) -> Result<RenderOutput, C
                 body: inner,
                 ..
             } => {
-                let inner_html = crate::markdown::to_html(inner);
-                let block = resolve(reg, name, raw_args, Some(&inner_html))?;
+                let sc = reg
+                    .get(name)
+                    .ok_or_else(|| ContentError::UnknownShortcode(name.into()))?;
+                let body_passed = if sc.body_is_markdown() {
+                    crate::markdown::to_html(inner)
+                } else {
+                    inner.to_string()
+                };
+                let block = resolve(reg, name, raw_args, Some(&body_passed))?;
                 emit(&mut html, &mut manifest, block);
             }
         }

@@ -6,10 +6,12 @@ expression: normalize(&out.html)
 </aside><p>A bare-metal application must declare <code>no_std</code> + <code>no_main</code> and provide its own
 non-returning panic handler.</p>
 <figure class="code-block" data-lang="rust" data-playground="rust">
-<pre><code class="language-rust">&lt;p&gt;#![no_std]
-#![no_main]&lt;/p&gt;
-&lt;p&gt;#[panic_handler]
-fn panic(_info: &amp;amp;core::panic::PanicInfo) -&amp;gt; ! { loop {} }&lt;/p&gt;
+<pre><code class="language-rust">
+#![no_std]
+#![no_main]
+
+#[panic_handler]
+fn panic(_info: &amp;core::panic::PanicInfo) -&gt; ! { loop {} }
 </code></pre>
 </figure><p>The boot sequence configures the hardware vector table at <code>0x00000000</code>,
 clears <code>.bss</code>, and copies <code>.data</code> from flash to SRAM before jumping to <code>main</code>.</p>

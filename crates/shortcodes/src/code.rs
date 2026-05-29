@@ -12,6 +12,9 @@ impl Shortcode for Code {
     fn paired(&self) -> bool {
         true
     }
+    fn body_is_markdown(&self) -> bool {
+        false
+    }
 
     fn render(
         &self,

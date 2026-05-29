@@ -58,6 +58,11 @@ pub trait Shortcode: Send + Sync {
     fn paired(&self) -> bool {
         false
     }
+    /// If true, paired body is rendered through markdown before being passed
+    /// to render(). If false, body is passed raw. Default: true.
+    fn body_is_markdown(&self) -> bool {
+        true
+    }
 }
 
 #[derive(Default)]
