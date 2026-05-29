@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod health;
+pub mod reader;
 
 use axum::Router;
 use tower::ServiceBuilder;
@@ -19,6 +20,7 @@ pub fn router(state: AppState) -> Router {
 
     Router::new()
         .merge(health::router())
+        .merge(reader::router())
         .nest("/admin", admin::router(state.clone()))
         .route("/assets/*path", axum::routing::get(crate::embed::handler))
         .layer(service)
