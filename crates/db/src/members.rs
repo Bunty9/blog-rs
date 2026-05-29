@@ -144,6 +144,110 @@ pub async fn export_all(pool: &SqlitePool) -> Result<Vec<(String, &'static str, 
         .collect())
 }
 
+// ---------------------------------------------------------------------------
+// Phase 1e: signup + outbox helpers
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignupOutcome {
+    /// Email was new; row inserted.
+    Created,
+    /// Email already existed and is still pending confirmation.
+    AlreadyPending,
+    /// Email already confirmed and active.
+    AlreadyConfirmed,
+    /// Email exists but is currently unsubscribed; resubscribing.
+    Resubscribed,
+}
+
+/// Insert-or-resurrect member. Idempotent: returns an outcome the caller can
+/// use to decide whether to enqueue a new confirm email. Email is normalised
+/// to lowercase + trimmed before hitting the unique index.
+pub async fn signup(pool: &SqlitePool, email: &str) -> Result<(Member, SignupOutcome), DbError> {
+    let email = email.trim().to_ascii_lowercase();
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+
+    if let Some(existing) = sqlx::query_as::<_, Member>(
+        "SELECT id, email, confirmed_at, unsubscribed_at, created_at FROM members WHERE email = ?",
+    )
+    .bind(&email)
+    .fetch_optional(pool)
+    .await?
+    {
+        let outcome = match (existing.confirmed_at, existing.unsubscribed_at) {
+            (Some(_), Some(_)) => {
+                sqlx::query("UPDATE members SET unsubscribed_at = NULL WHERE id = ?")
+                    .bind(existing.id)
+                    .execute(pool)
+                    .await?;
+                SignupOutcome::Resubscribed
+            }
+            (Some(_), None) => SignupOutcome::AlreadyConfirmed,
+            (None, _) => SignupOutcome::AlreadyPending,
+        };
+        let m = find_by_id(pool, existing.id).await?;
+        return Ok((m, outcome));
+    }
+
+    let id = sqlx::query(
+        "INSERT INTO members(email, confirmed_at, unsubscribed_at, created_at)
+         VALUES (?, NULL, NULL, ?)",
+    )
+    .bind(&email)
+    .bind(now)
+    .execute(pool)
+    .await?
+    .last_insert_rowid();
+
+    Ok((find_by_id(pool, id).await?, SignupOutcome::Created))
+}
+
+pub async fn change_email(pool: &SqlitePool, id: i64, new_email: &str) -> Result<(), DbError> {
+    let normalized = new_email.trim().to_ascii_lowercase();
+    sqlx::query("UPDATE members SET email = ? WHERE id = ?")
+        .bind(normalized)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Enqueue confirm-email rows. Uses `post_id = 0` as the synthetic "confirm"
+/// marker (no FK enforcement on the test schema slice; production callers
+/// should use `crate::outbox::enqueue` once a real post is published).
+pub async fn enqueue_confirm(pool: &SqlitePool, member_id: i64) -> Result<(), DbError> {
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    sqlx::query(
+        "INSERT OR IGNORE INTO newsletter_outbox(post_id, member_id, status, attempts, created_at)
+         VALUES (0, ?, 'pending', 0, ?)",
+    )
+    .bind(member_id)
+    .bind(now)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Fan-out a published post to every confirmed, non-unsubscribed member.
+/// Idempotent on (post_id, member_id).
+pub async fn enqueue_post_to_all_confirmed(
+    pool: &SqlitePool,
+    post_id: i64,
+) -> Result<u64, DbError> {
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    let res = sqlx::query(
+        "INSERT OR IGNORE INTO newsletter_outbox(post_id, member_id, status, attempts, created_at)
+         SELECT ?, id, 'pending', 0, ?
+         FROM members
+         WHERE confirmed_at IS NOT NULL AND unsubscribed_at IS NULL",
+    )
+    .bind(post_id)
+    .bind(now)
+    .execute(pool)
+    .await?;
+    Ok(res.rows_affected())
+}
+
 #[cfg(any(test, feature = "test-helpers"))]
 pub async fn insert_fixture(
     pool: &SqlitePool,
@@ -251,5 +355,113 @@ mod admin_tests {
         assert_eq!(statuses["a@x.com"], "confirmed");
         assert_eq!(statuses["b@x.com"], "unsubscribed");
         assert_eq!(statuses["c@x.com"], "pending");
+    }
+}
+
+#[cfg(test)]
+mod signup_tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    // Inline schema slice — no FK on outbox.post_id, so the synthetic post_id=0
+    // used by enqueue_confirm round-trips without needing a real post.
+    async fn pool() -> SqlitePool {
+        let p = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE members (
+                id INTEGER PRIMARY KEY,
+                email TEXT NOT NULL UNIQUE,
+                confirmed_at INTEGER,
+                unsubscribed_at INTEGER,
+                created_at INTEGER NOT NULL
+             );",
+        )
+        .execute(&p)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE newsletter_outbox (
+                id INTEGER PRIMARY KEY,
+                post_id INTEGER NOT NULL,
+                member_id INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT,
+                sent_at INTEGER,
+                created_at INTEGER NOT NULL,
+                UNIQUE(post_id, member_id)
+             );",
+        )
+        .execute(&p)
+        .await
+        .unwrap();
+        p
+    }
+
+    #[tokio::test]
+    async fn signup_inserts_then_idempotent() {
+        let p = pool().await;
+        let (m1, o1) = signup(&p, "x@example.com").await.unwrap();
+        assert_eq!(o1, SignupOutcome::Created);
+        let (m2, o2) = signup(&p, "X@Example.com").await.unwrap();
+        assert_eq!(o2, SignupOutcome::AlreadyPending);
+        assert_eq!(m1.id, m2.id);
+    }
+
+    #[tokio::test]
+    async fn confirm_then_unsubscribe_then_resub() {
+        let p = pool().await;
+        let (m, _) = signup(&p, "a@example.com").await.unwrap();
+        confirm(&p, m.id).await.unwrap();
+        let m2 = find_by_id(&p, m.id).await.unwrap();
+        assert!(m2.confirmed_at.is_some());
+        unsubscribe(&p, m.id).await.unwrap();
+        let m3 = find_by_id(&p, m.id).await.unwrap();
+        assert!(m3.unsubscribed_at.is_some());
+        let (_, outcome) = signup(&p, "a@example.com").await.unwrap();
+        assert_eq!(outcome, SignupOutcome::Resubscribed);
+        let m4 = find_by_id(&p, m.id).await.unwrap();
+        assert!(m4.unsubscribed_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn enqueue_confirm_is_idempotent() {
+        let p = pool().await;
+        let (m, _) = signup(&p, "a@example.com").await.unwrap();
+        enqueue_confirm(&p, m.id).await.unwrap();
+        enqueue_confirm(&p, m.id).await.unwrap();
+        let n: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM newsletter_outbox WHERE member_id = ?")
+                .bind(m.id)
+                .fetch_one(&p)
+                .await
+                .unwrap();
+        assert_eq!(n, 1);
+    }
+
+    #[tokio::test]
+    async fn change_email_updates_normalised() {
+        let p = pool().await;
+        let (m, _) = signup(&p, "a@example.com").await.unwrap();
+        change_email(&p, m.id, "  B@EXAMPLE.com  ").await.unwrap();
+        let m2 = find_by_id(&p, m.id).await.unwrap();
+        assert_eq!(m2.email, "b@example.com");
+    }
+
+    #[tokio::test]
+    async fn enqueue_post_to_all_confirmed_skips_pending_and_unsubscribed() {
+        let p = pool().await;
+        let (a, _) = signup(&p, "a@example.com").await.unwrap();
+        confirm(&p, a.id).await.unwrap();
+        let (b, _) = signup(&p, "b@example.com").await.unwrap();
+        confirm(&p, b.id).await.unwrap();
+        unsubscribe(&p, b.id).await.unwrap();
+        let (_c, _) = signup(&p, "c@example.com").await.unwrap(); // pending
+        let n = enqueue_post_to_all_confirmed(&p, 42).await.unwrap();
+        assert_eq!(n, 1);
     }
 }
