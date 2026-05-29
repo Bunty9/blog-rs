@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>{% if ok %}Subscribed{% else %}Confirmation failed{% endif %} — {{ site_title }}</title>
+<link rel="stylesheet" href="/assets/reader/base.css" />
+</head>
+<body>
+<header class="site-header">
+<a class="site-title" href="/">{{ site_title }}</a>
+</header>
+
+<main class="container">
+<section class="confirmed">
+  {% if ok %}
+    <h1>You're subscribed</h1>
+    <p>Thanks — you're on the list for {{ site_title }}.</p>
+    <p><a href="/">Back to the home page</a></p>
+  {% else %}
+    <h1>That link didn't work</h1>
+    <p>{{ message }}</p>
+    <p><a href="/signup">Try again</a></p>
+  {% endif %}
+</section>
+</main>
+</body>
+</html>
