@@ -12,8 +12,11 @@ pub mod posts;
 pub mod search;
 pub mod series;
 pub mod sessions;
+pub mod settings;
 pub mod tags;
 pub mod users;
+
+pub use settings as settings_db;
 
 pub use error::DbError;
 pub use pool::connect;
