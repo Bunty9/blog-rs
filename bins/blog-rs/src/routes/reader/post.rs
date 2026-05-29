@@ -47,7 +47,7 @@ pub async fn handler(
     Path(slug): Path<String>,
     State(state): State<AppState>,
 ) -> Result<axum::response::Response, AppError> {
-    let post: Post = match db::posts::find_by_slug(&state.pool, &slug).await {
+    let mut post: Post = match db::posts::find_by_slug(&state.pool, &slug).await {
         Ok(p) if p.status == "published" => p,
         Ok(_) => {
             return Ok((StatusCode::NOT_FOUND, "404 — post not found").into_response());
@@ -57,6 +57,26 @@ pub async fn handler(
         }
         Err(e) => return Err(AppError::from(e)),
     };
+
+    // Lazy regen: if the cached HTML was rendered by an older RENDER_VERSION
+    // (e.g. legacy rows where the column defaults to 0), re-render from body_md
+    // and persist before serving. See spec §5.2.
+    let cached_version = db::posts::body_html_version(&state.pool, post.id).await?;
+    if cached_version < content::RENDER_VERSION as i64 {
+        let out = content::render(&post.body_md)
+            .map_err(|e| AppError::Internal(format!("re-render failed: {e}")))?;
+        let assets_json = serde_json::to_string(&out.assets).unwrap_or_else(|_| "[]".into());
+        db::posts::update_rendered_cache(
+            &state.pool,
+            post.id,
+            &out.html,
+            &assets_json,
+            content::RENDER_VERSION as i64,
+        )
+        .await?;
+        post.body_html = out.html;
+        post.assets_json = assets_json;
+    }
 
     let tag_rows = db::tags::list_for_post(&state.pool, post.id).await?;
     let tags: Vec<TagLink> = tag_rows
@@ -132,12 +152,14 @@ mod tests {
         sqlx::query(
             r#"
             INSERT INTO posts (slug, title, subtitle, status, author_id, published_at,
-                               updated_at, created_at, body_md, body_html, meta_json, assets_json)
+                               updated_at, created_at, body_md, body_html,
+                               body_html_version, meta_json, assets_json)
             VALUES ('boot-up', 'Booting a Cortex-M4', 'no_std notes', 'published', 1,
                     1700000000, 1700000000, 1700000000,
-                    '# x', '<aside class="callout callout-info">heads up</aside>', '{}', ?)
+                    '# x', '<aside class="callout callout-info">heads up</aside>', ?, '{}', ?)
             "#,
         )
+        .bind(content::RENDER_VERSION as i64)
         .bind(assets)
         .execute(&pool)
         .await
@@ -159,6 +181,52 @@ mod tests {
         assert!(body.contains("no_std notes"));
         assert!(body.contains(r#"class="callout callout-info""#));
         assert!(body.contains(r#"href="/assets/blocks/callout.css""#));
+    }
+
+    #[tokio::test]
+    async fn stale_body_html_version_triggers_lazy_regen() {
+        let (app, pool) = test_app().await;
+        // Seed a row with version=0 and intentionally stale body_html that does
+        // NOT match what content::render would produce from body_md.
+        sqlx::query(
+            r#"
+            INSERT INTO posts (slug, title, status, author_id, published_at,
+                               updated_at, created_at, body_md, body_html,
+                               body_html_version, meta_json, assets_json)
+            VALUES ('legacy', 'Legacy', 'published', 1, 1700000000, 1700000000,
+                    1700000000, '# Fresh heading', '<p>STALE</p>', 0, '{}', '[]')
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/posts/legacy")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        // Re-rendered output must reflect body_md, not the stale cache.
+        assert!(
+            !body.contains("STALE"),
+            "stale body_html should have been replaced"
+        );
+        assert!(body.contains("Fresh heading"));
+
+        // Persisted row should now carry the current RENDER_VERSION.
+        let v: i64 = sqlx::query_scalar("SELECT body_html_version FROM posts WHERE slug = ?")
+            .bind("legacy")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(v, content::RENDER_VERSION as i64);
     }
 
     #[tokio::test]

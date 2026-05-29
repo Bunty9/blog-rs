@@ -84,6 +84,40 @@ pub async fn find_by_slug(pool: &SqlitePool, slug: &str) -> Result<Post, DbError
         .map_err(DbError::from_row)
 }
 
+/// Read the currently persisted RENDER_VERSION for a post row.
+pub async fn body_html_version(pool: &SqlitePool, id: i64) -> Result<i64, DbError> {
+    let v: i64 = sqlx::query_scalar("SELECT body_html_version FROM posts WHERE id = ?")
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+    Ok(v)
+}
+
+/// Overwrite the rendered cache for a post (`body_html`, `assets_json`,
+/// `body_html_version`). Used by the lazy regeneration path when a published
+/// post is read with a stale `body_html_version`.
+pub async fn update_rendered_cache(
+    pool: &SqlitePool,
+    id: i64,
+    body_html: &str,
+    assets_json: &str,
+    version: i64,
+) -> Result<(), DbError> {
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    sqlx::query(
+        "UPDATE posts SET body_html = ?, assets_json = ?, body_html_version = ?, updated_at = ?
+         WHERE id = ?",
+    )
+    .bind(body_html)
+    .bind(assets_json)
+    .bind(version)
+    .bind(now)
+    .bind(id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn find_by_id(pool: &SqlitePool, id: i64) -> Result<Post, DbError> {
     sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE id = ?")
         .bind(id)
