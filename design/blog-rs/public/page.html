@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — blog-rs</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+</head>
+<body data-chrome data-base="../">
+  <div data-chrome-header></div>
+  <main id="main" class="container measure" style="padding-top: var(--space-7)">
+    <h1>About</h1>
+    <div class="prose" style="margin-top: var(--space-5)">
+      <p>blog-rs is the engine behind this site, and an excuse to write about the parts of software that don’t usually get a changelog: the allocator, the scheduler, the syscall you didn’t know you were making.</p>
+      <p>It’s built the way the writing recommends — server-rendered <a href="#">askama</a> templates over <a href="#">htmx</a>, no SPA framework, assets embedded at build time. The whole thing is fast because there’s very little of it.</p>
+      <h2>What you’ll find here</h2>
+      <p>Long-form, benchmarked posts about systems and performance, mostly in Rust. Code blocks you can run, charts with real numbers, and the occasional dead end documented honestly.</p>
+      <h2>Colophon</h2>
+      <p>Set in <strong>Inter</strong> and <strong>JetBrains Mono</strong>. Light and dark themes follow your system by default. There are no trackers; analytics, if any, are first-party and aggregate.</p>
+      <p>Say hello: <a href="#">hello@blog-rs.dev</a></p>
+    </div>
+  </main>
+  <div data-chrome-footer></div>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+</body>
+</html>

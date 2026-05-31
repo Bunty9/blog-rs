@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media — blog-rs admin</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .media-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
+    .media-toolbar .search-box { max-width: 240px; }
+    .media-toolbar .search-box input { padding-block: var(--space-2); }
+    .dropzone { border: 1.5px dashed var(--border-strong); border-radius: var(--r-md); padding: var(--space-6); text-align: center; color: var(--text-muted); margin-bottom: var(--space-5); transition: border-color var(--t-fast), background var(--t-fast); cursor: pointer; }
+    .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-hover); }
+    .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+    .media-item { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; cursor: pointer; transition: border-color var(--t-fast); background: var(--bg); }
+    .media-item:hover { border-color: var(--border-strong); }
+    .media-item img { aspect-ratio: 4/3; object-fit: cover; width: 100%; background: var(--surface-2); }
+    .media-item .mi-foot { padding: var(--space-2) var(--space-3); }
+    .media-item .mi-name { font-family: var(--font-mono); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .media-item .mi-meta { font-size: 0.7rem; color: var(--text-muted); }
+    .progress { height: 4px; background: var(--surface-2); border-radius: var(--r-full); overflow: hidden; margin-top: var(--space-3); }
+    .progress i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  </style>
+</head>
+<body data-admin data-admin-nav="media">
+  <div class="admin">
+    <div data-admin-sidebar></div>
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button class="icon-btn" aria-label="Toggle sidebar" onclick="toggleSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <div><h1>Media</h1><div class="breadcrumb" style="margin:2px 0 0"><a href="dashboard.html">Admin</a><span class="sep">/</span><span>Media</span></div></div>
+        <div class="at-actions">
+          <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+          <button class="btn btn-primary btn-sm" onclick="fakeUpload()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M5 11l7-7 7 7M5 20h14"/></svg> Upload</button>
+        </div>
+      </header>
+      <div class="admin-content">
+        <div class="media-toolbar">
+          <div class="search-box"><span class="s-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span><input type="search" placeholder="Search filenames…" /></div>
+          <select class="select" style="width:auto; padding-block:var(--space-2)"><option>All types</option><option>Images</option><option>SVG</option><option>Files</option></select>
+          <span class="spacer"></span><span class="meta">24 files · 18.2 MB</span>
+        </div>
+
+        <div class="dropzone" id="dz" onclick="fakeUpload()">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px"><path d="M12 16V4M5 11l7-7 7 7M5 20h14"/></svg>
+          <div>Drag &amp; drop images here, or click to browse</div>
+          <div class="meta" style="margin-top:6px">PNG, JPG, WebP, SVG · max 8 MB · content-addressed on disk</div>
+          <div class="progress hide" id="prog"><i></i></div>
+        </div>
+
+        <div class="media-grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail drawer -->
+  <div class="drawer" id="detail" role="dialog" aria-modal="true">
+    <div style="padding: var(--space-4) var(--space-5); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between"><h3 style="font-size:1.05rem">Media detail</h3><button class="icon-btn" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div style="padding: var(--space-5)">
+      <img id="d-img" style="width:100%; border-radius:var(--r-md); border:1px solid var(--border); aspect-ratio:4/3; object-fit:cover" alt="" />
+      <div class="field" style="margin-top:var(--space-4)"><label>Filename</label><div class="meta" id="d-name">benchmark-flamegraph.png</div></div>
+      <div class="row" style="gap:var(--space-5)"><div class="field" style="flex:1"><label>Size</label><div class="meta" id="d-size">412 KB</div></div><div class="field" style="flex:1"><label>Dimensions</label><div class="meta" id="d-dims">1600 × 900</div></div></div>
+      <div class="field"><label for="d-alt">Alt text</label><input class="input" id="d-alt" value="Flamegraph of the zero-copy parser" /></div>
+      <div class="field"><label>URL</label><div class="row" style="gap:var(--space-2)"><input class="input" id="d-url" readonly value="/media/3f/benchmark-flamegraph.png" style="font-family:var(--font-mono); font-size:0.78rem" /><button class="btn btn-secondary btn-sm" data-copy="#d-url" data-copy-text="/media/3f/benchmark-flamegraph.png"><span class="cc-label">Copy</span></button></div></div>
+      <div class="callout warn" style="margin:var(--space-4) 0"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><div class="co-body" style="font-size:0.85rem">In use on <strong>1 post</strong>. Delete is blocked until it’s unreferenced.</div></div>
+      <div class="row"><button class="btn btn-primary btn-sm" data-close onclick="toast('Alt text saved','success')">Save</button><button class="btn btn-danger btn-sm" disabled>Delete</button></div>
+    </div>
+  </div>
+
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/admin-shell.js"></script>
+  <script>
+    var files = [
+      ['benchmark-flamegraph.png','412 KB','1600 × 900','#dfe3ea'],
+      ['ring-buffer-diagram.svg','18 KB','vector','#eef0f4'],
+      ['cover-zero-copy.png','280 KB','1200 × 630','#e4e7ec'],
+      ['syscall-latency.png','190 KB','900 × 500','#d6dbe2'],
+      ['allocator-tree.svg','24 KB','vector','#e8ebf0'],
+      ['profile-trace.png','520 KB','1920 × 1080','#dde1e8'],
+      ['cover-syscall.png','244 KB','1200 × 630','#e0e4ea'],
+      ['scheduler-loop.svg','15 KB','vector','#eef0f4']
+    ];
+    var grid = document.getElementById('grid');
+    function tile(f){
+      return '<div class="media-item" onclick="openDetail(this)" data-name="'+f[0]+'" data-size="'+f[1]+'" data-dims="'+f[2]+'" data-color="'+f[3]+'">'+
+        '<img src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'160\' height=\'120\'%3E%3Crect width=\'160\' height=\'120\' fill=\''+encodeURIComponent(f[3])+'\'/%3E%3C/svg%3E" alt="" />'+
+        '<div class="mi-foot"><div class="mi-name">'+f[0]+'</div><div class="mi-meta">'+f[1]+'</div></div></div>';
+    }
+    grid.innerHTML = files.map(tile).join('');
+    function openDetail(el){
+      document.getElementById('d-name').textContent = el.dataset.name;
+      document.getElementById('d-size').textContent = el.dataset.size;
+      document.getElementById('d-dims').textContent = el.dataset.dims;
+      document.getElementById('d-url').value = '/media/3f/'+el.dataset.name;
+      document.getElementById('d-img').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='240'%3E%3Crect width='320' height='240' fill='"+encodeURIComponent(el.dataset.color)+"'/%3E%3C/svg%3E";
+      document.getElementById('detail').classList.add('open');
+    }
+    function fakeUpload(){
+      var prog = document.getElementById('prog'), bar = prog.querySelector('i');
+      prog.classList.remove('hide'); bar.style.width='0'; var p=0;
+      var iv=setInterval(function(){ p+=Math.random()*25; bar.style.width=Math.min(p,100)+'%'; if(p>=100){ clearInterval(iv); setTimeout(function(){ prog.classList.add('hide'); grid.insertAdjacentHTML('afterbegin', tile(['new-upload-'+Date.now().toString().slice(-4)+'.png','310 KB','1280 × 720','#d9dee6'])); grid.firstElementChild.querySelectorAll('*'); toast('Uploaded 1 file','success'); }, 300); } }, 180);
+    }
+    var dz = document.getElementById('dz');
+    ['dragover','dragenter'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('drag'); }); });
+    ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('drag'); if(ev==='drop') fakeUpload(); }); });
+  </script>
+</body>
+</html>

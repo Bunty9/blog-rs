@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscribe — blog-rs</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .txn-wrap { min-height: calc(100vh - var(--header-h)); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-7) var(--space-5); }
+    .txn-card { max-width: 420px; width: 100%; border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--space-7); background: var(--bg); text-align: center; }
+    .txn-card .tc-icon { width: 52px; height: 52px; margin: 0 auto var(--space-4); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; background: var(--accent-subtle); color: var(--accent-hover); }
+    .txn-card.ok .tc-icon { background: var(--success-subtle); color: var(--success); }
+    .txn-card.err .tc-icon { background: var(--danger-subtle); color: var(--danger); }
+    .txn-card h1 { font-size: 1.5rem; }
+    .txn-card p { color: var(--text-2); margin-top: var(--space-3); line-height: 1.55; }
+    .txn-card form { margin-top: var(--space-5); }
+    .txn-card .field { text-align: left; }
+    .txn-foot { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-5); }
+    .state-switch { display: flex; gap: var(--space-1); margin-bottom: var(--space-6); flex-wrap: wrap; justify-content: center; }
+    .state-switch button { font-family: var(--font-mono); font-size: 0.75rem; padding: 5px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2); border-radius: var(--r-full); cursor: pointer; }
+    .state-switch button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  </style>
+</head>
+<body data-chrome data-base="../">
+  <div data-chrome-header></div>
+  <main id="main">
+    <div class="txn-wrap">
+      <div class="state-switch" role="tablist" aria-label="Newsletter states">
+        <button class="active" onclick="showState('signup', this)">Signup</button>
+        <button onclick="showState('confirm', this)">Confirmed</button>
+        <button onclick="showState('prefs', this)">Preferences</button>
+        <button onclick="showState('unsub', this)">Unsubscribed</button>
+        <button onclick="showState('expired', this)">Expired link</button>
+      </div>
+
+      <!-- SIGNUP -->
+      <div class="txn-card" data-state="signup">
+        <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></div>
+        <h1>Subscribe to blog-rs</h1>
+        <p>New systems &amp; performance writing in your inbox, roughly twice a month. Free, no spam, one-click unsubscribe.</p>
+        <form onsubmit="event.preventDefault(); showState('confirm'); document.querySelectorAll('.state-switch button')[1].click()">
+          <div class="field"><label for="em">Email address</label><input class="input" id="em" type="email" placeholder="you@example.com" required /></div>
+          <input type="hidden" name="csrf" value="•••" />
+          <button class="btn btn-primary" type="submit" style="width:100%">Subscribe</button>
+        </form>
+        <div class="txn-foot">CSRF-protected · double opt-in</div>
+      </div>
+
+      <!-- CONFIRM -->
+      <div class="txn-card ok hide" data-state="confirm">
+        <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h1>You’re subscribed 🎉</h1>
+        <p>Your email is confirmed. The next post will land in your inbox. You can change your mind anytime from the link in any email.</p>
+        <a class="btn btn-secondary" href="home.html" style="margin-top: var(--space-5)">Back to the blog</a>
+        <div class="txn-foot">HMAC token validated</div>
+      </div>
+
+      <!-- PREFS -->
+      <div class="txn-card hide" data-state="prefs">
+        <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <h1>Email preferences</h1>
+        <p style="margin-bottom: var(--space-5)">Managing <strong>you@example.com</strong></p>
+        <div style="text-align:left; border:1px solid var(--border); border-radius:var(--r-md); padding:var(--space-4); display:flex; align-items:center; justify-content:space-between">
+          <div><div style="font-weight:550">New post emails</div><div class="meta" style="margin-top:2px">~2 per month</div></div>
+          <span class="switch"><input type="checkbox" checked /><span class="slider"></span></span>
+        </div>
+        <button class="btn btn-primary" style="width:100%; margin-top:var(--space-4)" onclick="toast('Preferences saved','success')">Save preferences</button>
+        <button class="btn btn-ghost" style="width:100%; margin-top:var(--space-2); color:var(--danger)" onclick="showState('unsub'); document.querySelectorAll('.state-switch button')[3].click()">Unsubscribe from everything</button>
+        <div class="txn-foot">Token-based · no login required</div>
+      </div>
+
+      <!-- UNSUB -->
+      <div class="txn-card hide" data-state="unsub">
+        <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <h1>You’ve been unsubscribed</h1>
+        <p>You won’t receive any more emails. Sorry to see you go — if it was a mistake, you can re-subscribe in one tap.</p>
+        <button class="btn btn-primary" style="margin-top:var(--space-5)" onclick="toast('Welcome back! Check your inbox','success'); showState('confirm'); document.querySelectorAll('.state-switch button')[1].click()">Re-subscribe</button>
+        <div class="txn-foot">Idempotent · one-click</div>
+      </div>
+
+      <!-- EXPIRED -->
+      <div class="txn-card err hide" data-state="expired">
+        <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <h1>This link has expired</h1>
+        <p>Confirmation links are valid for 24 hours. Enter your email again and we’ll send a fresh one.</p>
+        <button class="btn btn-primary" style="margin-top:var(--space-5)" onclick="showState('signup'); document.querySelectorAll('.state-switch button')[0].click()">Re-send confirmation</button>
+        <div class="txn-foot">HMAC token invalid or expired</div>
+      </div>
+    </div>
+  </main>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+  <script>
+    function showState(s, btn){
+      document.querySelectorAll('.txn-card').forEach(function(c){ c.classList.toggle('hide', c.getAttribute('data-state')!==s); });
+      if(btn){ document.querySelectorAll('.state-switch button').forEach(function(b){ b.classList.toggle('active', b===btn); }); }
+    }
+  </script>
+</body>
+</html>

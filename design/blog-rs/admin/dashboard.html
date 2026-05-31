@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — blog-rs admin</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+    .panels-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4); }
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .mini-table td { padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border); }
+    .mini-table tr:last-child td { border-bottom: none; }
+    .mini-table td:last-child { text-align: right; font-family: var(--font-mono); color: var(--text-2); }
+    .mini-table a { color: var(--text); text-decoration: none; font-weight: 500; }
+    .mini-table a:hover { color: var(--accent); }
+    .bar-cell { display: flex; align-items: center; gap: var(--space-3); }
+    .bar-cell .b { height: 6px; background: var(--accent); border-radius: var(--r-full); }
+    @media (max-width: 1024px) { .stat-grid { grid-template-columns: repeat(2,1fr); } .panels-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body data-admin data-admin-nav="dashboard">
+  <div class="admin">
+    <div data-admin-sidebar></div>
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button class="icon-btn" aria-label="Toggle sidebar" onclick="toggleSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <h1>Overview</h1>
+        <div class="at-actions">
+          <div class="segment" data-segment id="window-seg">
+            <button data-value="7" class="active">7d</button>
+            <button data-value="30">30d</button>
+            <button data-value="90">90d</button>
+          </div>
+          <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+          <span class="avatar" title="admin@blog-rs.dev">A</span>
+        </div>
+      </header>
+      <div class="admin-content" id="analytics">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="sc-label">Views</div>
+            <div class="sc-value" data-stat="views">1,204</div>
+            <div class="sc-foot"><span class="sc-delta up">▲ 12%</span><svg class="sparkline" viewBox="0 0 72 24"><polyline fill="none" stroke="var(--accent)" stroke-width="2" points="0,18 12,16 24,17 36,10 48,12 60,6 72,4"/></svg></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Members</div>
+            <div class="sc-value" data-stat="members">312</div>
+            <div class="sc-foot"><span class="sc-delta up">▲ 8</span><svg class="sparkline" viewBox="0 0 72 24"><polyline fill="none" stroke="var(--accent)" stroke-width="2" points="0,20 12,19 24,17 36,16 48,12 60,9 72,6"/></svg></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Sends</div>
+            <div class="sc-value" data-stat="sends">8</div>
+            <div class="sc-foot"><span class="sc-delta">→ steady</span><svg class="sparkline" viewBox="0 0 72 24"><polyline fill="none" stroke="var(--text-muted)" stroke-width="2" points="0,12 12,12 24,10 36,12 48,11 60,12 72,12"/></svg></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Open rate</div>
+            <div class="sc-value" data-stat="open">41%</div>
+            <div class="sc-foot"><span class="sc-delta down">▼ 2%</span><svg class="sparkline" viewBox="0 0 72 24"><polyline fill="none" stroke="var(--danger)" stroke-width="2" points="0,8 12,7 24,9 36,8 48,11 60,10 72,12"/></svg></div>
+          </div>
+        </div>
+
+        <div class="panels-2">
+          <div class="panel">
+            <h3 class="panel-title">Top posts <span style="float:right; font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); font-weight:400">by views</span></h3>
+            <table class="mini-table">
+              <tr><td><div class="bar-cell"><a href="editor.html">Building a zero-copy log parser</a></div></td><td>+ <div class="b" style="width:90px; display:inline-block; vertical-align:middle"></div> 612</td></tr>
+              <tr><td><a href="editor.html">The cost of a syscall, measured</a></td><td><div class="b" style="width:60px; display:inline-block; vertical-align:middle"></div> 408</td></tr>
+              <tr><td><a href="editor.html">From zero to a working allocator</a></td><td><div class="b" style="width:40px; display:inline-block; vertical-align:middle"></div> 287</td></tr>
+              <tr><td><a href="editor.html">Async cancellation, done right</a></td><td><div class="b" style="width:26px; display:inline-block; vertical-align:middle"></div> 184</td></tr>
+            </table>
+          </div>
+          <div class="panel">
+            <h3 class="panel-title">Top referrers</h3>
+            <table class="mini-table">
+              <tr><td><a href="#">news.ycombinator.com</a></td><td>438</td></tr>
+              <tr><td><a href="#">lobste.rs</a></td><td>211</td></tr>
+              <tr><td><a href="#">reddit.com/r/rust</a></td><td>156</td></tr>
+              <tr><td><a href="#">Direct / RSS</a></td><td>142</td></tr>
+              <tr><td><a href="#">twitter.com</a></td><td>89</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="panels-2">
+          <div class="panel">
+            <h3 class="panel-title">Audience split</h3>
+            <div class="panel-pad">
+              <div style="display:flex; height:14px; border-radius:var(--r-full); overflow:hidden; margin-bottom:var(--space-4)"><div style="width:62%; background:var(--accent)"></div><div style="width:38%; background:var(--surface-2)"></div></div>
+              <div class="row" style="justify-content:space-between; font-size:0.85rem"><span class="row" style="gap:8px"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span> Members</span><span class="meta">62% · 747</span></div>
+              <div class="row" style="justify-content:space-between; font-size:0.85rem; margin-top:8px"><span class="row" style="gap:8px"><span style="width:10px;height:10px;border-radius:2px;background:var(--surface-2);display:inline-block"></span> Anonymous</span><span class="meta">38% · 457</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3 class="panel-title">Latest sends</h3>
+            <table class="mini-table">
+              <tr><td><a href="#">Building a zero-copy log parser</a><div class="meta" style="margin-top:2px">Jun 1 · 312 sent</div></td><td><span class="badge published" style="font-size:0.68rem">41% open</span></td></tr>
+              <tr><td><a href="#">The cost of a syscall</a><div class="meta" style="margin-top:2px">May 28 · 305 sent</div></td><td><span class="badge published" style="font-size:0.68rem">44% open</span></td></tr>
+              <tr><td><a href="#">Async cancellation</a><div class="meta" style="margin-top:2px">May 21 · 298 sent</div></td><td><span class="badge published" style="font-size:0.68rem">39% open</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/admin-shell.js"></script>
+  <script>
+    var sets = {
+      '7':  {views:'1,204', members:'312', sends:'8', open:'41%'},
+      '30': {views:'5,832', members:'341', sends:'6', open:'43%'},
+      '90': {views:'18,407', members:'389', sends:'19', open:'40%'}
+    };
+    document.getElementById('window-seg').addEventListener('segment:change', function(e){
+      var s = sets[e.detail]; if(!s) return;
+      document.querySelectorAll('[data-stat]').forEach(function(el){
+        var k = el.getAttribute('data-stat'); el.style.opacity='0';
+        setTimeout(function(){ el.textContent = s[k]; el.style.transition='opacity .2s'; el.style.opacity='1'; }, 120);
+      });
+    });
+  </script>
+</body>
+</html>

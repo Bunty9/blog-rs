@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building a zero-copy log parser in Rust — blog-rs</title>
+  <meta name="description" content="How we cut allocation overhead to near-zero by parsing directly out of the mmap’d ring buffer." />
+  <!-- OG / Twitter / JSON-LD would render here (Slice 1) -->
+  <meta property="og:title" content="Building a zero-copy log parser in Rust" />
+  <meta property="og:type" content="article" />
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .post-layout { display: grid; grid-template-columns: 1fr minmax(0, var(--measure)) 1fr; gap: var(--space-6); padding-top: var(--space-6); }
+    .post-aside { position: relative; }
+    .post-aside .toc { position: sticky; top: calc(var(--header-h) + var(--space-6)); padding-left: var(--space-4); }
+    .post-main { min-width: 0; }
+    .post-head h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin-top: var(--space-3); }
+    .post-head .subtitle { font-size: 1.2rem; color: var(--text-2); margin-top: var(--space-3); line-height: 1.5; }
+    .post-head .meta-strip { margin-top: var(--space-4); }
+    .post-cover { width: 100%; aspect-ratio: 2/1; object-fit: cover; border-radius: var(--r-md); background: var(--surface-2); margin-top: var(--space-5); border: 1px solid var(--border); }
+    .toc-mobile { display: none; }
+    .post-foot { margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--border); }
+    .series-banner { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); text-decoration: none; margin-top: var(--space-5); }
+    .series-banner .sb-icon { width: 38px; height: 38px; border-radius: var(--r-md); background: var(--accent-subtle); color: var(--accent-hover); display: flex; align-items: center; justify-content: center; flex: none; }
+    .subscribe-inline { margin-top: var(--space-7); padding: var(--space-6); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); text-align: center; }
+    .subscribe-inline form { display: flex; gap: var(--space-2); max-width: 420px; margin: var(--space-4) auto 0; }
+    @media (max-width: 1024px) {
+      .post-layout { grid-template-columns: 1fr; max-width: var(--measure); margin-inline: auto; }
+      .post-aside { display: none; }
+      .toc-mobile { display: block; }
+    }
+    @media (max-width: 540px) { .subscribe-inline form { flex-direction: column; } }
+  </style>
+</head>
+<body data-chrome data-base="../">
+  <div data-chrome-header></div>
+
+  <main id="main" class="container">
+    <div class="post-layout">
+      <div></div>
+      <article class="post-main">
+        <div class="breadcrumb"><a href="home.html">Home</a><span class="sep">/</span><a href="tag.html">rust</a></div>
+
+        <header class="post-head">
+          <h1>Building a zero-copy log parser in Rust</h1>
+          <p class="subtitle">How we cut allocation overhead to near-zero by parsing directly out of the mmap’d ring buffer — and the unsafe we had to write to get there.</p>
+          <div class="meta-strip">
+            <span class="avatar">RS</span>
+            <span class="meta">9 min read</span><span class="dot-sep">·</span>
+            <span class="meta">Jun 1, 2026</span><span class="dot-sep">·</span>
+            <a class="tag" href="tag.html">rust</a><a class="tag" href="tag.html">performance</a><a class="tag" href="tag.html">embedded</a>
+          </div>
+          <img class="post-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400'%3E%3Crect width='800' height='400' fill='%23eef0f4'/%3E%3Ctext x='50%25' y='50%25' fill='%23b8bfca' font-family='monospace' font-size='15' text-anchor='middle'%3Ecover image%3C/text%3E%3C/svg%3E" alt="" width="800" height="400" />
+        </header>
+
+        <!-- mobile TOC -->
+        <details class="accordion toc-mobile" style="margin-top: var(--space-5)">
+          <summary>Contents <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary>
+          <div class="acc-body"><nav class="toc"><ul><li><a href="#intro">The problem</a></li><li><a href="#setup">Setting up the ring buffer</a></li><li><a href="#parsing">Parsing without copies</a></li><li><a href="#unsafe">The unsafe we wrote</a></li><li><a href="#bench">Benchmarks</a></li><li><a href="#wrap">What we’d do differently</a></li></ul></nav></div>
+        </details>
+
+        <div class="prose" id="article">
+          <h2 id="intro">The problem <a class="anchor" href="#intro" aria-label="Link to section">#</a></h2>
+          <p>Our ingestion pipeline was spending <strong>40% of its CPU time in <code>memcpy</code></strong>. Every log line went through three buffers before it was parsed: the kernel’s socket buffer, our read buffer, and a freshly-allocated <code>String</code> for each field. For a service handling 200k lines per second, that adds up fast.</p>
+          <p>The insight is simple: the bytes are already in memory. If we map the ring buffer with <code>mmap</code> and parse fields as <code>&amp;[u8]</code> slices that borrow from it, we never copy at all. The borrow checker even guarantees we don’t hold a slice past the point the buffer is recycled.</p>
+
+          <div class="callout info"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="co-body">All benchmarks here run on a 12-core Ryzen 9 with <code>perf stat</code>, payloads pinned to one NUMA node. Numbers are p50 of 1M iterations.</div></div>
+
+          <h2 id="setup">Setting up the ring buffer <a class="anchor" href="#setup" aria-label="Link to section">#</a></h2>
+          <p>We use a power-of-two sized mapping so the wrap-around is a single bitwise <code>AND</code> instead of a modulo. Here’s the skeleton:</p>
+
+          <div class="code-card" id="cc1">
+            <div class="cc-bar">
+              <span class="cc-lang">rust · ring.rs</span>
+              <div class="cc-actions">
+                <button class="cc-btn run" onclick="runRing()"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg> Run</button>
+                <button class="cc-btn" data-copy="#cc1 pre"><span class="cc-label">Copy</span></button>
+              </div>
+            </div>
+<pre><code><span class="tok-kw">pub struct</span> <span class="tok-fn">Ring</span> <span class="tok-punct">{</span>
+    buf<span class="tok-punct">:</span> <span class="tok-punct">*</span><span class="tok-kw">mut</span> <span class="tok-fn">u8</span><span class="tok-punct">,</span>
+    mask<span class="tok-punct">:</span> <span class="tok-fn">usize</span><span class="tok-punct">,</span>   <span class="tok-com">// len - 1, len is 2^n</span>
+    head<span class="tok-punct">:</span> <span class="tok-fn">usize</span><span class="tok-punct">,</span>
+<span class="tok-punct">}</span>
+
+<span class="tok-kw">impl</span> <span class="tok-fn">Ring</span> <span class="tok-punct">{</span>
+    <span class="tok-com">// Borrow the next line WITHOUT copying it.</span>
+    <span class="tok-kw">pub fn</span> <span class="tok-fn">next_line</span><span class="tok-punct">(&amp;</span><span class="tok-kw">self</span><span class="tok-punct">) -&gt;</span> <span class="tok-fn">Option</span><span class="tok-punct">&lt;&amp;[</span><span class="tok-fn">u8</span><span class="tok-punct">]&gt; {</span>
+        <span class="tok-kw">let</span> start <span class="tok-punct">=</span> <span class="tok-kw">self</span><span class="tok-punct">.</span>head <span class="tok-punct">&amp;</span> <span class="tok-kw">self</span><span class="tok-punct">.</span>mask<span class="tok-punct">;</span>
+        <span class="tok-com">// ... find '\n', return slice into buf</span>
+        <span class="tok-fn">Some</span><span class="tok-punct">(&amp;[])</span>
+    <span class="tok-punct">}</span>
+<span class="tok-punct">}</span></code></pre>
+            <div class="cc-output hide" id="ring-out"></div>
+          </div>
+
+          <div class="callout warn"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><div class="co-body"><strong>Watch the lifetime.</strong> The returned slice borrows <code>&amp;self</code>, so the buffer can’t be advanced while a line is still in scope. That’s the borrow checker doing our bookkeeping for free.</div></div>
+
+          <h2 id="parsing">Parsing without copies <a class="anchor" href="#parsing" aria-label="Link to section">#</a></h2>
+          <p>Each field is just a sub-slice. We split on the delimiter and hand back <code>&amp;str</code> views validated with <code>from_utf8</code>. No allocation, no <code>String</code>, no <code>clone</code>.</p>
+          <p>The reduction in latency was dramatic across every payload size we tested:</p>
+
+          <figure class="chart-fig">
+            <div class="chart-wrap"><div class="chart-skeleton" id="post-skel"></div><canvas id="postChart" class="hide"></canvas></div>
+            <figcaption>p50 parse latency (µs, log scale) — copying parser vs. zero-copy, by line size.</figcaption>
+          </figure>
+
+          <h2 id="unsafe">The unsafe we wrote <a class="anchor" href="#unsafe" aria-label="Link to section">#</a></h2>
+          <p>There’s no getting around it: turning a raw pointer into a slice is <code>unsafe</code>. We isolate it to a single function with a documented invariant, and everything above it is safe.</p>
+
+          <details class="accordion"><summary>Show the safety argument <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary><div class="acc-body">The pointer is valid for <code>len</code> bytes because we allocated exactly <code>len</code> with <code>mmap</code> and never free it for the lifetime of the <code>Ring</code>. The slice never outlives <code>&amp;self</code>, so no use-after-free is possible. We assert alignment in the constructor.</div></details>
+
+          <h2 id="bench">Benchmarks <a class="anchor" href="#bench" aria-label="Link to section">#</a></h2>
+          <p>Beyond raw latency, the allocation count went from <strong>3 per line to zero</strong>. Here’s the perf summary, and a related reference if you want to go deeper:</p>
+
+          <a class="bookmark" href="#" onclick="return false">
+            <div class="bm-text">
+              <div class="bm-title">The Rust Performance Book</div>
+              <div class="bm-desc">Techniques to improve the speed and memory usage of Rust programs, maintained by the compiler team.</div>
+              <div class="bm-site"><span class="favicon"></span> nnethercote.github.io</div>
+            </div>
+            <img class="bm-thumb" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150'%3E%3Crect width='200' height='150' fill='%23eef0f4'/%3E%3C/svg%3E" alt="" />
+          </a>
+
+          <h2 id="wrap">What we’d do differently <a class="anchor" href="#wrap" aria-label="Link to section">#</a></h2>
+          <p>If we started over, we’d reach for <code>io_uring</code> from the beginning rather than retrofitting it. The zero-copy parser was the right call — but feeding it with completion-based I/O would have removed the last <code>read()</code> copy too.</p>
+          <div class="callout tip"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><div class="co-body"><strong>Takeaway.</strong> Borrowing instead of copying isn’t just faster — it makes the lifetime of your data explicit, and the compiler enforces it.</div></div>
+        </div>
+
+        <!-- foot -->
+        <div class="post-foot">
+          <div class="row-wrap" style="margin-bottom: var(--space-5)">
+            <span class="meta">Tagged</span>
+            <a class="tag" href="tag.html">rust</a><a class="tag" href="tag.html">performance</a><a class="tag" href="tag.html">embedded</a>
+          </div>
+
+          <a class="series-banner" href="series.html">
+            <div class="sb-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+            <div><div class="meta">Part 3 of a series</div><div style="font-weight:600">Systems from scratch →</div></div>
+          </a>
+
+          <h3 style="margin-top: var(--space-7); margin-bottom: var(--space-4); font-size:1.2rem">Related</h3>
+          <div class="related-grid">
+            <a class="post-card" href="post.html"><h3 style="font-size:1.05rem">The cost of a syscall, measured</h3><div class="pc-meta"><span class="meta">8 min · perf</span></div></a>
+            <a class="post-card" href="post.html"><h3 style="font-size:1.05rem">From zero to a working allocator</h3><div class="pc-meta"><span class="meta">11 min · systems</span></div></a>
+            <a class="post-card" href="post.html"><h3 style="font-size:1.05rem">Profiling async runtimes</h3><div class="pc-meta"><span class="meta">9 min · async</span></div></a>
+          </div>
+
+          <nav class="prevnext">
+            <a class="prev" href="post.html"><div class="pn-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg> Previous</div><div class="pn-title">The cost of a syscall, measured</div></a>
+            <a class="next" href="post.html"><div class="pn-label">Next <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div><div class="pn-title">Async cancellation, done right</div></a>
+          </nav>
+
+          <div class="subscribe-inline">
+            <h3 style="font-size:1.3rem">Get new posts by email</h3>
+            <p style="color:var(--text-2); margin-top:var(--space-2)">Systems &amp; performance writing, roughly twice a month. No spam.</p>
+            <form onsubmit="event.preventDefault(); this.querySelector('input').value=''; toast('Check your inbox to confirm','success')">
+              <input class="input" type="email" placeholder="you@example.com" required aria-label="Email" />
+              <button class="btn btn-primary" type="submit">Subscribe</button>
+            </form>
+          </div>
+        </div>
+      </article>
+
+      <aside class="post-aside" aria-label="Table of contents">
+        <nav class="toc" id="toc">
+          <div class="toc-label">On this page</div>
+          <ul>
+            <li><a href="#intro">The problem</a></li>
+            <li><a href="#setup">Setting up the ring buffer</a></li>
+            <li><a href="#parsing">Parsing without copies</a></li>
+            <li><a href="#unsafe">The unsafe we wrote</a></li>
+            <li><a href="#bench">Benchmarks</a></li>
+            <li><a href="#wrap">What we’d do differently</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <div data-chrome-footer></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+  <script>
+    function runRing(){ var o=document.getElementById('ring-out'); o.classList.remove('hide'); o.innerHTML='<span style="color:#8b949e">$ cargo test ring</span><br><span class="ok">running 3 tests</span><br>test ring::wraps_at_boundary ... <span class="ok">ok</span><br>test ring::no_copy_slice ... <span class="ok">ok</span><br>test ring::lifetime_enforced ... <span class="ok">ok</span><br><span class="ok">test result: ok. 3 passed</span>'; }
+
+    // scroll-spy TOC
+    (function(){
+      var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+      var map = {};
+      links.forEach(function(l){ map[l.getAttribute('href').slice(1)] = l; });
+      var headings = links.map(function(l){ return document.getElementById(l.getAttribute('href').slice(1)); }).filter(Boolean);
+      var obs = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){
+            links.forEach(function(l){ l.classList.remove('active'); });
+            if(map[e.target.id]) map[e.target.id].classList.add('active');
+          }
+        });
+      }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+      headings.forEach(function(h){ obs.observe(h); });
+    })();
+
+    // chart
+    window.addEventListener('load', function(){
+      setTimeout(function(){
+        var skel=document.getElementById('post-skel'), cv=document.getElementById('postChart');
+        skel.classList.add('hide'); cv.classList.remove('hide');
+        var css=getComputedStyle(document.documentElement);
+        var accent=css.getPropertyValue('--accent').trim(), muted=css.getPropertyValue('--text-muted').trim(), grid=css.getPropertyValue('--border').trim();
+        new Chart(cv,{type:'line',
+          data:{labels:['64 B','256 B','1 KB','4 KB','16 KB'],
+            datasets:[
+              {label:'copying',data:[1.8,4.2,14,52,210],borderColor:muted,backgroundColor:'transparent',tension:0.3,borderWidth:2,pointRadius:3},
+              {label:'zero-copy',data:[0.6,0.9,2.1,6.4,22],borderColor:accent,backgroundColor:'transparent',tension:0.3,borderWidth:2,pointRadius:3}
+            ]},
+          options:{responsive:true,maintainAspectRatio:false,
+            scales:{y:{type:'logarithmic',grid:{color:grid},ticks:{color:muted,font:{family:'JetBrains Mono',size:10}}},x:{grid:{display:false},ticks:{color:muted,font:{family:'JetBrains Mono',size:10}}}},
+            plugins:{legend:{labels:{color:muted,font:{family:'JetBrains Mono',size:11},boxWidth:12}}}}
+        });
+      }, 700);
+    });
+  </script>
+</body>
+</html>
