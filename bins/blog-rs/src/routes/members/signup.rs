@@ -29,6 +29,7 @@ use lettre::Message;
 pub struct SignupPage<'a> {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub site_title: &'a str,
     pub csrf_token: &'a str,
     pub email: &'a str,
@@ -59,6 +60,7 @@ pub async fn show(State(st): State<AppState>, headers: axum::http::HeaderMap) ->
     let mut res = SignupPage {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "",
         site_title: &st.site.site_title,
         csrf_token: &csrf,
         email: "",
@@ -99,6 +101,7 @@ pub async fn submit(
         return SignupPage {
             site: SiteCtx::placeholder(),
             asset_tags: Vec::new(),
+            nav: "",
             site_title: &st.site.site_title,
             csrf_token: &input.csrf_token,
             email: &input.email,
@@ -135,6 +138,7 @@ pub async fn submit(
     SignupPage {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "",
         site_title: &st.site.site_title,
         csrf_token: &input.csrf_token,
         email: &member.email,

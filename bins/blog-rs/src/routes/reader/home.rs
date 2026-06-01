@@ -41,6 +41,7 @@ impl From<&posts::Post> for PostCard {
 pub struct HomeTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub cards: Vec<PostCard>,
     pub pagination: Pagination,
 }
@@ -62,6 +63,7 @@ pub async fn handler(
     Ok(HomeTemplate {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(), // home page has no shortcode assets
+        nav: "home",
         cards,
         pagination: Pagination::new(page, total, "/"),
     })
@@ -131,6 +133,10 @@ mod tests {
             "slug link missing: {body}"
         );
         assert!(body.contains("2023-11-14"), "iso date missing: {body}");
+        assert!(
+            body.contains("class=\"post-card\""),
+            "post-card class missing: {body}"
+        );
     }
 
     #[tokio::test]

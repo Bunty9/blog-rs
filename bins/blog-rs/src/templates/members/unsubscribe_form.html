@@ -1,11 +1,25 @@
 {% extends "reader/base.html" %}
 {% block title %}Unsubscribe — {{ site.title }}{% endblock %}
+{% block extra_head %}
+<style>
+  .txn-wrap { min-height: calc(100vh - var(--header-h)); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-7) var(--space-5); }
+  .txn-card { max-width: 420px; width: 100%; border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--space-7); background: var(--bg); text-align: center; }
+  .txn-card .tc-icon { width: 52px; height: 52px; margin: 0 auto var(--space-4); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; background: var(--accent-subtle); color: var(--accent-hover); }
+  .txn-card h1 { font-size: 1.5rem; }
+  .txn-card p { color: var(--text-2); margin-top: var(--space-3); line-height: 1.55; }
+  .txn-foot { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-5); }
+</style>
+{% endblock %}
 {% block content %}
-<section class="unsubscribe">
-  <h1>Unsubscribe from {{ site_title }}</h1>
-  <p>You're unsubscribing <strong>{{ email }}</strong>. Click the button below to confirm.</p>
-  <form method="post" action="/unsubscribe/{{ token }}">
-    <button type="submit">Unsubscribe</button>
-  </form>
-</section>
+<div class="txn-wrap">
+  <div class="txn-card">
+    <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+    <h1>Unsubscribe from {{ site_title }}</h1>
+    <p>You're unsubscribing <strong>{{ email }}</strong>. Click the button below to confirm.</p>
+    <form method="post" action="/unsubscribe/{{ token }}" style="margin-top: var(--space-5)">
+      <button class="btn btn-primary" type="submit" style="width:100%">Unsubscribe</button>
+    </form>
+    <div class="txn-foot">Token-based · one-click</div>
+  </div>
+</div>
 {% endblock %}

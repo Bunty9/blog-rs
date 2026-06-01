@@ -1,0 +1,94 @@
+{% extends "reader/base.html" %}
+
+{% block title %}{{ page.title }} — {{ site.title }}{% endblock %}
+{% block description %}{% if let Some(d) = meta.description %}{{ d }}{% else %}{{ page.title }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="canonical" href="{% if let Some(c) = meta.canonical_url %}{{ c }}{% else %}{{ site.base_url }}/{{ page.slug }}{% endif %}" />
+<meta property="og:title" content="{{ page.title }}" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{% if let Some(c) = meta.canonical_url %}{{ c }}{% else %}{{ site.base_url }}/{{ page.slug }}{% endif %}" />
+{% if let Some(img) = meta.og_image %}<meta property="og:image" content="{{ img }}" />
+{% endif -%}
+<meta property="og:description" content="{% if let Some(d) = meta.description %}{{ d }}{% else %}{{ page.title }}{% endif %}" />
+<meta name="twitter:card" content="{% if let Some(tc) = meta.twitter_card %}{{ tc }}{% else if meta.og_image.is_some() %}summary_large_image{% else %}summary{% endif %}" />
+<meta name="twitter:title" content="{{ page.title }}" />
+<meta name="twitter:description" content="{% if let Some(d) = meta.description %}{{ d }}{% else %}{{ page.title }}{% endif %}" />
+{% if let Some(img) = meta.og_image %}<meta name="twitter:image" content="{{ img }}" />
+{% endif -%}
+<script type="application/ld+json">{{ jsonld|safe }}</script>
+<style>
+  .page-layout { display: grid; grid-template-columns: 1fr minmax(0, var(--measure)) 1fr; gap: var(--space-6); padding-top: var(--space-6); }
+  .page-aside { position: relative; }
+  .page-aside .toc { position: sticky; top: calc(var(--header-h) + var(--space-6)); padding-left: var(--space-4); }
+  .page-main { min-width: 0; }
+  .page-head h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin-top: var(--space-3); }
+  .toc-mobile { display: none; }
+  @media (max-width: 1024px) {
+    .page-layout { grid-template-columns: 1fr; max-width: var(--measure); margin-inline: auto; }
+    .page-aside { display: none; }
+    .toc-mobile { display: block; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-layout">
+  <div></div>
+  <article class="page-main">
+    <header class="page-head">
+      <h1>{{ page.title }}</h1>
+    </header>
+
+    {% if !page.toc.is_empty() %}
+    <details class="accordion toc-mobile" style="margin-top: var(--space-5)">
+      <summary>Contents <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary>
+      <div class="acc-body">
+        <nav class="toc">
+          <ul>
+            {% for entry in page.toc %}
+            <li>
+              <a href="#{{ entry.id }}">{{ entry.text }}</a>
+              {% if !entry.children.is_empty() %}
+              <ul>
+                {% for child in entry.children %}
+                <li><a href="#{{ child.id }}">{{ child.text }}</a></li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </div>
+    </details>
+    {% endif %}
+
+    <div class="prose" id="article">{{ page.body_html|safe }}</div>
+  </article>
+
+  {% if !page.toc.is_empty() %}
+  <aside class="page-aside" aria-label="Table of contents">
+    <nav class="toc" id="toc">
+      <div class="toc-label">On this page</div>
+      <ul>
+        {% for entry in page.toc %}
+        <li>
+          <a href="#{{ entry.id }}">{{ entry.text }}</a>
+          {% if !entry.children.is_empty() %}
+          <ul>
+            {% for child in entry.children %}
+            <li><a href="#{{ child.id }}">{{ child.text }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </aside>
+  {% else %}
+  <div></div>
+  {% endif %}
+</div>
+{% endblock %}

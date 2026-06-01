@@ -1,0 +1,33 @@
+{% extends "reader/base.html" %}
+
+{% block title %}Tags — {{ site.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tags-cloud { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); align-items: baseline; }
+  .tags-cloud a { display: inline-flex; align-items: baseline; gap: var(--space-2); font-family: var(--font-mono); padding: var(--space-2) var(--space-4); border: 1px solid var(--border); border-radius: var(--r-full); text-decoration: none; color: var(--text); transition: border-color var(--t-fast), background var(--t-fast); }
+  .tags-cloud a:hover { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-hover); }
+  .tags-cloud a .c { color: var(--text-muted); font-size: 0.8em; }
+  .tags-cloud a .hash { color: var(--accent); }
+  /* Size tiers — proportional to post count */
+  .tags-cloud a.tag-xl { font-size: 1.25rem; padding: var(--space-3) var(--space-5); }
+  .tags-cloud a.tag-lg { font-size: 1.05rem; padding: var(--space-2) var(--space-4); }
+  .tags-cloud a.tag-md { font-size: 0.9rem; }
+  .tags-cloud a.tag-sm { font-size: 0.78rem; padding: 3px var(--space-3); color: var(--text-2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb" style="margin-top: var(--space-5)"><a href="/">Home</a><span class="sep">/</span><span>Tags</span></div>
+<h1>Tags</h1>
+<p style="color:var(--text-2); margin-top:var(--space-3); max-width:56ch">Browse all topics. Size reflects how much has been written about each.</p>
+{% if tags.is_empty() %}
+<p class="empty-feed" style="margin-top: var(--space-6)">No tags yet.</p>
+{% else %}
+<div class="tags-cloud">
+  {% for tag in tags %}
+  <a href="/tags/{{ tag.slug }}" class="{% if tag.count >= 10 %}tag-xl{% else if tag.count >= 5 %}tag-lg{% else if tag.count >= 2 %}tag-md{% else %}tag-sm{% endif %}"><span class="hash">#</span>{{ tag.name }} <span class="c">{{ tag.count }}</span></a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

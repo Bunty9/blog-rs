@@ -2,16 +2,42 @@
 
 {% block title %}{{ site.title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .home-hero { text-align: center; padding: var(--space-8) 0 var(--space-7); }
+  .home-hero h1 { font-size: clamp(2rem, 4vw, 2.6rem); }
+  .home-hero p { color: var(--text-2); font-size: 1.1rem; margin-top: var(--space-3); max-width: 52ch; margin-inline: auto; }
+  .section-title { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-7) 0 var(--space-5); }
+  .section-title h2 { font-size: 1.1rem; font-family: var(--font-mono); font-weight: 600; letter-spacing: -0.01em; }
+  .section-title .rule { flex: 1; height: 1px; background: var(--border); }
+  .section-title a { font-size: 0.85rem; color: var(--text-2); text-decoration: none; }
+  .section-title a:hover { color: var(--accent); }
+  .posts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  @media (max-width: 768px) { .posts-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="home-feed">
+<section class="home-hero">
+  <h1>{{ site.title }}</h1>
+  <p>{{ site.description }}</p>
+</section>
+
 {% if cards.is_empty() %}
 <p class="empty-feed">No posts yet. Check back soon.</p>
 {% else %}
-{% for post in cards %}
+<div class="section-title">
+  <h2>Latest</h2>
+  <div class="rule"></div>
+  <a href="/posts">All posts &rarr;</a>
+</div>
+
+<div class="posts-grid">
+{% for card in cards %}
 {% include "partials/post_card.html" %}
 {% endfor %}
+</div>
 {% endif %}
-</section>
 
 {% include "partials/pagination.html" %}
 {% endblock %}

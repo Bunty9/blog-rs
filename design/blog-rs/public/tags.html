@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tags — blog-rs</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .tags-cloud { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+    .tags-cloud a { display: inline-flex; align-items: baseline; gap: var(--space-2); font-family: var(--font-mono); padding: var(--space-2) var(--space-4); border: 1px solid var(--border); border-radius: var(--r-full); text-decoration: none; color: var(--text); transition: border-color var(--t-fast), background var(--t-fast); }
+    .tags-cloud a:hover { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-hover); }
+    .tags-cloud a .c { color: var(--text-muted); font-size: 0.8rem; }
+    .tags-cloud a .hash { color: var(--accent); }
+  </style>
+</head>
+<body data-chrome data-base="../" data-nav="tags">
+  <div data-chrome-header></div>
+  <main id="main" class="container">
+    <div class="breadcrumb" style="margin-top: var(--space-5)"><a href="home.html">Home</a><span class="sep">/</span><span>Tags</span></div>
+    <h1>Tags</h1>
+    <p style="color:var(--text-2); margin-top:var(--space-3); max-width:56ch">Browse all topics. Size reflects how much has been written about each.</p>
+    <div class="tags-cloud">
+      <a href="tag.html" style="font-size:1.4rem"><span class="hash">#</span>rust <span class="c">18</span></a>
+      <a href="tag.html" style="font-size:1.25rem"><span class="hash">#</span>performance <span class="c">12</span></a>
+      <a href="tag.html" style="font-size:1.15rem"><span class="hash">#</span>systems <span class="c">9</span></a>
+      <a href="tag.html" style="font-size:1.1rem"><span class="hash">#</span>async <span class="c">7</span></a>
+      <a href="tag.html" style="font-size:1rem"><span class="hash">#</span>linux <span class="c">6</span></a>
+      <a href="tag.html"><span class="hash">#</span>embedded <span class="c">4</span></a>
+      <a href="tag.html"><span class="hash">#</span>ops <span class="c">4</span></a>
+      <a href="tag.html"><span class="hash">#</span>wasm <span class="c">3</span></a>
+      <a href="tag.html"><span class="hash">#</span>networking <span class="c">3</span></a>
+      <a href="tag.html"><span class="hash">#</span>databases <span class="c">2</span></a>
+      <a href="tag.html"><span class="hash">#</span>compilers <span class="c">2</span></a>
+      <a href="tag.html"><span class="hash">#</span>testing <span class="c">1</span></a>
+    </div>
+  </main>
+  <div data-chrome-footer></div>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+</body>
+</html>

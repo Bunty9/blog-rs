@@ -1,13 +1,13 @@
-//! GET /admin/login  — JSON form prompt (HTML form in Phase 1d).
-//! POST /admin/login — validate credentials, mint session, set cookies.
+//! GET /admin/login  — HTML login page (standalone card, not behind auth).
+//! POST /admin/login — validate credentials, mint session, set cookies (JSON).
 
+use askama::Template;
+use askama_axum::IntoResponse;
 use axum::extract::State;
 use axum::http::{header::SET_COOKIE, HeaderMap, StatusCode};
-use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use time::{Duration, OffsetDateTime};
 
 use crate::error::AppError;
@@ -36,8 +36,14 @@ struct LoginOk {
     csrf_token: String,
 }
 
+#[derive(Template)]
+#[template(path = "admin/login.html")]
+struct LoginTpl {
+    error: Option<String>,
+}
+
 async fn form() -> impl IntoResponse {
-    Json(json!({"action": "POST /admin/login", "fields": ["email", "password"]}))
+    LoginTpl { error: None }
 }
 
 async fn submit(

@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block title %}Pages · blog-rs{% endblock %}
+{% block content %}
+<h2 style="display:flex;justify-content:space-between;align-items:center;">
+    <span>Pages</span>
+    <a class="btn primary" href="/admin/pages/new">New page</a>
+</h2>
+
+<p style="color:var(--muted);margin-bottom:1rem;">
+    Evergreen, standalone pages resolved at the lowest route priority. No tags, series, or newsletter.
+</p>
+
+<table class="posts">
+    <thead><tr><th>Title</th><th>URL</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/pages/{{ row.id }}/edit">{{ row.title }}</a></td>
+            <td><span style="color:var(--muted);">/{{ row.slug }}</span></td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.updated_at }}</td>
+            <td style="text-align:right;">
+                {% if row.status == "published" %}
+                <a class="btn" href="/{{ row.slug }}" target="_blank" rel="noopener">View</a>
+                {% endif %}
+                <a class="btn" href="/admin/pages/{{ row.id }}/edit">Edit</a>
+                <form method="post" action="/admin/pages/{{ row.id }}/delete" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+                    <button class="btn danger" type="submit"
+                            onclick="return confirm('Delete this page?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        {% if rows.is_empty() %}
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);">No pages yet.</td></tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}

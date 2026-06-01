@@ -1,94 +1,316 @@
 {% extends "admin/base.html" %}
 {% block title %}Edit · {{ title }}{% endblock %}
+
+{# Override body so the editor shell can use overflow:hidden full-height layout #}
+{% block topbar_title %}{% endblock %}
+{% block topbar_actions %}{% endblock %}
+
 {% block content %}
-<h2 style="display:flex;justify-content:space-between;align-items:center;">
-    <span>Edit post</span>
-    <span><a class="btn" href="/admin/posts">Back to list</a></span>
-</h2>
+<style>
+  /* Editor shell overrides — scoped to this page */
+  body { overflow: hidden; }
+  .admin-content { padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h, 57px)); }
 
-<div id="flash-slot"></div>
+  /* Top bar row */
+  .ed-top { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); flex: none; background: var(--bg); }
+  .ed-title-wrap { flex: 1; min-width: 0; }
+  .ed-title { width: 100%; border: none; background: transparent; font-size: 1.2rem; font-weight: 650; letter-spacing: -0.01em; outline: none; color: var(--text); }
+  .ed-sub { display: flex; align-items: center; gap: var(--space-3); margin-top: 2px; flex-wrap: wrap; }
+  .ed-slug-prefix { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0; }
+  .ed-slug-in { border: none; background: transparent; font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); outline: none; width: 180px; }
+  .ed-actions { display: flex; align-items: center; gap: var(--space-2); flex: none; }
 
+  /* Split body */
+  .ed-body { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; overflow: hidden; }
+  .ed-body.full-source { grid-template-columns: 1fr; }
+  .ed-body.full-source .ed-preview { display: none; }
+  .ed-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .ed-pane.ed-source { border-right: 1px solid var(--border); }
+
+  /* Toolbar */
+  .ed-toolbar { display: flex; align-items: center; gap: 2px; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); flex-wrap: wrap; flex: none; background: var(--surface); }
+  .ed-toolbar button { font-size: 0.78rem; font-family: var(--font-mono); padding: 4px 8px; border: 1px solid transparent; background: transparent; color: var(--text-2); border-radius: var(--r-sm); cursor: pointer; }
+  .ed-toolbar button:hover { background: var(--surface-2); color: var(--text); }
+  .ed-toolbar button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex: none; }
+
+  /* Textarea */
+  .ed-textarea { flex: 1; border: none; outline: none; resize: none; padding: var(--space-5); font-family: var(--font-mono); font-size: 0.875rem; line-height: 1.7; background: var(--bg); color: var(--text); tab-size: 2; }
+
+  /* Preview pane */
+  .ed-pane-label { padding: var(--space-2) var(--space-3); font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex: none; }
+  .ed-preview { background: var(--bg); }
+  .ed-preview-scroll { flex: 1; overflow-y: auto; padding: var(--space-6); }
+  .ed-preview-scroll .prose { max-width: 100%; font-size: 16px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success, #22c55e); flex: none; }
+
+  /* Settings drawer */
+  .ed-drawer { position: fixed; top: 0; right: -420px; width: 400px; max-width: 95vw; height: 100vh; background: var(--bg); border-left: 1px solid var(--border); z-index: 200; display: flex; flex-direction: column; transition: right 0.2s ease; box-shadow: -4px 0 24px rgba(0,0,0,.12); }
+  .ed-drawer.open { right: 0; }
+  .ed-drawer-head { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); flex: none; }
+  .ed-drawer-body { flex: 1; overflow-y: auto; padding: var(--space-5); }
+  .ed-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 190; }
+  .ed-overlay.open { display: block; }
+
+  /* Segment control */
+  .segment { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+  .segment button { padding: 5px 10px; font-size: 0.8rem; border: none; background: transparent; cursor: pointer; color: var(--text-2); }
+  .segment button.active { background: var(--surface-2); color: var(--text); }
+
+  @media (max-width: 1024px) {
+    .ed-body { grid-template-columns: 1fr; }
+    .ed-body .ed-preview { display: none; }
+    .ed-body.show-preview .ed-source { display: none; }
+    .ed-body.show-preview .ed-preview { display: flex; }
+  }
+</style>
+
+{# Hidden form — htmx auto-saves on any change delay:800ms; also used by Save Now button #}
 <form id="editor"
       hx-post="/admin/posts/{{ id }}"
-      hx-trigger="change delay:500ms from:closest form"
+      hx-trigger="change delay:800ms from:closest form"
       hx-target="#flash-slot"
       hx-swap="innerHTML"
-      hx-include="closest form">
-    <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      hx-include="closest form"
+      style="display:contents">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}" />
 
-    <div class="editor-grid">
-        <div class="editor-pane">
-            <div class="field">
-                <label for="title">Title</label>
-                <input id="title" name="title" type="text" value="{{ title }}" />
-            </div>
-            <div class="field">
-                <label for="slug">Slug</label>
-                <input id="slug" name="slug" type="text" value="{{ slug }}" />
-            </div>
-            <div class="field">
-                <label for="subtitle">Subtitle</label>
-                <input id="subtitle" name="subtitle" type="text" value="{{ subtitle }}" />
-            </div>
-            <div class="field">
-                <label for="excerpt">Excerpt</label>
-                <textarea id="excerpt" name="excerpt" rows="2">{{ excerpt }}</textarea>
-            </div>
-            <div class="field">
-                <label for="cover_image">Cover image URL</label>
-                <input id="cover_image" name="cover_image" type="text" value="{{ cover_image }}" />
-            </div>
-            <div class="field">
-                <label for="tags_csv">Tags (comma-separated)</label>
-                <input id="tags_csv" name="tags_csv" type="text" value="{{ tags_csv }}" />
-            </div>
-            <div class="field">
-                <label for="status">Status</label>
-                <select id="status" name="status">
-                    <option value="draft"     {% if status == "draft" %}selected{% endif %}>Draft</option>
-                    <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>Scheduled</option>
-                    <option value="published" {% if status == "published" %}selected{% endif %}>Published</option>
-                </select>
-            </div>
-            <div class="field">
-                <label for="scheduled_for">Scheduled for (unix seconds, blank = none)</label>
-                <input id="scheduled_for" name="scheduled_for" type="text" value="{{ scheduled_for }}" />
-            </div>
-            <div class="field">
-                <label for="body-md">Body (markdown + shortcodes)</label>
-                <textarea id="body-md" name="body_md" rows="20">{{ body_md }}</textarea>
-            </div>
-        </div>
+  <!-- ── Top bar ─────────────────────────────────────────────────── -->
+  <div class="ed-top">
+    <a class="icon-btn" href="/admin/posts" aria-label="Back to posts">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </a>
+    <div class="ed-title-wrap">
+      <input class="ed-title" name="title" value="{{ title }}" aria-label="Title" placeholder="Post title…" />
+      <div class="ed-sub">
+        <span class="ed-slug-prefix">
+          /posts/<input class="ed-slug-in" name="slug" value="{{ slug }}" aria-label="Slug" />
+        </span>
+        <span class="badge {% if status == "published" %}published{% else if status == "scheduled" %}scheduled{% else %}draft{% endif %}" id="status-badge">{{ status }}</span>
+        <span id="flash-slot" style="font-size:0.8rem; color:var(--text-muted)"></span>
+      </div>
+    </div>
+    <div class="ed-actions">
+      <div class="segment" id="view-seg" aria-label="Editor view">
+        <button type="button" data-value="split" class="active" title="Split view">▤</button>
+        <button type="button" data-value="source" title="Source only">≡</button>
+        <button type="button" data-value="preview" title="Preview only" class="mobile-only">◑</button>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="openDrawer()" aria-expanded="false" id="settings-btn">Settings</button>
+      <button type="submit" class="btn btn-secondary btn-sm">Save now</button>
+      <button type="button"
+              class="btn btn-primary btn-sm"
+              hx-post="/admin/posts/{{ id }}/publish"
+              hx-include="[name=csrf_token]"
+              hx-target="#flash-slot"
+              hx-confirm="Publish this post? Newsletter will be queued.">Publish</button>
+    </div>
+  </div>
 
-        <div class="preview-pane">
-            <h3 style="margin-top:0;">Preview</h3>
-            <div id="preview"
+  <!-- ── Split editor body ─────────────────────────────────────── -->
+  <div class="ed-body" id="ed-body">
+    <!-- Source pane -->
+    <section class="ed-pane ed-source">
+      <div class="ed-toolbar" aria-label="Formatting toolbar">
+        <button type="button" onclick="edWrap('**','**')" title="Bold"><strong>B</strong></button>
+        <button type="button" onclick="edWrap('_','_')" title="Italic"><em>I</em></button>
+        <button type="button" onclick="edWrap('`','`')" title="Inline code">&lt;/&gt;</button>
+        <button type="button" onclick="edPrefix('## ')" title="Heading 2">H2</button>
+        <span class="tb-sep" aria-hidden="true"></span>
+        <button type="button" onclick="edBlock('callout')">{callout}</button>
+        <button type="button" onclick="edBlock('code')">{code}</button>
+        <button type="button" onclick="edBlock('chart')">{chart}</button>
+        <button type="button" onclick="edBlock('embed')">{embed}</button>
+        <span class="tb-sep" aria-hidden="true"></span>
+        <button type="button" disabled title="Media picker — coming soon">+ media</button>
+        <button type="button" disabled title="Revisions — coming soon">Revisions</button>
+      </div>
+      <textarea id="body-md"
+                name="body_md"
+                class="ed-textarea"
+                aria-label="Markdown source"
+                spellcheck="false">{{ body_md }}</textarea>
+    </section>
+
+    <!-- Preview pane -->
+    <section class="ed-pane ed-preview">
+      <div class="ed-pane-label">
+        <span class="live-dot" aria-hidden="true"></span>
+        Live preview · rendered via content::render
+      </div>
+      <div class="ed-preview-scroll">
+        <article class="prose"
+                 id="preview"
                  hx-post="/admin/posts/{{ id }}/preview"
                  hx-trigger="keyup changed delay:800ms from:#body-md"
                  hx-include="#body-md, [name=csrf_token]"
-                 hx-swap="innerHTML">
-                {{ body_html|safe }}
-            </div>
-        </div>
-    </div>
+                 hx-swap="innerHTML">{{ body_html|safe }}</article>
+      </div>
+    </section>
+  </div>
 
-    <div class="actions">
-        <button type="submit" class="primary">Save now</button>
+  <!-- ── Settings drawer ──────────────────────────────────────── -->
+  <div class="ed-overlay" id="ed-overlay" onclick="closeDrawer()"></div>
+  <aside class="ed-drawer" id="ed-drawer" role="dialog" aria-modal="true" aria-label="Post settings">
+    <div class="ed-drawer-head">
+      <h3 style="font-size:1.05rem; margin:0">Post settings</h3>
+      <button type="button" class="icon-btn" onclick="closeDrawer()" aria-label="Close settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="ed-drawer-body">
+
+      <div class="field">
+        <label for="ds-subtitle">Subtitle</label>
+        <input id="ds-subtitle" name="subtitle" type="text" class="input" value="{{ subtitle }}" placeholder="Optional subtitle…" />
+      </div>
+
+      <div class="field">
+        <label for="ds-excerpt">Excerpt</label>
+        <textarea id="ds-excerpt" name="excerpt" class="textarea" rows="3" placeholder="Short summary for cards &amp; SEO…">{{ excerpt }}</textarea>
+      </div>
+
+      <div class="field">
+        <label for="ds-cover">Cover image URL</label>
+        <input id="ds-cover" name="cover_image" type="text" class="input" value="{{ cover_image }}" placeholder="/media/cover.jpg" />
+        <span class="help">Or: <button type="button" disabled title="Media picker — coming soon" class="btn btn-ghost btn-sm" style="padding:2px 6px">Choose from library…</button></span>
+      </div>
+
+      <div class="field">
+        <label for="ds-tags">Tags <span class="help">(comma-separated)</span></label>
+        <input id="ds-tags" name="tags_csv" type="text" class="input" value="{{ tags_csv }}" placeholder="rust, performance, embedded" />
+      </div>
+
+      <div class="field">
+        <label for="ds-series">Series slug</label>
+        <input id="ds-series" name="series" type="text" class="input" value="{{ series }}" placeholder="e.g. systems-from-scratch" />
+        <span class="help">Must match an existing series slug. Leave blank for none.</span>
+      </div>
+
+      <div class="field">
+        <label for="ds-status">Status</label>
+        <select id="ds-status" name="status" class="select">
+          <option value="draft"     {% if status == "draft" %}selected{% endif %}>Draft</option>
+          <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>Scheduled</option>
+          <option value="published" {% if status == "published" %}selected{% endif %}>Published</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="ds-sched">Schedule <span class="help">(unix timestamp, blank = none)</span></label>
+        <input id="ds-sched" name="scheduled_for" type="text" class="input" value="{{ scheduled_for }}" placeholder="1735689600" />
+        <span class="help">Set status to "scheduled" alongside this.</span>
+      </div>
+
+      <details open style="margin-bottom:var(--space-4)">
+        <summary style="cursor:pointer; font-weight:600; padding:var(--space-2) 0; user-select:none">
+          SEO &amp; social
+        </summary>
+        <div style="padding-top:var(--space-3)">
+          <div class="field">
+            <label for="ds-metadesc">Meta description</label>
+            <textarea id="ds-metadesc" name="meta_description" class="textarea" rows="2" placeholder="Appears in Google results…">{{ meta_description }}</textarea>
+          </div>
+          <div class="field">
+            <label for="ds-ogimage">OG image URL</label>
+            <input id="ds-ogimage" name="og_image" type="text" class="input" value="{{ og_image }}" placeholder="/media/og/post.png" />
+          </div>
+          <div class="field">
+            <label for="ds-canonical">Canonical URL</label>
+            <input id="ds-canonical" name="canonical_url" type="text" class="input" value="{{ canonical_url }}" placeholder="https://…" />
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label for="ds-twitter">Twitter card</label>
+            <select id="ds-twitter" name="twitter_card" class="select">
+              <option value="summary_large_image" {% if twitter_card == "summary_large_image" || twitter_card == "" %}selected{% endif %}>summary_large_image</option>
+              <option value="summary" {% if twitter_card == "summary" %}selected{% endif %}>summary</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <details style="margin-bottom:var(--space-4)">
+        <summary style="cursor:pointer; font-weight:600; padding:var(--space-2) 0; user-select:none">
+          Revisions <span class="help" style="font-weight:400">(coming soon)</span>
+        </summary>
+        <div style="padding-top:var(--space-3); color:var(--text-muted); font-size:0.85rem">
+          Revision history is not yet available.
+        </div>
+      </details>
+
+      <div style="display:flex; gap:var(--space-3); padding-top:var(--space-4); border-top:1px solid var(--border)">
+        <button type="submit" class="btn btn-secondary" style="flex:1">Save</button>
         <button type="button"
-                class="primary"
+                class="btn btn-primary"
+                style="flex:1"
                 hx-post="/admin/posts/{{ id }}/publish"
                 hx-include="[name=csrf_token]"
                 hx-target="#flash-slot"
-                hx-confirm="Publish this post? Newsletter will be queued.">
-            Publish
-        </button>
+                hx-confirm="Publish this post? Newsletter will be queued.">Publish</button>
+      </div>
+      <div style="padding-top:var(--space-3)">
         <button type="button"
-                class="danger"
+                class="btn btn-ghost btn-sm"
+                style="color:var(--danger, #ef4444)"
                 hx-post="/admin/posts/{{ id }}/delete"
                 hx-include="[name=csrf_token]"
-                hx-confirm="Delete this post?">
-            Delete
-        </button>
+                hx-confirm="Delete this post permanently?">Delete post</button>
+      </div>
     </div>
+  </aside>
 </form>
+
+<script>
+  /* Drawer open/close */
+  function openDrawer() {
+    document.getElementById('ed-drawer').classList.add('open');
+    document.getElementById('ed-overlay').classList.add('open');
+    document.getElementById('settings-btn').setAttribute('aria-expanded', 'true');
+  }
+  function closeDrawer() {
+    document.getElementById('ed-drawer').classList.remove('open');
+    document.getElementById('ed-overlay').classList.remove('open');
+    document.getElementById('settings-btn').setAttribute('aria-expanded', 'false');
+  }
+
+  /* View segment toggle */
+  var viewSeg = document.getElementById('view-seg');
+  var edBody  = document.getElementById('ed-body');
+  viewSeg.querySelectorAll('button').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      viewSeg.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      var v = btn.dataset.value;
+      edBody.classList.toggle('full-source', v === 'source');
+      edBody.classList.toggle('show-preview', v === 'preview');
+    });
+  });
+
+  /* Toolbar helpers */
+  var ta = document.getElementById('body-md');
+  function edWrap(a, b) {
+    var s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+    ta.value = v.slice(0,s) + a + v.slice(s,e) + b + v.slice(e);
+    ta.focus(); ta.selectionStart = s + a.length; ta.selectionEnd = e + a.length;
+    ta.dispatchEvent(new Event('keyup', {bubbles:true}));
+  }
+  function edPrefix(p) {
+    var s = ta.selectionStart, v = ta.value;
+    var ls = v.lastIndexOf('\n', s-1) + 1;
+    ta.value = v.slice(0,ls) + p + v.slice(ls);
+    ta.focus(); ta.dispatchEvent(new Event('keyup', {bubbles:true}));
+  }
+  function edBlock(type) {
+    var lcb = '{', rcb = '}';
+  var blocks = {
+      callout: '\n' + lcb + lcb + '< callout type="info" >' + rcb + rcb + '\nYour note here.\n' + lcb + lcb + '< /callout >' + rcb + rcb + '\n',
+      code:    '\n```rust\nfn main() {}\n```\n',
+      chart:   '\n' + lcb + lcb + '< chart data="" >' + rcb + rcb + lcb + lcb + '< /chart >' + rcb + rcb + '\n',
+      embed:   '\n' + lcb + lcb + '< embed url="" >' + rcb + rcb + lcb + lcb + '< /embed >' + rcb + rcb + '\n'
+    };
+    var s = ta.selectionStart, v = ta.value;
+    ta.value = v.slice(0,s) + (blocks[type] || '') + v.slice(s);
+    ta.focus(); ta.dispatchEvent(new Event('keyup', {bubbles:true}));
+  }
+</script>
 {% endblock %}

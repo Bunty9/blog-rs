@@ -5,7 +5,7 @@
 /// different output for the same input. Persisted callers (see `db::posts`)
 /// write this value alongside `body_html`, so a future regen pass can find
 /// stale rows via `body_html_version <> content::RENDER_VERSION`.
-pub const RENDER_VERSION: u32 = 1;
+pub const RENDER_VERSION: u32 = 2;
 
 pub mod asset;
 pub mod error;
@@ -13,8 +13,10 @@ pub mod frontmatter;
 pub mod markdown;
 pub mod render;
 pub mod shortcode_lexer;
+pub mod toc;
 
 pub use asset::{Asset, AssetKind, AssetManifest};
 pub use error::ContentError;
 pub use frontmatter::Frontmatter;
 pub use render::{render, RenderOutput};
+pub use toc::{Slugger, Toc, TocEntry};

@@ -3,35 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
 <title>{% block title %}{{ site.title }}{% endblock %}</title>
 <meta name="description" content="{% block description %}{{ site.description }}{% endblock %}" />
 <link rel="alternate" type="application/rss+xml" title="{{ site.title }} feed" href="/feed.xml" />
 <link rel="stylesheet" href="/assets/reader/base.css" />
+<link rel="stylesheet" href="/assets/reader/components.css" />
 {% block extra_head %}{% endblock %}
-{% for a in asset_tags %}
-{% if a.kind == "css" %}<link rel="stylesheet" href="{{ a.src }}" />
+{% for a in asset_tags %}{% if a.kind == "css" %}<link rel="stylesheet" href="{{ a.src }}" />
 {% else %}<script src="{{ a.src }}"{% if a.defer %} defer{% endif %}></script>
-{% endif %}
-{% endfor %}
+{% endif %}{% endfor %}
 </head>
-<body>
-<header class="site-header">
-<a class="site-title" href="/">{{ site.title }}</a>
-<nav class="site-nav">
-<a href="/">Home</a>
-<a href="/search">Search</a>
-<a href="/feed.xml">RSS</a>
-</nav>
-</header>
-
-<main class="container">
+<body{% block body_attrs %}{% endblock %}>
+{% include "partials/site_header.html" %}
+<main id="main" class="container">
 {% block content %}{% endblock %}
 </main>
-
-<footer class="site-footer">
-<p>&copy; <span data-year></span> {{ site.title }}.</p>
-</footer>
-
-<script src="/assets/reader/base.js" defer></script>
+{% include "partials/site_footer.html" %}
+<script src="/assets/reader/app.js" defer></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

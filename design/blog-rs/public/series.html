@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Systems from scratch — blog-rs</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .series-head { padding: var(--space-7) 0 var(--space-6); }
+    .series-head .eyebrow { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); letter-spacing: 0.04em; }
+    .series-head h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin-top: var(--space-3); }
+    .series-head p { color: var(--text-2); font-size: 1.1rem; margin-top: var(--space-4); max-width: 60ch; line-height: 1.6; }
+    .series-progress { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-5); }
+    .series-progress .bar { flex: 1; max-width: 280px; height: 6px; background: var(--surface-2); border-radius: var(--r-full); overflow: hidden; }
+    .series-progress .bar i { display: block; height: 100%; width: 50%; background: var(--accent); }
+    .series-list { counter-reset: ep; display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-6); }
+    .ep { display: grid; grid-template-columns: 48px 1fr auto; gap: var(--space-4); align-items: center; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--r-md); text-decoration: none; transition: border-color var(--t-fast), background var(--t-fast); }
+    .ep:hover { border-color: var(--border-strong); background: var(--surface); }
+    .ep .ep-num { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 650; color: var(--accent); }
+    .ep h3 { font-size: 1.2rem; }
+    .ep .excerpt { color: var(--text-2); font-size: 0.95rem; margin-top: var(--space-1); }
+    .ep .ep-meta { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+    .ep.done .ep-num::after { content: " ✓"; color: var(--success); font-size: 0.9rem; }
+    @media (max-width:600px){ .ep { grid-template-columns: 36px 1fr; } .ep .ep-meta { grid-column: 2; } }
+  </style>
+</head>
+<body data-chrome data-base="../" data-nav="series">
+  <div data-chrome-header></div>
+  <main id="main" class="container measure">
+    <div class="breadcrumb" style="margin-top: var(--space-5)"><a href="home.html">Home</a><span class="sep">/</span><a href="series.html">Series</a><span class="sep">/</span><span>systems-from-scratch</span></div>
+    <header class="series-head">
+      <div class="eyebrow">≡ A SERIES IN 6 PARTS</div>
+      <h1>Systems from scratch</h1>
+      <p>Build the unglamorous foundations yourself — an allocator, a ring buffer, a parser, a scheduler — to understand what the standard library is doing on your behalf.</p>
+      <div class="series-progress"><span class="meta">3 of 6 read</span><div class="bar"><i></i></div></div>
+      <div style="margin-top: var(--space-5)"><a class="btn btn-primary" href="post.html">Start reading →</a></div>
+    </header>
+
+    <div class="series-list">
+      <a class="ep done" href="post.html"><div class="ep-num">1</div><div><h3>From zero to a working allocator</h3><div class="excerpt">A bump allocator in 80 lines, then a free-list, then a buddy allocator.</div></div><div class="ep-meta">11 min</div></a>
+      <a class="ep done" href="post.html"><div class="ep-num">2</div><div><h3>The cost of a syscall, measured</h3><div class="excerpt">Where the microseconds actually go, across the vDSO and the raw path.</div></div><div class="ep-meta">8 min</div></a>
+      <a class="ep done" href="post.html"><div class="ep-num">3</div><div><h3>Building a zero-copy log parser</h3><div class="excerpt">Parsing directly out of the mmap’d ring buffer with zero allocation.</div></div><div class="ep-meta">9 min</div></a>
+      <a class="ep" href="post.html"><div class="ep-num">4</div><div><h3>A cooperative scheduler in safe Rust</h3><div class="excerpt">Generators, wakers, and a run loop you can actually read.</div></div><div class="ep-meta">14 min</div></a>
+      <a class="ep" href="post.html"><div class="ep-num">5</div><div><h3>Lock-free queues without the footguns</h3><div class="excerpt">When a Mutex is fine, and when it really isn’t.</div></div><div class="ep-meta">10 min</div></a>
+      <a class="ep" href="post.html"><div class="ep-num">6</div><div><h3>Putting it together: a tiny runtime</h3><div class="excerpt">Wire the pieces into something that runs real workloads.</div></div><div class="ep-meta">16 min</div></a>
+    </div>
+  </main>
+  <div data-chrome-footer></div>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+</body>
+</html>

@@ -17,6 +17,7 @@ pub struct TagQuery {
 pub struct TagView {
     pub slug: String,
     pub name: String,
+    pub count: i64,
 }
 
 #[derive(Template)]
@@ -24,6 +25,7 @@ pub struct TagView {
 pub struct TagTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub tag: TagView,
     pub cards: Vec<PostCard>,
     pub pagination: Pagination,
@@ -51,9 +53,11 @@ pub async fn handler(
     Ok(TagTemplate {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "tags",
         tag: TagView {
             slug: tag.slug,
             name: tag.name,
+            count: total,
         },
         cards,
         pagination: Pagination::new(page, total, format!("/tags/{}", slug)),
@@ -138,7 +142,7 @@ mod tests {
         let body = std::str::from_utf8(&bytes).unwrap();
         assert!(body.contains("Post 1"), "Post 1 missing: {body}");
         assert!(!body.contains("Post 2"), "Post 2 should not appear: {body}");
-        assert!(body.contains("#Rust"), "tag name missing: {body}");
+        assert!(body.contains("Rust"), "tag name missing: {body}");
     }
 
     #[tokio::test]

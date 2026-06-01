@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% block title %}Analytics · blog-rs{% endblock %}
+
+{% block content %}
+
+<style>
+.analytics-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: var(--space-5); }
+.analytics-tabs button { padding: var(--space-2) var(--space-4); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: var(--text-muted); font-size: 0.9rem; margin-bottom: -1px; }
+.analytics-tabs button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-10) var(--space-6); text-align: center; color: var(--text-muted); gap: var(--space-3); }
+.empty-state svg { opacity: .35; }
+.empty-state p { max-width: 380px; font-size: 0.9rem; line-height: 1.6; }
+.window-seg { display: flex; gap: 0; }
+.window-seg button { padding: var(--space-1) var(--space-3); background: none; border: 1px solid var(--border); cursor: pointer; color: var(--text-muted); font-size: 0.82rem; }
+.window-seg button:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.window-seg button:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.window-seg button:not(:first-child) { border-left: none; }
+.window-seg button[disabled] { cursor: not-allowed; opacity: .5; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-5); }
+.panels-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4); }
+@media (max-width: 1024px) { .stat-grid { grid-template-columns: repeat(2,1fr); } .panels-2 { grid-template-columns: 1fr; } }
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+    <div class="analytics-tabs">
+        <button class="active" disabled>Overview</button>
+        <button disabled>Posts</button>
+        <button disabled>Audience</button>
+        <button disabled>Email</button>
+    </div>
+    <div class="window-seg">
+        <button disabled>7d</button>
+        <button disabled>30d</button>
+        <button disabled>90d</button>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="sc-label">Views</div>
+        <div class="sc-value" style="color:var(--text-muted)">—</div>
+        <div class="sc-foot sc-foot-meta">No data yet</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Members</div>
+        <div class="sc-value" style="color:var(--text-muted)">—</div>
+        <div class="sc-foot sc-foot-meta">No data yet</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Email sends</div>
+        <div class="sc-value" style="color:var(--text-muted)">—</div>
+        <div class="sc-foot sc-foot-meta">No data yet</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Open rate</div>
+        <div class="sc-value" style="color:var(--text-muted)">—</div>
+        <div class="sc-foot sc-foot-meta">No data yet</div>
+    </div>
+</div>
+
+<div class="panels-2">
+    <div class="panel">
+        <h3 class="panel-title">Top posts <span style="float:right;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);font-weight:400">by views</span></h3>
+        <div class="empty-state" style="padding:var(--space-7) var(--space-4)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+            <p>Analytics will appear once the analytics module is enabled.</p>
+        </div>
+    </div>
+    <div class="panel">
+        <h3 class="panel-title">Top referrers</h3>
+        <div class="empty-state" style="padding:var(--space-7) var(--space-4)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+            <p>Referrer tracking requires the analytics module.</p>
+        </div>
+    </div>
+</div>
+
+<div class="callout info" style="margin-top:var(--space-5)">
+    <span class="co-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    </span>
+    <div class="co-body" style="font-size:0.9rem">
+        Analytics data collection is a planned feature. When enabled, page views, referrers, audience splits, and email open rates will appear here. No data is collected yet.
+    </div>
+</div>
+
+{% endblock %}

@@ -1,11 +1,17 @@
-<article class="post-card">
-<a class="post-card-link" href="/posts/{{ post.slug }}">
-<h2 class="post-card-title">{{ post.title }}</h2>
-{% if let Some(sub) = post.subtitle %}<p class="post-card-subtitle">{{ sub }}</p>{% endif %}
-{% if let Some(ex) = post.excerpt %}<p class="post-card-excerpt">{{ ex }}</p>{% endif %}
-<p class="post-card-meta">
-{% if let Some(d) = post.published_date %}<time datetime="{{ d }}">{{ d }}</time>{% endif %}
-{% if let Some(m) = post.reading_minutes %}<span> · {{ m }} min read</span>{% endif %}
-</p>
+<a class="post-card" href="/posts/{{ card.slug }}">
+  <h3>{{ card.title }}</h3>
+  {% if let Some(ex) = card.excerpt %}
+  <p class="excerpt">{{ ex }}</p>
+  {% else if let Some(sub) = card.subtitle %}
+  <p class="excerpt">{{ sub }}</p>
+  {% endif %}
+  <div class="pc-meta">
+    <span class="meta">
+      {% if let Some(m) = card.reading_minutes %}
+        {{ m }} min read{% if let Some(d) = card.published_date %} · {{ d }}{% endif %}
+      {% else if let Some(d) = card.published_date %}
+        {{ d }}
+      {% endif %}
+    </span>
+  </div>
 </a>
-</article>

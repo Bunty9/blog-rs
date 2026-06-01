@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>blog-rs · Design system & screens</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <style>
+    .hub-hero { padding: var(--space-9) 0 var(--space-7); border-bottom: 1px solid var(--border); }
+    .hub-hero .eyebrow { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); letter-spacing: 0.04em; margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
+    .hub-hero h1 { font-size: clamp(2.4rem, 5vw, 3.4rem); max-width: 18ch; }
+    .hub-hero p { font-size: 1.15rem; color: var(--text-2); max-width: 56ch; margin-top: var(--space-4); line-height: 1.6; }
+    .hub-hero .hero-actions { display: flex; gap: var(--space-3); margin-top: var(--space-6); flex-wrap: wrap; }
+    .hub-stats { display: flex; gap: var(--space-7); margin-top: var(--space-7); flex-wrap: wrap; }
+    .hub-stats .hs { }
+    .hub-stats .hs .n { font-size: 1.8rem; font-weight: 650; letter-spacing: -0.02em; }
+    .hub-stats .hs .l { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
+    .section-head { display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-8) 0 var(--space-5); }
+    .section-head h2 { font-size: 1.5rem; }
+    .section-head .sh-num { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); }
+    .section-head .sh-desc { color: var(--text-muted); font-size: 0.9rem; margin-left: auto; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: var(--space-4); }
+    .hub-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--r-md); text-decoration: none; background: var(--bg); transition: border-color var(--t-fast), transform var(--t-fast), background var(--t-fast); }
+    .hub-card:hover { border-color: var(--border-strong); background: var(--surface); transform: translateY(-2px); }
+    .hub-card .hc-top { display: flex; align-items: center; justify-content: space-between; }
+    .hub-card .hc-icon { width: 38px; height: 38px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; background: var(--accent-subtle); color: var(--accent-hover); }
+    .hub-card .hc-route { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
+    .hub-card h3 { font-size: 1.05rem; }
+    .hub-card p { color: var(--text-2); font-size: 0.875rem; line-height: 1.5; }
+    .palette-row { display: flex; gap: 6px; margin-top: auto; }
+    .palette-row span { width: 22px; height: 22px; border-radius: var(--r-sm); border: 1px solid var(--border); }
+    .legend { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3); }
+  </style>
+</head>
+<body data-base="" >
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="container">
+      <a class="wordmark" href="index.html"><span class="dot"></span><span>blog-rs</span></a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#foundations">Foundations</a>
+        <a href="#components">Components</a>
+        <a href="#public">Public</a>
+        <a href="#admin">Admin</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <a class="btn btn-primary btn-sm" href="components.html">Open component library</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hub-hero">
+      <div class="container">
+        <div class="eyebrow"><span class="mono">v1.0</span> · technical-editorial design system</div>
+        <h1>The blog-rs design system & screen library</h1>
+        <p>A complete, token-driven UI for an engineering blog engine — quiet chrome, strong typography, first-class code &amp; charts, light + dark. Every public and admin screen, built from one small stylesheet.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="public/home.html">View the live blog →</a>
+          <a class="btn btn-secondary" href="admin/dashboard.html">Open admin</a>
+          <a class="btn btn-ghost" href="components.html">All 31 components</a>
+        </div>
+        <div class="hub-stats">
+          <div class="hs"><div class="n">18</div><div class="l">screens</div></div>
+          <div class="hs"><div class="n">31</div><div class="l">components</div></div>
+          <div class="hs"><div class="n">40+</div><div class="l">tokens</div></div>
+          <div class="hs"><div class="n">2</div><div class="l">themes</div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <!-- FOUNDATIONS -->
+      <div class="section-head" id="foundations">
+        <span class="sh-num">A</span><h2>Foundations</h2>
+        <span class="sh-desc">tokens · type · spacing · motion · a11y</span>
+      </div>
+      <div class="card-grid">
+        <a class="hub-card" href="components.html#colors">
+          <div class="hc-top"><div class="hc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20c5 0 5 4 3 6s-2 4 1 4a3 3 0 0 1 0 6z"/></svg></div><span class="hc-route">:root</span></div>
+          <h3>Color & theme tokens</h3>
+          <p>Neutral canvas + one indigo accent, status hues, a shared dark code surface. Light & dark.</p>
+          <div class="palette-row"><span style="background:#11141a"></span><span style="background:#475067"></span><span style="background:#4f46e5"></span><span style="background:#16a34a"></span><span style="background:#d97706"></span><span style="background:#dc2626"></span></div>
+        </a>
+        <a class="hub-card" href="components.html#type">
+          <div class="hc-top"><div class="hc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg></div><span class="hc-route">Inter · JetBrains</span></div>
+          <h3>Typography</h3>
+          <p>Inter variable for body/UI, JetBrains Mono for code & metadata. 1.25 modular scale, 68ch measure.</p>
+        </a>
+        <a class="hub-card" href="components.html#spacing">
+          <div class="hc-top"><div class="hc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 3H3v18M7 21v-4M11 21v-8M15 21v-6"/></svg></div><span class="hc-route">4px base</span></div>
+          <h3>Spacing, radius & elevation</h3>
+          <p>9-step 4px spacing scale, restrained radii, borders over shadows. Overlays only get elevation.</p>
+        </a>
+      </div>
+
+      <!-- COMPONENTS -->
+      <div class="section-head" id="components">
+        <span class="sh-num">B</span><h2>Component library</h2>
+        <span class="sh-desc">31 themable components + live playground</span>
+      </div>
+      <div class="card-grid">
+        <a class="hub-card" href="components.html">
+          <div class="hc-top"><div class="hc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div><span class="hc-route">components.html</span></div>
+          <h3>Full component showcase</h3>
+          <p>Buttons, cards, callouts, forms, tables, badges, TOC, search, modals — every state, light & dark.</p>
+        </a>
+        <a class="hub-card" href="components.html#code">
+          <div class="hc-top"><div class="hc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></div><span class="hc-route">copy + run</span></div>
+          <h3>Code card & playground</h3>
+          <p>Dark code surface with syntax colors, working Copy, and a Run ▶ affordance with output.</p>
+        </a>
+        <a class="hub-card" href="components.html#chart">
+          <div class="hc-top"><div class="hc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></div><span class="hc-route">Chart.js</span></div>
+          <h3>Chart figure</h3>
+          <p>A real, responsive chart in a bordered figure with caption and loading skeleton.</p>
+        </a>
+      </div>
+
+      <!-- PUBLIC -->
+      <div class="section-head" id="public">
+        <span class="sh-num">C</span><h2>Public · reader pages</h2>
+        <span class="sh-desc">the publication, front to back</span>
+      </div>
+      <div class="card-grid">
+        <a class="hub-card" href="public/home.html"><div class="hc-top"><div class="hc-icon">⌂</div><span class="hc-route">GET /</span></div><h3>Home / index</h3><p>Featured post, card grid of latest writing, pagination.</p></a>
+        <a class="hub-card" href="public/post.html"><div class="hc-top"><div class="hc-icon">¶</div><span class="hc-route">/posts/:slug</span></div><h3>Post detail</h3><p>The reading experience: TOC scroll-spy, runnable code, callouts, charts.</p></a>
+        <a class="hub-card" href="public/tag.html"><div class="hc-top"><div class="hc-icon">#</div><span class="hc-route">/tags/:slug</span></div><h3>Tag page</h3><p>All posts under a tag, with header band and count.</p></a>
+        <a class="hub-card" href="public/tags.html"><div class="hc-top"><div class="hc-icon">#</div><span class="hc-route">/tags</span></div><h3>Tags index</h3><p>Grid of tag pills sized by post count.</p></a>
+        <a class="hub-card" href="public/series.html"><div class="hc-top"><div class="hc-icon">≡</div><span class="hc-route">/series/:slug</span></div><h3>Series</h3><p>Ordered reading sequence with progress.</p></a>
+        <a class="hub-card" href="public/page.html"><div class="hc-top"><div class="hc-icon">𝐩</div><span class="hc-route">/:slug</span></div><h3>Static page</h3><p>Evergreen content (About) minus post chrome.</p></a>
+        <a class="hub-card" href="public/search.html"><div class="hc-top"><div class="hc-icon">⌕</div><span class="hc-route">/search</span></div><h3>Search</h3><p>Instant search-as-you-type over FTS5, keyboard nav.</p></a>
+        <a class="hub-card" href="public/members-signup.html"><div class="hc-top"><div class="hc-icon">✉</div><span class="hc-route">/members/*</span></div><h3>Newsletter</h3><p>Signup, confirm, preferences & unsubscribe.</p></a>
+        <a class="hub-card" href="public/404.html"><div class="hc-top"><div class="hc-icon">∅</div><span class="hc-route">404</span></div><h3>Error page</h3><p>On-brand not-found with search and home link.</p></a>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="section-head" id="admin">
+        <span class="sh-num">D</span><h2>Admin · authoring</h2>
+        <span class="sh-desc">the writing & operations surface</span>
+      </div>
+      <div class="card-grid">
+        <a class="hub-card" href="admin/login.html"><div class="hc-top"><div class="hc-icon">⊙</div><span class="hc-route">/admin/login</span></div><h3>Login</h3><p>Centered auth card, single admin.</p></a>
+        <a class="hub-card" href="admin/dashboard.html"><div class="hc-top"><div class="hc-icon">▦</div><span class="hc-route">/admin</span></div><h3>Dashboard & analytics</h3><p>Stat cards, top posts, referrers, window selector.</p></a>
+        <a class="hub-card" href="admin/posts.html"><div class="hc-top"><div class="hc-icon">☰</div><span class="hc-route">/admin/posts</span></div><h3>Posts list</h3><p>Data table, filters, bulk actions, status badges.</p></a>
+        <a class="hub-card" href="admin/editor.html"><div class="hc-top"><div class="hc-icon">✎</div><span class="hc-route">/posts/:id/edit</span></div><h3>Post editor</h3><p>Two-pane source + live preview, settings drawer.</p></a>
+        <a class="hub-card" href="admin/pages.html"><div class="hc-top"><div class="hc-icon">𝐩</div><span class="hc-route">/admin/pages</span></div><h3>Pages</h3><p>Static page management, reuses post table/editor.</p></a>
+        <a class="hub-card" href="admin/media.html"><div class="hc-top"><div class="hc-icon">▢</div><span class="hc-route">/admin/media</span></div><h3>Media library</h3><p>Upload grid, detail drawer, picker mode.</p></a>
+        <a class="hub-card" href="admin/members.html"><div class="hc-top"><div class="hc-icon">☺</div><span class="hc-route">/admin/members</span></div><h3>Members</h3><p>Newsletter audience, CSV export, statuses.</p></a>
+        <a class="hub-card" href="admin/settings.html"><div class="hc-top"><div class="hc-icon">⚙</div><span class="hc-route">/admin/settings</span></div><h3>Settings</h3><p>General, newsletter, navigation, design, danger.</p></a>
+      </div>
+
+      <div style="height: var(--space-9)"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>
+        <div class="wordmark" style="margin-bottom:8px"><span class="dot"></span><span>blog-rs</span></div>
+        <p class="tagline">A complete design system & screen library, generated from the blog-rs spec. Server-rendered askama + htmx, no SPA framework.</p>
+      </div>
+      <nav><h4>System</h4><a href="components.html">Components</a><a href="components.html#colors">Tokens</a><a href="components.html#type">Type</a></nav>
+      <nav><h4>Screens</h4><a href="public/home.html">Public</a><a href="admin/dashboard.html">Admin</a></nav>
+      <div class="foot-bottom">
+        <span class="copyright">© 2026 blog-rs · technical-editorial</span>
+        <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

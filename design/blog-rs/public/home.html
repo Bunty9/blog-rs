@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>blog-rs — engineering notes on systems & performance</title>
+  <meta name="description" content="An engineering blog engine written in Rust. Notes on systems, performance, and the craft of building software." />
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .home-hero { text-align: center; padding: var(--space-8) 0 var(--space-7); }
+    .home-hero h1 { font-size: clamp(2rem, 4vw, 2.6rem); }
+    .home-hero p { color: var(--text-2); font-size: 1.1rem; margin-top: var(--space-3); max-width: 52ch; margin-inline: auto; }
+    .section-title { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-7) 0 var(--space-5); }
+    .section-title h2 { font-size: 1.1rem; font-family: var(--font-mono); font-weight: 600; letter-spacing: -0.01em; }
+    .section-title .rule { flex: 1; height: 1px; background: var(--border); }
+    .section-title a { font-size: 0.85rem; color: var(--text-2); text-decoration: none; }
+    .section-title a:hover { color: var(--accent); }
+    .posts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+    @media (max-width: 768px) { .posts-grid, .featured-card { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body data-chrome data-base="../" data-nav="home">
+  <div data-chrome-header></div>
+
+  <main id="main" class="container">
+    <section class="home-hero">
+      <h1>blog-rs</h1>
+      <p>Engineering notes on systems, performance, and the craft of building software — written in Rust, rendered fast.</p>
+    </section>
+
+    <a class="featured-card" href="post.html">
+      <div>
+        <div class="featured-flag">★ Featured</div>
+        <h2>Building a zero-copy log parser in Rust</h2>
+        <p class="excerpt">How we cut allocation overhead to near-zero by parsing directly out of the mmap’d ring buffer — and the unsafe we had to write to get there. A deep dive with benchmarks, flamegraphs, and a few dead ends.</p>
+        <div class="meta-strip"><span class="meta">9 min read</span><span class="dot-sep">·</span><span class="meta">Jun 1, 2026</span><span class="dot-sep">·</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">rust</a><a class="tag" href="tag.html" onclick="event.stopPropagation()">performance</a></div>
+      </div>
+      <img class="fc-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23eef0f4'/%3E%3Ctext x='50%25' y='50%25' fill='%23b8bfca' font-family='monospace' font-size='13' text-anchor='middle'%3Ecover image%3C/text%3E%3C/svg%3E" alt="Cover illustration" width="400" height="300" loading="lazy" />
+    </a>
+
+    <div class="section-title"><h2>Latest</h2><div class="rule"></div><a href="#">All posts →</a></div>
+
+    <div class="posts-grid">
+      <a class="post-card" href="post.html">
+        <h3>The cost of a syscall, measured</h3>
+        <p class="excerpt">We benchmark getpid, clock_gettime and friends across the vDSO and the raw path to find where the microseconds actually go.</p>
+        <div class="pc-meta"><span class="meta">8 min read · May 28</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">perf</a><a class="tag" href="tag.html" onclick="event.stopPropagation()">linux</a></div>
+      </a>
+      <a class="post-card" href="post.html">
+        <h3>Async cancellation, done right</h3>
+        <p class="excerpt">Drop is your cancellation signal. Here’s how to make cancellation composable across an async call tree without leaks.</p>
+        <div class="pc-meta"><span class="meta">5 min read · May 21</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">async</a><a class="tag" href="tag.html" onclick="event.stopPropagation()">rust</a></div>
+      </a>
+      <a class="post-card" href="post.html">
+        <h3>From zero to a working allocator</h3>
+        <p class="excerpt">A bump allocator in 80 lines, then a free-list, then a buddy allocator — building intuition for how malloc actually works.</p>
+        <div class="pc-meta"><span class="meta">11 min read · May 14</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">systems</a></div>
+      </a>
+      <a class="post-card" href="post.html">
+        <h3>Notes on the borrow checker</h3>
+        <p class="excerpt">The borrow checker is not a tax — it’s a proof obligation you discharge once. Five mental models that made it click.</p>
+        <div class="pc-meta"><span class="meta">6 min read · May 7</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">rust</a></div>
+      </a>
+      <a class="post-card" href="post.html">
+        <h3>Zero-downtime deploys with systemd</h3>
+        <p class="excerpt">Socket activation plus a careful reload dance gets you blue/green deploys without a load balancer in front.</p>
+        <div class="pc-meta"><span class="meta">4 min read · Apr 30</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">ops</a><a class="tag" href="tag.html" onclick="event.stopPropagation()">linux</a></div>
+      </a>
+      <a class="post-card" href="post.html">
+        <h3>Profiling async runtimes</h3>
+        <p class="excerpt">tokio-console, tracing spans, and a perf workflow for finding the task that’s starving your executor.</p>
+        <div class="pc-meta"><span class="meta">9 min read · Apr 23</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">async</a><a class="tag" href="tag.html" onclick="event.stopPropagation()">perf</a></div>
+      </a>
+    </div>
+
+    <nav class="pagination" aria-label="Pagination">
+      <span class="current">1</span>
+      <a href="#">2</a><a href="#">3</a><span class="ellipsis">…</span><a href="#">7</a>
+      <a href="#">Next ›</a>
+    </nav>
+  </main>
+
+  <div data-chrome-footer></div>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+</body>
+</html>

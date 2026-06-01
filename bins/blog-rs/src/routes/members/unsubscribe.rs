@@ -21,6 +21,7 @@ use db::members;
 pub struct UnsubForm<'a> {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub site_title: &'a str,
     pub email: &'a str,
     pub token: &'a str,
@@ -31,6 +32,7 @@ pub struct UnsubForm<'a> {
 pub struct UnsubDone<'a> {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub site_title: &'a str,
     pub email: &'a str,
 }
@@ -78,6 +80,7 @@ pub async fn show(
         let done = UnsubDone {
             site: site_ctx(&st),
             asset_tags: Vec::new(),
+            nav: "",
             site_title: &st.site.site_title,
             email: &member.email,
         };
@@ -87,6 +90,7 @@ pub async fn show(
     let form = UnsubForm {
         site: site_ctx(&st),
         asset_tags: Vec::new(),
+        nav: "",
         site_title: &st.site.site_title,
         email: &member.email,
         token: &token,
@@ -120,6 +124,7 @@ pub async fn submit(
     let done = UnsubDone {
         site: site_ctx(&st),
         asset_tags: Vec::new(),
+        nav: "",
         site_title: &st.site.site_title,
         email: &member.email,
     };

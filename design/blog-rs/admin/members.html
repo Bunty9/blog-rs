@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Members — blog-rs admin</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
+    .filter-bar .search-box { max-width: 260px; flex: 1; }
+    .filter-bar .search-box input { padding-block: var(--space-2); }
+    .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--space-4); margin-bottom: var(--space-5); }
+    .table-card { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+    .table-scroll { overflow-x: auto; }
+    .m-email { display: flex; align-items: center; gap: var(--space-3); }
+  </style>
+</head>
+<body data-admin data-admin-nav="members">
+  <div class="admin">
+    <div data-admin-sidebar></div>
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button class="icon-btn" aria-label="Toggle sidebar" onclick="toggleSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <div><h1>Members</h1><div class="breadcrumb" style="margin:2px 0 0"><a href="dashboard.html">Admin</a><span class="sep">/</span><span>Members</span></div></div>
+        <div class="at-actions">
+          <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+          <button class="btn btn-secondary btn-sm" onclick="toast('members.csv exported','success')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export CSV</button>
+        </div>
+      </header>
+      <div class="admin-content">
+        <div class="stat-row">
+          <div class="stat-card"><div class="sc-label">Confirmed</div><div class="sc-value">312</div></div>
+          <div class="stat-card"><div class="sc-label">Pending</div><div class="sc-value">14</div></div>
+          <div class="stat-card"><div class="sc-label">Unsubscribed</div><div class="sc-value">27</div></div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box"><span class="s-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span><input type="search" placeholder="Search by email…" /></div>
+          <select class="select" style="width:auto; padding-block:var(--space-2)"><option>All statuses</option><option>Confirmed</option><option>Pending</option><option>Unsubscribed</option></select>
+          <span class="spacer"></span><span class="meta">353 total</span>
+        </div>
+
+        <div class="table-card"><div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th class="checkbox-cell"><input type="checkbox" /></th><th>Email</th><th>Status</th><th>Source</th><th class="sortable">Signed up ↓</th><th></th></tr></thead>
+            <tbody>
+              <tr onclick="openMember(this)" style="cursor:pointer" data-email="a.turing@example.com" data-status="confirmed"><td><input type="checkbox" onclick="event.stopPropagation()" /></td><td><div class="m-email"><span class="avatar">AT</span> a.turing@example.com</div></td><td><span class="badge confirmed">Confirmed</span></td><td><span class="meta">inline CTA</span></td><td><span class="meta">Jun 1</span></td><td><span class="meta">›</span></td></tr>
+              <tr onclick="openMember(this)" style="cursor:pointer" data-email="grace@example.com" data-status="confirmed"><td><input type="checkbox" onclick="event.stopPropagation()" /></td><td><div class="m-email"><span class="avatar">GH</span> grace@example.com</div></td><td><span class="badge confirmed">Confirmed</span></td><td><span class="meta">header</span></td><td><span class="meta">May 29</span></td><td><span class="meta">›</span></td></tr>
+              <tr onclick="openMember(this)" style="cursor:pointer" data-email="dennis@example.com" data-status="pending"><td><input type="checkbox" onclick="event.stopPropagation()" /></td><td><div class="m-email"><span class="avatar">DR</span> dennis@example.com</div></td><td><span class="badge pending">Pending</span></td><td><span class="meta">post footer</span></td><td><span class="meta">May 28</span></td><td><span class="meta">›</span></td></tr>
+              <tr onclick="openMember(this)" style="cursor:pointer" data-email="ada@example.com" data-status="confirmed"><td><input type="checkbox" onclick="event.stopPropagation()" /></td><td><div class="m-email"><span class="avatar">AL</span> ada@example.com</div></td><td><span class="badge confirmed">Confirmed</span></td><td><span class="meta">signup page</span></td><td><span class="meta">May 24</span></td><td><span class="meta">›</span></td></tr>
+              <tr onclick="openMember(this)" style="cursor:pointer" data-email="ken@example.com" data-status="unsub"><td><input type="checkbox" onclick="event.stopPropagation()" /></td><td><div class="m-email"><span class="avatar">KT</span> ken@example.com</div></td><td><span class="badge unsub">Unsubscribed</span></td><td><span class="meta">header</span></td><td><span class="meta">May 18</span></td><td><span class="meta">›</span></td></tr>
+            </tbody>
+          </table>
+        </div></div>
+        <nav class="pagination" aria-label="Pagination"><span class="current">1</span><a href="#">2</a><a href="#">…</a><a href="#">12</a><a href="#">Next ›</a></nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer" id="member" role="dialog" aria-modal="true">
+    <div style="padding: var(--space-4) var(--space-5); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between"><h3 style="font-size:1.05rem">Member</h3><button class="icon-btn" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div style="padding: var(--space-5)">
+      <div class="row" style="margin-bottom:var(--space-5)"><span class="avatar lg" id="m-init">AT</span><div><div style="font-weight:600" id="m-email">a.turing@example.com</div><span class="badge confirmed" id="m-badge">Confirmed</span></div></div>
+      <div class="row" style="gap:var(--space-5)"><div class="field" style="flex:1"><label>Signed up</label><div class="meta">Jun 1, 2026</div></div><div class="field" style="flex:1"><label>Source</label><div class="meta">inline CTA</div></div></div>
+      <div class="field" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; border:1px solid var(--border); border-radius:var(--r-md); padding:var(--space-3) var(--space-4)"><label style="margin:0">Subscribed</label><span class="switch"><input type="checkbox" checked onchange="toast(this.checked?'Re-subscribed':'Unsubscribed','success')" /><span class="slider"></span></span></div>
+      <div class="field"><label>Notes</label><textarea class="textarea" placeholder="Internal notes (optional)…"></textarea></div>
+      <button class="btn btn-danger btn-sm" data-close onclick="toast('Member deleted','success')">Delete member</button>
+    </div>
+  </div>
+
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/admin-shell.js"></script>
+  <script>
+    function openMember(row){
+      var email=row.dataset.email, st=row.dataset.status;
+      document.getElementById('m-email').textContent=email;
+      document.getElementById('m-init').textContent=email.slice(0,2).toUpperCase();
+      var b=document.getElementById('m-badge'); b.className='badge '+st; b.textContent={confirmed:'Confirmed',pending:'Pending',unsub:'Unsubscribed'}[st];
+      document.getElementById('member').classList.add('open');
+    }
+  </script>
+</body>
+</html>

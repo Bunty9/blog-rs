@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Not found — blog-rs</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .nf { min-height: calc(100vh - var(--header-h)); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-7) var(--space-5); }
+    .nf .code { font-family: var(--font-mono); font-size: clamp(5rem, 18vw, 9rem); font-weight: 650; line-height: 1; color: var(--surface-2); letter-spacing: -0.04em; }
+    .nf h1 { font-size: 1.5rem; margin-top: var(--space-2); }
+    .nf p { color: var(--text-2); margin-top: var(--space-3); max-width: 44ch; }
+    .nf .search-box { max-width: 380px; width: 100%; margin-top: var(--space-6); }
+    .nf .links { margin-top: var(--space-5); display: flex; gap: var(--space-3); }
+  </style>
+</head>
+<body data-chrome data-base="../">
+  <div data-chrome-header></div>
+  <main id="main">
+    <div class="nf">
+      <div class="code">404</div>
+      <h1>This page wandered off</h1>
+      <p>The slug you’re after doesn’t resolve — it may be a draft, unpublished, or simply never existed.</p>
+      <form class="search-box" action="search.html">
+        <span class="s-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <input type="search" name="q" placeholder="Search for what you wanted…" />
+      </form>
+      <div class="links">
+        <a class="btn btn-primary" href="home.html">Back home</a>
+        <a class="btn btn-secondary" href="tags.html">Browse tags</a>
+      </div>
+    </div>
+  </main>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+</body>
+</html>

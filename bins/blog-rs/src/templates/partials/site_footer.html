@@ -1,0 +1,14 @@
+<footer class="site-footer">
+  <div class="container">
+    <div>
+      <div class="wordmark" style="margin-bottom:var(--space-2)"><span class="dot"></span><span>{{ site.title }}</span></div>
+      <p class="tagline">{{ site.description }}</p>
+    </div>
+    <nav aria-label="Explore"><h4>Explore</h4><a href="/">Latest</a><a href="/tags">Tags</a><a href="/series">Series</a></nav>
+    <nav aria-label="More"><h4>More</h4><a href="/about">About</a><a href="/feed.xml">RSS feed</a><a href="/members/signup">Subscribe</a></nav>
+    <div class="foot-bottom">
+      <span class="copyright">&copy; {{ site.year() }} {{ site.title }}</span>
+      <button class="icon-btn" aria-label="Toggle theme" data-theme-state onclick="toggleTheme()"><span class="icon-moon">{% include "partials/icon_moon.html" %}</span><span class="icon-sun">{% include "partials/icon_sun.html" %}</span></button>
+    </div>
+  </div>
+</footer>

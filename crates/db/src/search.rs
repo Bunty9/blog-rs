@@ -57,6 +57,8 @@ mod tests {
                 body_md: body,
                 body_html: body,
                 meta_json: None,
+                toc_json: "[]",
+                reading_minutes: None,
             },
         )
         .await

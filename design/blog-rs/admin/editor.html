@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit post — blog-rs admin</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    body { overflow: hidden; }
+    .editor-shell { display: flex; flex-direction: column; height: 100vh; }
+    .ed-top { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); flex: none; }
+    .ed-top .back { color: var(--text-muted); }
+    .ed-title-wrap { flex: 1; min-width: 0; }
+    .ed-title { width: 100%; border: none; background: transparent; font-size: 1.3rem; font-weight: 650; letter-spacing: -0.01em; outline: none; color: var(--text); }
+    .ed-sub { display: flex; align-items: center; gap: var(--space-3); margin-top: 2px; }
+    .ed-slug { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
+    .ed-slug .ed-slug-in { border: none; background: transparent; font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); outline: none; width: 160px; }
+    .ed-actions { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+    .split-toggle { display: inline-flex; }
+    .ed-body { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; }
+    .ed-body.full-source { grid-template-columns: 1fr; }
+    .ed-body.full-source .ed-preview { display: none; }
+    .ed-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .ed-pane.ed-source { border-right: 1px solid var(--border); }
+    .ed-toolbar { display: flex; align-items: center; gap: 2px; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); flex-wrap: wrap; flex: none; background: var(--surface); }
+    .ed-toolbar button { font-size: 0.78rem; font-family: var(--font-mono); padding: 4px 8px; border: 1px solid transparent; background: transparent; color: var(--text-2); border-radius: var(--r-sm); cursor: pointer; }
+    .ed-toolbar button:hover { background: var(--surface-2); color: var(--text); }
+    .ed-toolbar .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+    .ed-textarea { flex: 1; border: none; outline: none; resize: none; padding: var(--space-5); font-family: var(--font-mono); font-size: 0.875rem; line-height: 1.7; background: var(--bg); color: var(--text); tab-size: 2; }
+    .ed-pane-label { padding: var(--space-2) var(--space-3); font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); border-bottom: 1px solid var(--border); display:flex; align-items:center; gap:8px; flex:none; }
+    .ed-preview { background: var(--bg); }
+    .ed-preview-scroll { flex: 1; overflow-y: auto; padding: var(--space-6); }
+    .ed-preview-scroll .prose { max-width: 100%; font-size: 16px; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+    @media (max-width: 1024px) {
+      .ed-body { grid-template-columns: 1fr; }
+      .ed-body .ed-preview { display: none; }
+      .ed-body.show-preview .ed-source { display: none; }
+      .ed-body.show-preview .ed-preview { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-shell">
+    <header class="ed-top">
+      <a class="icon-btn back" href="posts.html" aria-label="Back to posts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a>
+      <div class="ed-title-wrap">
+        <input class="ed-title" value="Building a zero-copy log parser in Rust" aria-label="Title" />
+        <div class="ed-sub">
+          <span class="ed-slug">/posts/<input class="ed-slug-in" value="zero-copy-log-parser" aria-label="Slug" /></span>
+          <span class="badge draft" id="status-badge">Draft</span>
+          <span class="meta" id="save-state">Saved 2m ago</span>
+        </div>
+      </div>
+      <div class="ed-actions">
+        <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+        <div class="segment split-toggle" data-segment id="view-seg">
+          <button data-value="split" class="active" title="Split">▤</button>
+          <button data-value="source" title="Source only">≡</button>
+          <button data-value="preview" title="Preview" class="mobile-only">◑</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" data-open="settings-drawer">Settings</button>
+        <button class="btn btn-secondary btn-sm" data-loading-demo>Save</button>
+        <button class="btn btn-primary btn-sm" onclick="publish()">Publish ▾</button>
+      </div>
+    </header>
+
+    <div class="ed-body" id="ed-body">
+      <section class="ed-pane ed-source">
+        <div class="ed-toolbar">
+          <button onclick="wrap('**','**')" title="Bold"><strong>B</strong></button>
+          <button onclick="wrap('_','_')" title="Italic"><em>I</em></button>
+          <button onclick="wrap('`','`')" title="Code">&lt;/&gt;</button>
+          <button onclick="prefix('## ')" title="Heading">H2</button>
+          <span class="tb-sep"></span>
+          <button onclick="insertBlock('callout')">{callout}</button>
+          <button onclick="insertBlock('code')">{code}</button>
+          <button onclick="insertBlock('chart')">{chart}</button>
+          <button onclick="insertBlock('toggle')">{toggle}</button>
+          <button onclick="insertBlock('embed')">{embed}</button>
+          <span class="tb-sep"></span>
+          <button data-open="media-drawer">+ media</button>
+          <button onclick="toast('Snippet inserted','success')">+ snippet</button>
+        </div>
+        <textarea class="ed-textarea" id="src" spellcheck="false"></textarea>
+      </section>
+
+      <section class="ed-pane ed-preview">
+        <div class="ed-pane-label"><span class="live-dot"></span> Live preview · rendered via content::render</div>
+        <div class="ed-preview-scroll"><article class="prose" id="preview"></article></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Settings drawer -->
+  <div class="drawer" id="settings-drawer" role="dialog" aria-modal="true">
+    <div style="padding: var(--space-4) var(--space-5); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--bg)"><h3 style="font-size:1.05rem">Post settings</h3><button class="icon-btn" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div style="padding: var(--space-5)">
+      <div class="field"><label>Excerpt</label><textarea class="textarea" placeholder="Short summary for cards & SEO…">How we cut allocation overhead to near-zero by parsing directly out of the mmap’d ring buffer.</textarea></div>
+      <div class="field"><label>Cover image</label><button class="btn btn-secondary btn-sm" data-open="media-drawer" style="width:100%">Choose from media library…</button></div>
+      <div class="field"><label>Tags</label><div class="row-wrap" style="border:1px solid var(--border-strong); border-radius:var(--r-md); padding:6px"><span class="tag">rust ×</span><span class="tag">performance ×</span><span class="tag">embedded ×</span><input class="input" placeholder="Add tag…" style="border:none; flex:1; min-width:80px; padding:4px; box-shadow:none" /></div></div>
+      <div class="field"><label>Series</label><select class="select"><option>Systems from scratch (part 3)</option><option>None</option></select></div>
+      <details class="accordion" open style="margin-bottom:var(--space-4)"><summary>SEO <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary><div class="acc-body">
+        <div class="field"><label>Meta description</label><textarea class="textarea" style="min-height:64px"></textarea></div>
+        <div class="field"><label>OG image</label><input class="input" placeholder="/media/og/…png" /></div>
+        <div class="field"><label>Canonical URL</label><input class="input" placeholder="https://…" /></div>
+        <div class="field" style="margin-bottom:0"><label>Twitter card</label><select class="select"><option>summary_large_image</option><option>summary</option></select></div>
+      </div></details>
+      <div class="field"><label>Schedule</label><input class="input" type="datetime-local" /><span class="help">Setting a future time switches status to “scheduled”.</span></div>
+      <details class="accordion"><summary>Revisions <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary><div class="acc-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0"><span class="meta">2m ago · admin</span><span><button class="btn btn-ghost btn-sm">View</button><button class="btn btn-ghost btn-sm">Restore</button></span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid var(--border)"><span class="meta">1h ago · admin</span><span><button class="btn btn-ghost btn-sm">View</button><button class="btn btn-ghost btn-sm">Restore</button></span></div>
+      </div></details>
+    </div>
+  </div>
+
+  <!-- Media drawer (picker) -->
+  <div class="drawer" id="media-drawer" role="dialog" aria-modal="true" style="width:480px">
+    <div style="padding: var(--space-4) var(--space-5); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--bg)"><h3 style="font-size:1.05rem">Insert media</h3><button class="icon-btn" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div style="padding: var(--space-5)">
+      <button class="btn btn-secondary" style="width:100%; margin-bottom:var(--space-4)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M5 11l7-7 7 7M5 20h14"/></svg> Upload new</button>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-3)" id="media-grid"></div>
+    </div>
+  </div>
+
+  <script src="../assets/js/app.js"></script>
+  <script>
+    /* seed content */
+    var seed = [
+      '# (title is in the header field above)',
+      '',
+      "Our ingestion pipeline was spending **40% of its CPU time in `memcpy`**. Every log line went through three buffers before it was parsed.",
+      '',
+      '## The problem',
+      '',
+      'The insight is simple: the bytes are already in memory. If we map the ring buffer with `mmap` and parse fields as `&[u8]` slices, we never copy at all.',
+      '',
+      ':::info',
+      'All benchmarks run on a 12-core Ryzen 9 with `perf stat`. Numbers are p50 of 1M iterations.',
+      ':::',
+      '',
+      '## Setting up the ring buffer',
+      '',
+      'We use a power-of-two sized mapping so wrap-around is a single bitwise AND:',
+      '',
+      '```rust',
+      'pub fn next_line(&self) -> Option<&[u8]> {',
+      '    let start = self.head & self.mask;',
+      '    Some(&[])',
+      '}',
+      '```',
+      '',
+      ':::warn',
+      "Watch the lifetime: the slice borrows `&self`, so the buffer can't advance while a line is in scope.",
+      ':::',
+      '',
+      '## Benchmarks',
+      '',
+      'Allocation count went from **3 per line to zero**.'
+    ].join('\n');
+
+    var src = document.getElementById('src');
+    var preview = document.getElementById('preview');
+    src.value = seed;
+
+    /* tiny markdown + shortcode renderer (stand-in for content::render) */
+    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function inline(s){
+      return esc(s)
+        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+        .replace(/(^|[^_])_([^_]+)_/g,'$1<em>$2</em>')
+        .replace(/`([^`]+)`/g,'<code>$1</code>');
+    }
+    function render(md){
+      var lines = md.split('\n'), out = [], i = 0;
+      function callout(type){
+        var body = []; i++;
+        while(i<lines.length && lines[i].trim() !== ':::'){ body.push(lines[i]); i++; }
+        var icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
+        return '<div class="callout '+type+'"><span class="co-icon">'+icon+'</span><div class="co-body">'+inline(body.join(' '))+'</div></div>';
+      }
+      while(i < lines.length){
+        var l = lines[i];
+        if(/^```/.test(l)){
+          var lang = l.slice(3).trim() || 'text'; var code = []; i++;
+          while(i<lines.length && !/^```/.test(lines[i])){ code.push(lines[i]); i++; }
+          out.push('<div class="code-card"><div class="cc-bar"><span class="cc-lang">'+esc(lang)+'</span><div class="cc-actions"><button class="cc-btn"><span class="cc-label">Copy</span></button></div></div><pre><code>'+esc(code.join('\n'))+'</code></pre></div>');
+        }
+        else if(/^:::info/.test(l)) out.push(callout('info'));
+        else if(/^:::tip/.test(l)) out.push(callout('tip'));
+        else if(/^:::warn/.test(l)) out.push(callout('warn'));
+        else if(/^:::danger/.test(l)) out.push(callout('danger'));
+        else if(/^### /.test(l)) out.push('<h3>'+inline(l.slice(4))+'</h3>');
+        else if(/^## /.test(l)) out.push('<h2>'+inline(l.slice(3))+'</h2>');
+        else if(/^# /.test(l)) out.push('<p class="meta">'+inline(l.slice(2))+'</p>');
+        else if(l.trim()==='') {}
+        else out.push('<p>'+inline(l)+'</p>');
+        i++;
+      }
+      return out.join('\n');
+    }
+    var deb;
+    function update(){ clearTimeout(deb); document.getElementById('save-state').textContent='Unsaved changes'; deb = setTimeout(function(){ preview.innerHTML = render(src.value); }, 180); }
+    src.addEventListener('input', update);
+    preview.innerHTML = render(src.value);
+
+    /* toolbar helpers */
+    function wrap(a,b){ var s=src.selectionStart,e=src.selectionEnd,v=src.value; src.value=v.slice(0,s)+a+v.slice(s,e)+b+v.slice(e); src.focus(); src.selectionStart=s+a.length; src.selectionEnd=e+a.length; update(); }
+    function prefix(p){ var s=src.selectionStart,v=src.value; var ls=v.lastIndexOf('\n',s-1)+1; src.value=v.slice(0,ls)+p+v.slice(ls); src.focus(); update(); }
+    function insertBlock(type){
+      var blocks={ callout:'\n:::info\nYour note here.\n:::\n', code:'\n```rust\nfn main() {}\n```\n', chart:'\n{{ chart data="..." }}\n', toggle:'\n:::toggle Summary\nHidden detail.\n:::\n', embed:'\n{{ embed url="..." }}\n' };
+      var s=src.selectionStart,v=src.value; src.value=v.slice(0,s)+blocks[type]+v.slice(s); src.focus(); update();
+    }
+
+    /* view segment */
+    document.getElementById('view-seg').addEventListener('segment:change', function(e){
+      var body=document.getElementById('ed-body');
+      body.classList.toggle('full-source', e.detail==='source');
+      body.classList.toggle('show-preview', e.detail==='preview');
+    });
+
+    function publish(){ document.getElementById('status-badge').outerHTML='<span class="badge published" id="status-badge">Published</span>'; document.getElementById('save-state').textContent='Published just now'; toast('Published — newsletter queued to 312 members','success'); }
+
+    /* media grid */
+    var shades=['#e4e7ec','#eef0f4','#d0d5dd','#dfe3ea','#e8ebf0','#d6dbe2'];
+    document.getElementById('media-grid').innerHTML = shades.map(function(c){ return '<img onclick="toast(\'Inserted /media/img.png\',\'success\'); document.getElementById(\'media-drawer\').classList.remove(\'open\')" style="aspect-ratio:1;object-fit:cover;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--border)" src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'120\'%3E%3Crect width=\'120\' height=\'120\' fill=\''+encodeURIComponent(c)+'\'/%3E%3C/svg%3E" alt="" />'; }).join('');
+  </script>
+</body>
+</html>

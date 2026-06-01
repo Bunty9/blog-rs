@@ -5,6 +5,9 @@ use askama_axum::IntoResponse;
 use axum::extract::{Query, State};
 use serde::Deserialize;
 
+/// Limit for instant/partial results (no pagination needed for the htmx fragment).
+const INSTANT_LIMIT: i64 = 20;
+
 #[derive(Debug, Deserialize)]
 pub struct SearchQuery {
     #[serde(default)]
@@ -25,9 +28,19 @@ pub struct SearchHitView {
 pub struct SearchTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub query: String,
     pub hits: Vec<SearchHitView>,
     pub pagination: Pagination,
+}
+
+/// Fragment-only template returned by `/search/instant`.
+/// Does NOT extend base.html — it is a bare HTML fragment for htmx to swap in.
+#[derive(Template)]
+#[template(path = "partials/search_results.html")]
+pub struct SearchResultsTemplate {
+    pub query: String,
+    pub hits: Vec<SearchHitView>,
 }
 
 pub async fn handler(
@@ -77,10 +90,36 @@ pub async fn handler(
     Ok(SearchTemplate {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "",
         query,
         hits: hit_views,
         pagination,
     })
+}
+
+/// `GET /search/instant?q=<query>` — returns the bare `search_results.html` fragment
+/// for htmx to swap into `#search-results`. No base layout, no `<html>` wrapper.
+pub async fn instant_handler(
+    Query(q): Query<SearchQuery>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, crate::error::AppError> {
+    let query = q.q.trim().to_string();
+    let hits = if query.is_empty() {
+        Vec::new()
+    } else {
+        let rows = db::posts::search_fts(&state.pool, &query, INSTANT_LIMIT, 0)
+            .await
+            .map_err(db::DbError::from)?;
+        rows.iter()
+            .map(|h| SearchHitView {
+                slug: h.slug.clone(),
+                title: h.title.clone(),
+                snippet: h.snippet.clone(),
+                published_date: h.published_at.map(iso_date),
+            })
+            .collect()
+    };
+    Ok(SearchResultsTemplate { query, hits })
 }
 
 #[cfg(test)]
@@ -130,11 +169,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn empty_query_renders_hint() {
+    async fn empty_query_renders_search_box() {
         let (app, _pool) = test_app().await;
         let (status, body) = body_of(app, "/search").await;
         assert_eq!(status, StatusCode::OK);
-        assert!(body.contains("Enter a query"));
+        // The search input with htmx attributes must be present.
+        assert!(body.contains(r#"id="q""#));
+        assert!(body.contains("hx-get"));
     }
 
     #[tokio::test]
@@ -174,5 +215,56 @@ mod tests {
             .await;
             assert_eq!(status, StatusCode::OK, "{q} should not 500");
         }
+    }
+
+    // ── instant / htmx fragment tests ──────────────────────────────────────
+
+    #[tokio::test]
+    async fn instant_empty_query_returns_200_empty_fragment() {
+        let (app, _pool) = test_app().await;
+        let (status, body) = body_of(app, "/search/instant").await;
+        assert_eq!(status, StatusCode::OK);
+        // Must NOT contain <html> or page layout — it is a bare fragment.
+        assert!(!body.contains("<html"));
+        assert!(!body.contains("<header"));
+        // No results markup for empty query.
+        assert!(!body.contains("search-result"));
+    }
+
+    #[tokio::test]
+    async fn instant_query_returns_fragment_with_hit() {
+        let (app, pool) = test_app().await;
+        insert(
+            &pool,
+            "instant-post",
+            "Instant Rust Guide",
+            "A guide to instant feedback loops in Rust.",
+        )
+        .await;
+        let (status, body) = body_of(app, "/search/instant?q=instant").await;
+        assert_eq!(status, StatusCode::OK);
+        // Fragment: no full-page layout.
+        assert!(!body.contains("<html"));
+        assert!(!body.contains("<header"));
+        // Hit present with slug link.
+        assert!(
+            body.contains("/posts/instant-post"),
+            "expected slug link in body: {body}"
+        );
+        // Snippet should contain <mark> from FTS5.
+        assert!(
+            body.contains("<mark>"),
+            "expected <mark> in snippet: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn instant_no_match_returns_empty_state() {
+        let (app, pool) = test_app().await;
+        insert(&pool, "p", "Title", "body text").await;
+        let (status, body) = body_of(app, "/search/instant?q=zzznomatch").await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(!body.contains("<html"));
+        assert!(body.contains("No matches for"));
     }
 }

@@ -26,6 +26,7 @@ pub struct Post {
     pub body_html: String,
     pub meta_json: Option<String>,
     pub assets_json: String,
+    pub toc_json: String,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +41,8 @@ pub struct NewPost<'a> {
     pub body_md: &'a str,
     pub body_html: &'a str,
     pub meta_json: Option<&'a str>,
+    pub toc_json: &'a str,
+    pub reading_minutes: Option<i64>,
 }
 
 pub async fn create(pool: &SqlitePool, p: NewPost<'_>) -> Result<i64, DbError> {
@@ -49,8 +52,9 @@ pub async fn create(pool: &SqlitePool, p: NewPost<'_>) -> Result<i64, DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     let res = sqlx::query(
         "INSERT INTO posts (slug, title, subtitle, status, author_id, updated_at, created_at,
-                            excerpt, cover_image, body_md, body_html, body_html_version, meta_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            excerpt, cover_image, body_md, body_html, body_html_version, meta_json,
+                            toc_json, reading_minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(p.slug)
     .bind(p.title)
@@ -65,6 +69,8 @@ pub async fn create(pool: &SqlitePool, p: NewPost<'_>) -> Result<i64, DbError> {
     .bind(p.body_html)
     .bind(content::RENDER_VERSION as i64)
     .bind(p.meta_json)
+    .bind(p.toc_json)
+    .bind(p.reading_minutes)
     .execute(pool)
     .await
     .map_err(|e| match e {
@@ -94,22 +100,28 @@ pub async fn body_html_version(pool: &SqlitePool, id: i64) -> Result<i64, DbErro
 }
 
 /// Overwrite the rendered cache for a post (`body_html`, `assets_json`,
-/// `body_html_version`). Used by the lazy regeneration path when a published
-/// post is read with a stale `body_html_version`.
+/// `toc_json`, `reading_minutes`, `body_html_version`). Used by the lazy
+/// regeneration path when a published post is read with a stale
+/// `body_html_version`.
 pub async fn update_rendered_cache(
     pool: &SqlitePool,
     id: i64,
     body_html: &str,
     assets_json: &str,
+    toc_json: &str,
+    reading_minutes: i64,
     version: i64,
 ) -> Result<(), DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     sqlx::query(
-        "UPDATE posts SET body_html = ?, assets_json = ?, body_html_version = ?, updated_at = ?
+        "UPDATE posts SET body_html = ?, assets_json = ?, toc_json = ?, reading_minutes = ?,
+                          body_html_version = ?, updated_at = ?
          WHERE id = ?",
     )
     .bind(body_html)
     .bind(assets_json)
+    .bind(toc_json)
+    .bind(reading_minutes)
     .bind(version)
     .bind(now)
     .bind(id)
@@ -173,7 +185,7 @@ pub async fn list_by_tag(
         SELECT p.id, p.slug, p.title, p.subtitle, p.status, p.author_id,
                p.published_at, p.scheduled_for, p.updated_at, p.created_at,
                p.excerpt, p.cover_image, p.reading_minutes,
-               p.body_md, p.body_html, p.meta_json, p.assets_json
+               p.body_md, p.body_html, p.meta_json, p.assets_json, p.toc_json
           FROM posts p
           JOIN post_tags pt ON pt.post_id = p.id
           JOIN tags t       ON t.id = pt.tag_id
@@ -216,7 +228,7 @@ pub async fn list_by_series(
         SELECT id, slug, title, subtitle, status, author_id,
                published_at, scheduled_for, updated_at, created_at,
                excerpt, cover_image, reading_minutes,
-               body_md, body_html, meta_json, assets_json
+               body_md, body_html, meta_json, assets_json, toc_json
           FROM posts
          WHERE status = 'published'
            AND json_extract(meta_json, '$.series') = ?
@@ -574,9 +586,13 @@ pub struct PostUpdate {
     pub cover_image: Option<String>,
     pub body_md: Option<String>,
     pub body_html: Option<String>,
+    pub toc_json: Option<String>,
+    pub reading_minutes: Option<i64>,
     pub status: Option<String>,
     pub scheduled_for: Option<Option<i64>>,
     pub tags_csv: Option<String>,
+    /// Serialised JSON blob; replaces the existing `meta_json` column entirely.
+    pub meta_json: Option<String>,
 }
 
 pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result<(), DbError> {
@@ -624,16 +640,21 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result
             .await?;
     }
     if let (Some(md), Some(html)) = (&u.body_md, &u.body_html) {
+        let toc = u.toc_json.as_deref().unwrap_or("[]");
+        let mins = u.reading_minutes.unwrap_or(1);
         sqlx::query(
-            "UPDATE posts SET body_md = ?, body_html = ?, body_html_version = ?, updated_at = ? WHERE id = ?",
+            "UPDATE posts SET body_md = ?, body_html = ?, toc_json = ?, reading_minutes = ?,
+                              body_html_version = ?, updated_at = ? WHERE id = ?",
         )
-            .bind(md)
-            .bind(html)
-            .bind(content::RENDER_VERSION as i64)
-            .bind(now)
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
+        .bind(md)
+        .bind(html)
+        .bind(toc)
+        .bind(mins)
+        .bind(content::RENDER_VERSION as i64)
+        .bind(now)
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
     }
     if let Some(v) = &u.status {
         sqlx::query("UPDATE posts SET status = ?, updated_at = ? WHERE id = ?")
@@ -645,6 +666,14 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result
     }
     if let Some(v) = &u.scheduled_for {
         sqlx::query("UPDATE posts SET scheduled_for = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.meta_json {
+        sqlx::query("UPDATE posts SET meta_json = ?, updated_at = ? WHERE id = ?")
             .bind(v)
             .bind(now)
             .bind(id)
@@ -752,6 +781,136 @@ pub async fn soft_delete(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
         .execute(pool)
         .await?;
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Related posts (Task 14)
+// ---------------------------------------------------------------------------
+
+/// Published posts that share tags with `post_id`, ordered by shared-tag
+/// count DESC then `published_at` DESC. Self is excluded. If the post has
+/// no tags the query still runs and returns an empty vec (or falls through to
+/// the most-recent fallback).
+pub async fn related(pool: &SqlitePool, post_id: i64, limit: i64) -> Result<Vec<Post>, DbError> {
+    // Primary: posts sharing at least one tag with the target post.
+    let shared = sqlx::query_as::<_, Post>(
+        r#"
+        SELECT p.*
+          FROM posts p
+         WHERE p.status = 'published'
+           AND p.id != ?
+           AND p.id IN (
+                 SELECT pt2.post_id
+                   FROM post_tags pt1
+                   JOIN post_tags pt2 ON pt2.tag_id = pt1.tag_id
+                  WHERE pt1.post_id = ?
+                    AND pt2.post_id != ?
+               )
+         ORDER BY (
+                 SELECT COUNT(*)
+                   FROM post_tags pt1
+                   JOIN post_tags pt2 ON pt2.tag_id = pt1.tag_id
+                  WHERE pt1.post_id = ?
+                    AND pt2.post_id = p.id
+               ) DESC,
+               p.published_at DESC
+         LIMIT ?
+        "#,
+    )
+    .bind(post_id)
+    .bind(post_id)
+    .bind(post_id)
+    .bind(post_id)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+
+    if shared.len() as i64 >= limit {
+        return Ok(shared);
+    }
+
+    // Fallback: fill remaining slots with most-recent published posts
+    // excluding self and anything already in `shared`.
+    let remaining = limit - shared.len() as i64;
+    let shared_ids: Vec<i64> = std::iter::once(post_id)
+        .chain(shared.iter().map(|p| p.id))
+        .collect();
+
+    // SQLite doesn't support binding a list directly; we build a safe
+    // placeholder string (only i64 values, no SQL injection risk).
+    let placeholders = shared_ids
+        .iter()
+        .map(|_| "?")
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = format!(
+        "SELECT * FROM posts WHERE status = 'published' AND id NOT IN ({}) \
+         ORDER BY published_at DESC LIMIT ?",
+        placeholders
+    );
+    let mut q = sqlx::query_as::<_, Post>(&sql);
+    for sid in &shared_ids {
+        q = q.bind(*sid);
+    }
+    q = q.bind(remaining);
+    let mut fill = q.fetch_all(pool).await?;
+
+    let mut result = shared;
+    result.append(&mut fill);
+    Ok(result)
+}
+
+// ---------------------------------------------------------------------------
+// Neighbor posts — previous / next by published_at (Task 14)
+// ---------------------------------------------------------------------------
+
+/// Returns `(previous, next)` neighbors of `post_id` among published posts
+/// ordered by `published_at`.
+///
+/// - `previous` = most-recent published post with `published_at < this`
+/// - `next`     = oldest published post with `published_at > this`
+///
+/// Either or both may be `None` (first/last post in the chronology).
+pub async fn neighbors(
+    pool: &SqlitePool,
+    post_id: i64,
+) -> Result<(Option<Post>, Option<Post>), DbError> {
+    // Fetch the target post's published_at.
+    let this_published: Option<i64> =
+        sqlx::query_scalar("SELECT published_at FROM posts WHERE id = ?")
+            .bind(post_id)
+            .fetch_one(pool)
+            .await
+            .map_err(DbError::from_row)?;
+
+    let Some(this_ts) = this_published else {
+        // Post is not yet published — no meaningful neighbors.
+        return Ok((None, None));
+    };
+
+    let prev: Option<Post> = sqlx::query_as::<_, Post>(
+        "SELECT * FROM posts
+          WHERE status = 'published' AND published_at < ? AND id != ?
+          ORDER BY published_at DESC
+          LIMIT 1",
+    )
+    .bind(this_ts)
+    .bind(post_id)
+    .fetch_optional(pool)
+    .await?;
+
+    let next: Option<Post> = sqlx::query_as::<_, Post>(
+        "SELECT * FROM posts
+          WHERE status = 'published' AND published_at > ? AND id != ?
+          ORDER BY published_at ASC
+          LIMIT 1",
+    )
+    .bind(this_ts)
+    .bind(post_id)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok((prev, next))
 }
 
 #[cfg(test)]
@@ -929,6 +1088,8 @@ mod tests {
                 body_md: "# hi",
                 body_html: "<h1>hi</h1>",
                 meta_json: None,
+                toc_json: "[]",
+                reading_minutes: Some(1),
             },
         )
         .await
@@ -954,6 +1115,8 @@ mod tests {
             body_md: "x",
             body_html: "x",
             meta_json: None,
+            toc_json: "[]",
+            reading_minutes: None,
         };
         create(&pool, mk()).await.unwrap();
         let err = create(&pool, mk()).await.unwrap_err();
@@ -977,10 +1140,290 @@ mod tests {
                 body_md: "x",
                 body_html: "x",
                 meta_json: None,
+                toc_json: "[]",
+                reading_minutes: None,
             },
         )
         .await
         .unwrap_err();
         assert!(matches!(err, DbError::Invalid(_)));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests: toc_json + reading_minutes persistence (Task 13)
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod toc_tests {
+    use super::*;
+    use crate::test_support::fresh_pool;
+    use crate::users;
+
+    async fn seed_author(pool: &SqlitePool) -> i64 {
+        users::bootstrap_admin(pool, "a@b.c", "h").await.unwrap();
+        users::find_by_email(pool, "a@b.c").await.unwrap().id
+    }
+
+    /// Create a post via the real write path with headings in markdown;
+    /// assert toc_json != "[]" and reading_minutes >= 1.
+    #[tokio::test]
+    async fn create_persists_toc_and_reading_minutes() {
+        let pool = fresh_pool().await;
+        let uid = seed_author(&pool).await;
+
+        let md = "# Introduction\n\n## Overview\n\nThis post covers several topics in depth.";
+        let out = content::render(md).expect("render failed");
+        let toc_json = serde_json::to_string(&out.toc).unwrap();
+        let assets_json = serde_json::to_string(&out.assets).unwrap();
+
+        let id = create(
+            &pool,
+            NewPost {
+                slug: "toc-test",
+                title: "TOC Test",
+                subtitle: None,
+                status: "published",
+                author_id: uid,
+                excerpt: None,
+                cover_image: None,
+                body_md: md,
+                body_html: &out.html,
+                meta_json: None,
+                toc_json: &toc_json,
+                reading_minutes: Some(out.reading_minutes),
+            },
+        )
+        .await
+        .unwrap();
+
+        let _ = assets_json; // assets not checked here
+        let row = find_by_id(&pool, id).await.unwrap();
+
+        assert_ne!(
+            row.toc_json, "[]",
+            "toc_json should be non-empty for a post with headings"
+        );
+        assert!(
+            row.reading_minutes.unwrap_or(0) >= 1,
+            "reading_minutes should be >= 1"
+        );
+    }
+
+    /// Simulate the lazy-regen path: insert a row with body_html_version=0,
+    /// call update_rendered_cache with new content, assert toc_json +
+    /// reading_minutes + version=RENDER_VERSION are written.
+    #[tokio::test]
+    async fn update_rendered_cache_persists_toc_and_reading_minutes() {
+        let pool = fresh_pool().await;
+        let uid = seed_author(&pool).await;
+
+        // Insert a stale row (version 0, empty toc_json via DEFAULT).
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        sqlx::query(
+            "INSERT INTO posts (slug, title, status, author_id, published_at,
+                                updated_at, created_at, body_md, body_html,
+                                body_html_version, assets_json)
+             VALUES (?, ?, 'published', ?, ?, ?, ?, '# Old', '<h1>Old</h1>',
+                     0, '[]')",
+        )
+        .bind("stale-toc")
+        .bind("Stale TOC")
+        .bind(uid)
+        .bind(now)
+        .bind(now)
+        .bind(now)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let id: i64 = sqlx::query_scalar("SELECT id FROM posts WHERE slug = 'stale-toc'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        // Re-render and persist.
+        let md = "# Fresh Heading\n\n## Sub-section\n\nLots of interesting words here.";
+        let out = content::render(md).expect("render failed");
+        let toc_json = serde_json::to_string(&out.toc).unwrap();
+        let assets_json = serde_json::to_string(&out.assets).unwrap();
+
+        update_rendered_cache(
+            &pool,
+            id,
+            &out.html,
+            &assets_json,
+            &toc_json,
+            out.reading_minutes,
+            content::RENDER_VERSION as i64,
+        )
+        .await
+        .unwrap();
+
+        let row = find_by_id(&pool, id).await.unwrap();
+        assert_ne!(row.toc_json, "[]", "toc_json should be updated");
+        assert!(
+            row.reading_minutes.unwrap_or(0) >= 1,
+            "reading_minutes should be >= 1"
+        );
+        let v: i64 = sqlx::query_scalar("SELECT body_html_version FROM posts WHERE id = ?")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(v, content::RENDER_VERSION as i64);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests: related + neighbors (Task 14)
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod neighbor_tests {
+    use super::*;
+    use crate::test_support::fresh_pool;
+
+    /// Seed a published post with the given slug and published_at timestamp.
+    /// Optionally attach a slice of tag slugs.
+    async fn seed_published(
+        pool: &SqlitePool,
+        slug: &str,
+        published_at: i64,
+        tag_slugs: &[&str],
+    ) -> i64 {
+        // Ensure user 1 exists.
+        sqlx::query(
+            "INSERT OR IGNORE INTO users (id, email, password_hash, role, created_at) \
+             VALUES (1, 'a@b', 'x', 'admin', 0)",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO posts (slug, title, status, author_id, published_at,
+                                updated_at, created_at, body_md, body_html, assets_json)
+             VALUES (?, ?, 'published', 1, ?, ?, ?, '# x', '<h1>x</h1>', '[]')",
+        )
+        .bind(slug)
+        .bind(slug) // title same as slug for simplicity
+        .bind(published_at)
+        .bind(published_at)
+        .bind(published_at)
+        .execute(pool)
+        .await
+        .unwrap();
+
+        let id: i64 = sqlx::query_scalar("SELECT id FROM posts WHERE slug = ?")
+            .bind(slug)
+            .fetch_one(pool)
+            .await
+            .unwrap();
+
+        for tag_slug in tag_slugs {
+            sqlx::query("INSERT OR IGNORE INTO tags (slug, name) VALUES (?, ?)")
+                .bind(tag_slug)
+                .bind(tag_slug)
+                .execute(pool)
+                .await
+                .unwrap();
+            let tag_id: i64 = sqlx::query_scalar("SELECT id FROM tags WHERE slug = ?")
+                .bind(tag_slug)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            sqlx::query("INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)")
+                .bind(id)
+                .bind(tag_id)
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+
+        id
+    }
+
+    #[tokio::test]
+    async fn neighbors_prev_and_next() {
+        let pool = fresh_pool().await;
+        let _early = seed_published(&pool, "early", 1_000, &[]).await;
+        let mid = seed_published(&pool, "mid", 2_000, &[]).await;
+        let _late = seed_published(&pool, "late", 3_000, &[]).await;
+
+        let (prev, next) = neighbors(&pool, mid).await.unwrap();
+        assert_eq!(prev.as_ref().map(|p| p.slug.as_str()), Some("early"));
+        assert_eq!(next.as_ref().map(|p| p.slug.as_str()), Some("late"));
+    }
+
+    #[tokio::test]
+    async fn neighbors_none_at_ends() {
+        let pool = fresh_pool().await;
+        let first = seed_published(&pool, "first", 1_000, &[]).await;
+        let last = seed_published(&pool, "last", 2_000, &[]).await;
+
+        let (prev, next) = neighbors(&pool, first).await.unwrap();
+        assert!(prev.is_none(), "first post should have no previous");
+        assert_eq!(next.as_ref().map(|p| p.slug.as_str()), Some("last"));
+
+        let (prev, next) = neighbors(&pool, last).await.unwrap();
+        assert_eq!(prev.as_ref().map(|p| p.slug.as_str()), Some("first"));
+        assert!(next.is_none(), "last post should have no next");
+    }
+
+    #[tokio::test]
+    async fn related_orders_by_shared_tag_count() {
+        let pool = fresh_pool().await;
+
+        // Target post has tags: rust, embedded
+        let target = seed_published(&pool, "target", 5_000, &["rust", "embedded"]).await;
+        // post_a shares both tags (count = 2) → should rank first
+        let post_a = seed_published(&pool, "post-a", 4_000, &["rust", "embedded"]).await;
+        // post_b shares one tag (count = 1) → should rank second
+        let post_b = seed_published(&pool, "post-b", 3_000, &["rust"]).await;
+        // post_c shares no tags → should not appear in primary results
+        let _post_c = seed_published(&pool, "post-c", 2_000, &["go"]).await;
+
+        let results = related(&pool, target, 2).await.unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results[0].id, post_a,
+            "post_a (2 shared tags) should rank first"
+        );
+        assert_eq!(
+            results[1].id, post_b,
+            "post_b (1 shared tag) should rank second"
+        );
+    }
+
+    #[tokio::test]
+    async fn related_fills_with_recency_when_few_shared_tags() {
+        let pool = fresh_pool().await;
+
+        // Target has tag: rare — only one other post shares it.
+        let target = seed_published(&pool, "target", 5_000, &["rare"]).await;
+        let _shared = seed_published(&pool, "shared", 4_000, &["rare"]).await;
+        // Two recency-fill candidates.
+        let _fill1 = seed_published(&pool, "fill1", 3_000, &["other"]).await;
+        let _fill2 = seed_published(&pool, "fill2", 2_000, &["other"]).await;
+
+        // limit=3 → 1 shared + 2 recency fill
+        let results = related(&pool, target, 3).await.unwrap();
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].slug, "shared");
+    }
+
+    #[tokio::test]
+    async fn related_no_tags_returns_recency_fill() {
+        let pool = fresh_pool().await;
+
+        let target = seed_published(&pool, "target", 5_000, &[]).await;
+        seed_published(&pool, "other1", 4_000, &[]).await;
+        seed_published(&pool, "other2", 3_000, &[]).await;
+
+        let results = related(&pool, target, 2).await.unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].slug, "other1");
+        assert_eq!(results[1].slug, "other2");
     }
 }

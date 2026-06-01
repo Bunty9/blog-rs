@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>blog-rs · Component library</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <style>
+    .cl-layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-7); align-items: start; }
+    .cl-nav { position: sticky; top: calc(var(--header-h) + var(--space-5)); font-size: 0.875rem; }
+    .cl-nav .cl-label { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: var(--space-4) 0 var(--space-2); }
+    .cl-nav a { display: block; padding: 5px var(--space-3); color: var(--text-2); text-decoration: none; border-radius: var(--r-sm); transition: color var(--t-fast), background var(--t-fast); }
+    .cl-nav a:hover { color: var(--text); background: var(--surface); }
+    .cl-main { min-width: 0; }
+    .comp { padding: var(--space-6) 0; border-bottom: 1px solid var(--border); scroll-margin-top: calc(var(--header-h) + var(--space-4)); }
+    .comp > h2 { font-size: 1.4rem; display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-2); }
+    .comp > h2 .num { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); }
+    .comp > .desc { color: var(--text-2); margin-bottom: var(--space-5); max-width: 64ch; }
+    .demo { padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+    .demo + .demo { margin-top: var(--space-3); }
+    .demo-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+    .demo-label { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-bottom: var(--space-3); }
+    .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+    .swatch { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+    .swatch .chip { height: 56px; }
+    .swatch .info { padding: var(--space-2) var(--space-3); }
+    .swatch .info .name { font-family: var(--font-mono); font-size: 0.75rem; }
+    .swatch .info .val { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+    .type-spec { display: flex; align-items: baseline; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+    .type-spec .ts-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); width: 130px; flex: none; }
+    .space-scale { display: flex; flex-direction: column; gap: var(--space-2); }
+    .space-scale .ss-row { display: flex; align-items: center; gap: var(--space-4); font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
+    .space-scale .ss-bar { height: 16px; background: var(--accent); border-radius: 2px; }
+    .radius-row { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+    .radius-row .rad { width: 80px; height: 80px; background: var(--accent-subtle); border: 1px solid var(--accent); display: flex; align-items: flex-end; justify-content: center; font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-hover); padding-bottom: 6px; }
+    /* playground */
+    .pg { display: grid; grid-template-columns: 1fr 240px; gap: 0; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+    .pg-stage { padding: var(--space-7) var(--space-5); display: flex; align-items: center; justify-content: center; background: var(--surface); min-height: 200px; }
+    .pg-controls { border-left: 1px solid var(--border); padding: var(--space-4); background: var(--bg); }
+    .pg-controls .field { margin-bottom: var(--space-3); }
+    .pg-controls label { font-size: 0.8rem; }
+    @media (max-width: 1024px) { .cl-layout { grid-template-columns: 1fr; } .cl-nav { display: none; } .pg { grid-template-columns: 1fr; } .pg-controls { border-left: none; border-top: 1px solid var(--border); } }
+  </style>
+</head>
+<body data-chrome data-base="">
+  <div data-chrome-header></div>
+
+  <main id="main" class="container" style="padding-top: var(--space-6)">
+    <div style="margin-bottom: var(--space-6)">
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Component library</span></div>
+      <h1>Component library</h1>
+      <p style="color: var(--text-2); margin-top: var(--space-3); max-width: 64ch;">The 31 themable components from the spec, each with their states. Toggle the theme (top-right) to verify both palettes. Everything below is driven by the same token stylesheet.</p>
+    </div>
+
+    <div class="cl-layout">
+      <aside class="cl-nav" aria-label="Component nav">
+        <div class="cl-label">Foundations</div>
+        <a href="#colors">Colors</a><a href="#type">Typography</a><a href="#spacing">Spacing & radius</a>
+        <div class="cl-label">Core</div>
+        <a href="#buttons">Buttons</a><a href="#tags">Tags & badges</a><a href="#forms">Form controls</a><a href="#playground">Playground</a>
+        <div class="cl-label">Content blocks</div>
+        <a href="#cards">Cards</a><a href="#code">Code card</a><a href="#callouts">Callouts</a><a href="#chart">Chart figure</a><a href="#blocks">Bookmark · gallery · toggle</a>
+        <div class="cl-label">Navigation</div>
+        <a href="#toc">TOC</a><a href="#search">Search</a><a href="#pagination">Pagination</a><a href="#empty">Empty state</a>
+        <div class="cl-label">Overlays</div>
+        <a href="#overlays">Modal & drawer</a><a href="#toast">Toast</a><a href="#table">Data table</a>
+      </aside>
+
+      <div class="cl-main">
+
+        <!-- COLORS -->
+        <section class="comp" id="colors">
+          <h2><span class="num">A.2</span> Color tokens</h2>
+          <p class="desc">Neutral canvas + one indigo accent, plus four status hues. Defined as CSS custom properties on <code>:root</code> and <code>[data-theme="dark"]</code>. These swatches read the live values — switch theme to see them shift.</p>
+          <div class="demo-label">Surfaces & text</div>
+          <div class="swatch-grid" style="margin-bottom: var(--space-4)">
+            <div class="swatch"><div class="chip" style="background:var(--bg)"></div><div class="info"><div class="name">--bg</div><div class="val">page</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--surface)"></div><div class="info"><div class="name">--surface</div><div class="val">cards</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--surface-2)"></div><div class="info"><div class="name">--surface-2</div><div class="val">nested/hover</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--text)"></div><div class="info"><div class="name">--text</div><div class="val">primary</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--text-2)"></div><div class="info"><div class="name">--text-2</div><div class="val">secondary</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--border-strong)"></div><div class="info"><div class="name">--border-strong</div><div class="val">edges</div></div></div>
+          </div>
+          <div class="demo-label">Accent & status</div>
+          <div class="swatch-grid">
+            <div class="swatch"><div class="chip" style="background:var(--accent)"></div><div class="info"><div class="name">--accent</div><div class="val">indigo</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--accent-subtle)"></div><div class="info"><div class="name">--accent-subtle</div><div class="val">tint</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--success)"></div><div class="info"><div class="name">--success</div><div class="val">tip/ok</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--warn)"></div><div class="info"><div class="name">--warn</div><div class="val">warn</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--danger)"></div><div class="info"><div class="name">--danger</div><div class="val">danger</div></div></div>
+            <div class="swatch"><div class="chip" style="background:var(--info)"></div><div class="info"><div class="name">--info</div><div class="val">info</div></div></div>
+          </div>
+          <div class="demo-label" style="margin-top: var(--space-4)">Code surface (shared, both themes)</div>
+          <div class="swatch-grid">
+            <div class="swatch"><div class="chip" style="background:#0d1117"></div><div class="info"><div class="name">--code-bg</div></div></div>
+            <div class="swatch"><div class="chip" style="background:#ff7b72"></div><div class="info"><div class="name">keyword</div></div></div>
+            <div class="swatch"><div class="chip" style="background:#a5d6ff"></div><div class="info"><div class="name">string</div></div></div>
+            <div class="swatch"><div class="chip" style="background:#d2a8ff"></div><div class="info"><div class="name">fn</div></div></div>
+            <div class="swatch"><div class="chip" style="background:#79c0ff"></div><div class="info"><div class="name">number</div></div></div>
+            <div class="swatch"><div class="chip" style="background:#8b949e"></div><div class="info"><div class="name">comment</div></div></div>
+          </div>
+        </section>
+
+        <!-- TYPE -->
+        <section class="comp" id="type">
+          <h2><span class="num">A.3</span> Typography</h2>
+          <p class="desc">Inter variable for body/UI; JetBrains Mono for code and metadata accents. 1.25 modular scale, headings at weight 650 with −0.01em tracking. Reading measure caps at 68ch.</p>
+          <div class="demo">
+            <div class="type-spec"><div class="ts-meta">H1 · 2.5rem</div><h1 style="margin:0">The cost of a syscall</h1></div>
+            <div class="type-spec"><div class="ts-meta">H2 · 2rem</div><h2 style="margin:0">Zero-copy parsing</h2></div>
+            <div class="type-spec"><div class="ts-meta">H3 · 1.5rem</div><h3 style="margin:0">Benchmark methodology</h3></div>
+            <div class="type-spec"><div class="ts-meta">H4 · 1.25rem</div><h4 style="margin:0">A note on allocators</h4></div>
+            <div class="type-spec"><div class="ts-meta">Body · 18/1.7</div><p style="margin:0; max-width: 60ch;">Rust gives us the tools to reason about memory without a garbage collector. The borrow checker is not a tax — it is a proof obligation you discharge once.</p></div>
+            <div class="type-spec"><div class="ts-meta">Mono meta</div><span class="meta">6 min read · Jun 1, 2026 · embedded, rust</span></div>
+            <div class="type-spec"><div class="ts-meta">Inline code</div><p style="margin:0">Call <code>Vec::with_capacity()</code> to avoid reallocs.</p></div>
+          </div>
+        </section>
+
+        <!-- SPACING -->
+        <section class="comp" id="spacing">
+          <h2><span class="num">A.4</span> Spacing, radius & elevation</h2>
+          <p class="desc">A 9-step 4px spacing scale. Restrained radii. Borders are the primary separator; only overlays get shadow.</p>
+          <div class="demo">
+            <div class="demo-label">Spacing scale</div>
+            <div class="space-scale">
+              <div class="ss-row"><span style="width:64px">--space-1</span><div class="ss-bar" style="width:4px"></div><span>4</span></div>
+              <div class="ss-row"><span style="width:64px">--space-2</span><div class="ss-bar" style="width:8px"></div><span>8</span></div>
+              <div class="ss-row"><span style="width:64px">--space-3</span><div class="ss-bar" style="width:12px"></div><span>12</span></div>
+              <div class="ss-row"><span style="width:64px">--space-4</span><div class="ss-bar" style="width:16px"></div><span>16</span></div>
+              <div class="ss-row"><span style="width:64px">--space-5</span><div class="ss-bar" style="width:24px"></div><span>24</span></div>
+              <div class="ss-row"><span style="width:64px">--space-6</span><div class="ss-bar" style="width:32px"></div><span>32</span></div>
+              <div class="ss-row"><span style="width:64px">--space-7</span><div class="ss-bar" style="width:48px"></div><span>48</span></div>
+              <div class="ss-row"><span style="width:64px">--space-8</span><div class="ss-bar" style="width:64px"></div><span>64</span></div>
+              <div class="ss-row"><span style="width:64px">--space-9</span><div class="ss-bar" style="width:96px"></div><span>96</span></div>
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-label">Radius · --r-sm 4 · --r-md 8 · --r-lg 12 · --r-full</div>
+            <div class="radius-row">
+              <div class="rad" style="border-radius:4px">sm</div>
+              <div class="rad" style="border-radius:8px">md</div>
+              <div class="rad" style="border-radius:12px">lg</div>
+              <div class="rad" style="border-radius:9999px">full</div>
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-label">Elevation — overlays only</div>
+            <div class="demo-row">
+              <div style="padding:var(--space-4) var(--space-5); background:var(--bg); border-radius:var(--r-md); box-shadow:var(--shadow-sm)">--shadow-sm</div>
+              <div style="padding:var(--space-4) var(--space-5); background:var(--bg); border-radius:var(--r-md); box-shadow:var(--shadow-md)">--shadow-md</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- BUTTONS -->
+        <section class="comp" id="buttons">
+          <h2><span class="num">B.3</span> Buttons</h2>
+          <p class="desc">Four variants × two sizes, plus loading and disabled. Click “Save” to see the inline spinner + toast.</p>
+          <div class="demo">
+            <div class="demo-label">Variants</div>
+            <div class="demo-row">
+              <button class="btn btn-primary">Primary</button>
+              <button class="btn btn-secondary">Secondary</button>
+              <button class="btn btn-ghost">Ghost</button>
+              <button class="btn btn-danger">Delete</button>
+              <button class="btn btn-outline-accent">Subscribe</button>
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-label">Sizes · with icon · states</div>
+            <div class="demo-row">
+              <button class="btn btn-primary btn-sm">Small</button>
+              <button class="btn btn-primary">Medium</button>
+              <button class="btn btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> New post</button>
+              <button class="btn btn-primary" data-loading-demo>Save</button>
+              <button class="btn btn-primary" disabled>Disabled</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAGS & BADGES -->
+        <section class="comp" id="tags">
+          <h2><span class="num">B.5 · B.24</span> Tags, badges & avatars</h2>
+          <p class="desc">Mono tag pills with optional counts; status chips for posts and members; initial avatars.</p>
+          <div class="demo">
+            <div class="demo-label">Tag pills</div>
+            <div class="row-wrap">
+              <a class="tag" href="#">rust</a>
+              <a class="tag" href="#">embedded</a>
+              <a class="tag" href="#">performance <span class="count">· 12</span></a>
+              <a class="tag" href="#">wasm <span class="count">· 7</span></a>
+              <a class="tag" href="#">async</a>
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-label">Status badges</div>
+            <div class="row-wrap">
+              <span class="badge draft">Draft</span>
+              <span class="badge scheduled">Scheduled</span>
+              <span class="badge published">Published</span>
+              <span class="badge pending">Pending</span>
+              <span class="badge confirmed">Confirmed</span>
+              <span class="badge unsub">Unsubscribed</span>
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-label">Avatars</div>
+            <div class="demo-row"><span class="avatar">A</span><span class="avatar">JD</span><span class="avatar lg">RS</span></div>
+          </div>
+        </section>
+
+        <!-- FORMS -->
+        <section class="comp" id="forms">
+          <h2><span class="num">B.21</span> Form controls</h2>
+          <p class="desc">1px border, focus ring, label above, help/error below. Error state borders <code>--danger</code>.</p>
+          <div class="demo" style="max-width: 460px">
+            <div class="field">
+              <label for="f1">Email</label>
+              <input class="input" id="f1" type="email" placeholder="you@example.com" />
+              <span class="help">We’ll only send the newsletter.</span>
+            </div>
+            <div class="field has-error">
+              <label for="f2">Slug</label>
+              <input class="input" id="f2" type="text" value="the cost of a syscall" aria-describedby="f2e" />
+              <span class="error-msg" id="f2e">Slugs can’t contain spaces.</span>
+            </div>
+            <div class="field">
+              <label for="f3">Status</label>
+              <select class="select" id="f3"><option>Draft</option><option>Scheduled</option><option>Published</option></select>
+            </div>
+            <div class="field">
+              <label for="f4">Excerpt</label>
+              <textarea class="textarea" id="f4" placeholder="A short summary…"></textarea>
+            </div>
+            <div class="demo-row">
+              <label class="checkbox"><input type="checkbox" checked /> Featured</label>
+              <label class="row" style="gap:var(--space-2)"><span class="switch"><input type="checkbox" checked /><span class="slider"></span></span> Track opens</label>
+            </div>
+          </div>
+        </section>
+
+        <!-- PLAYGROUND -->
+        <section class="comp" id="playground">
+          <h2><span class="num">★</span> Interactive component playground</h2>
+          <p class="desc">Live-tweak a post card: drag the controls and watch hover / loading / state render in real time.</p>
+          <div class="pg">
+            <div class="pg-stage">
+              <a class="post-card" id="pg-card" href="#" style="max-width: 380px; width:100%;" onclick="return false">
+                <img class="pc-cover" id="pg-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%23eef0f4'/%3E%3C/svg%3E" alt="" />
+                <h3 id="pg-title">Building a zero-copy log parser in Rust</h3>
+                <p class="excerpt" id="pg-excerpt">How we cut allocation overhead to near-zero by parsing directly out of the mmap’d ring buffer, and what it cost us in unsafe.</p>
+                <div class="pc-meta">
+                  <span class="meta">6 min read · Jun 1, 2026</span>
+                </div>
+                <div class="row-wrap" id="pg-tags"><a class="tag" href="#" onclick="return false">rust</a><a class="tag" href="#" onclick="return false">performance</a></div>
+              </a>
+            </div>
+            <div class="pg-controls">
+              <div class="field"><label>Cover image</label><label class="checkbox"><input type="checkbox" id="ctl-cover" checked onchange="document.getElementById('pg-cover').classList.toggle('hide', !this.checked)" /> Show cover</label></div>
+              <div class="field"><label>Title length</label><input type="range" min="20" max="60" value="44" style="width:100%; accent-color: var(--accent)" oninput="setLen('pg-title', this.value, 'Building a zero-copy log parser in Rust that is fast and safe and quite a lot of fun to write indeed')" /></div>
+              <div class="field"><label>Show tags</label><label class="checkbox"><input type="checkbox" checked onchange="document.getElementById('pg-tags').classList.toggle('hide', !this.checked)" /> Tags row</label></div>
+              <div class="field"><label>Layout</label>
+                <div class="segment" data-segment style="width:100%">
+                  <button data-value="v" class="active" onclick="document.getElementById('pg-card').classList.remove('horizontal'); document.getElementById('pg-card').style.maxWidth='380px'">Vertical</button>
+                  <button data-value="h" onclick="document.getElementById('pg-card').classList.add('horizontal'); document.getElementById('pg-card').style.maxWidth='520px'">Horizontal</button>
+                </div>
+              </div>
+              <div class="field"><label>State</label>
+                <button class="btn btn-secondary btn-sm" style="width:100%" onclick="this.classList.toggle('is-loading'); this.textContent=this.classList.contains('is-loading')?'Loading…':'Toggle loading'">Toggle loading</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CARDS -->
+        <section class="comp" id="cards">
+          <h2><span class="num">B.6</span> Post cards</h2>
+          <p class="desc">Used across home, tag, series and search. Flat &amp; bordered; the border lifts to <code>--border-strong</code> on hover.</p>
+          <div class="demo" style="background:var(--bg)">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-4)">
+              <a class="post-card" href="post.html" onclick="return false">
+                <h3>The cost of a syscall, measured</h3>
+                <p class="excerpt">We benchmark getpid, clock_gettime and friends across vDSO and the raw path to find where the microseconds actually go.</p>
+                <div class="pc-meta"><span class="meta">8 min read · May 28</span><a class="tag" href="#" onclick="return false">perf</a></div>
+              </a>
+              <a class="post-card horizontal" href="post.html" onclick="return false">
+                <img class="pc-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150'%3E%3Crect width='200' height='150' fill='%23eef0f4'/%3E%3C/svg%3E" alt="" />
+                <div style="display:flex; flex-direction:column; gap:8px">
+                  <h3 style="font-size:1.1rem">Async cancellation, done right</h3>
+                  <p class="excerpt">Drop is your cancellation signal. Here’s how to make it composable.</p>
+                  <div class="pc-meta" style="margin-top:auto"><span class="meta">5 min read</span></div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- CODE CARD -->
+        <section class="comp" id="code">
+          <h2><span class="num">B.7</span> Code card &amp; playground</h2>
+          <p class="desc">Dark code surface with a language label, working <strong>Copy</strong>, and a <strong>Run ▶</strong> affordance that prints output. Long lines scroll horizontally.</p>
+          <div class="code-card" id="cc-demo">
+            <div class="cc-bar">
+              <span class="cc-lang">rust · main.rs</span>
+              <div class="cc-actions">
+                <button class="cc-btn run" onclick="runDemo()"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg> Run</button>
+                <button class="cc-btn" data-copy="#cc-demo pre"><span class="cc-label">Copy</span></button>
+              </div>
+            </div>
+<pre><code><span class="tok-kw">fn</span> <span class="tok-fn">main</span><span class="tok-punct">() {</span>
+    <span class="tok-kw">let</span> primes<span class="tok-punct">:</span> <span class="tok-fn">Vec</span><span class="tok-punct">&lt;</span><span class="tok-fn">u32</span><span class="tok-punct">&gt; =</span> <span class="tok-punct">(</span><span class="tok-num">2</span><span class="tok-punct">..</span><span class="tok-num">30</span><span class="tok-punct">)</span>
+        <span class="tok-punct">.</span><span class="tok-fn">filter</span><span class="tok-punct">(|</span>n<span class="tok-punct">|</span> <span class="tok-punct">(</span><span class="tok-num">2</span><span class="tok-punct">..</span><span class="tok-punct">*</span>n<span class="tok-punct">).</span><span class="tok-fn">all</span><span class="tok-punct">(|</span>d<span class="tok-punct">|</span> n <span class="tok-punct">%</span> d <span class="tok-punct">!=</span> <span class="tok-num">0</span><span class="tok-punct">))</span>
+        <span class="tok-punct">.</span><span class="tok-fn">collect</span><span class="tok-punct">();</span>
+    <span class="tok-fn">println!</span><span class="tok-punct">(</span><span class="tok-str">"{:?}"</span><span class="tok-punct">,</span> primes<span class="tok-punct">);</span> <span class="tok-com">// primes under 30</span>
+<span class="tok-punct">}</span></code></pre>
+            <div class="cc-output hide" id="cc-out"></div>
+          </div>
+        </section>
+
+        <!-- CALLOUTS -->
+        <section class="comp" id="callouts">
+          <h2><span class="num">B.8</span> Callouts</h2>
+          <p class="desc">Left accent bar + tinted background by type. Maps to the four status hues.</p>
+          <div class="callout info"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="co-body"><strong>Info.</strong> The asset manifest only loads CodeMirror on pages that actually contain a playground block.</div></div>
+          <div class="callout tip"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><div class="co-body"><strong>Tip.</strong> Prefer <code>Vec::with_capacity</code> when the final length is known — it skips the growth reallocations.</div></div>
+          <div class="callout warn"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><div class="co-body"><strong>Warning.</strong> <code>mem::transmute</code> between differently-sized types is undefined behaviour, even if it compiles.</div></div>
+          <div class="callout danger"><span class="co-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></span><div class="co-body"><strong>Danger.</strong> Never hold a <code>MutexGuard</code> across an <code>.await</code> — it can deadlock the executor.</div></div>
+        </section>
+
+        <!-- CHART -->
+        <section class="comp" id="chart">
+          <h2><span class="num">B.9</span> Chart figure</h2>
+          <p class="desc">A real, responsive Chart.js canvas in a bordered figure with a caption. Shows a loading skeleton until data resolves.</p>
+          <figure class="chart-fig">
+            <div class="chart-wrap"><div class="chart-skeleton" id="chart-skel"></div><canvas id="benchChart" class="hide"></canvas></div>
+            <figcaption>p50 request latency (µs) before and after the zero-copy rewrite, by payload size.</figcaption>
+          </figure>
+        </section>
+
+        <!-- BLOCKS -->
+        <section class="comp" id="blocks">
+          <h2><span class="num">B.11–14</span> Bookmark · gallery · toggle · button block</h2>
+          <p class="desc">The new content blocks: an embeddable link card, a responsive image grid, a disclosure, and a centered CTA.</p>
+          <a class="bookmark" href="#" onclick="return false">
+            <div class="bm-text">
+              <div class="bm-title">The Rust Performance Book</div>
+              <div class="bm-desc">A collection of techniques to improve the speed and memory usage of Rust programs, from the compiler team.</div>
+              <div class="bm-site"><span class="favicon"></span> nnethercote.github.io</div>
+            </div>
+            <img class="bm-thumb" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150'%3E%3Crect width='200' height='150' fill='%23eef0f4'/%3E%3C/svg%3E" alt="" />
+          </a>
+          <div class="gallery">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23e4e7ec'/%3E%3C/svg%3E" alt="" />
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23eef0f4'/%3E%3C/svg%3E" alt="" />
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23d0d5dd'/%3E%3C/svg%3E" alt="" />
+          </div>
+          <details class="accordion"><summary>Why not just use a garbage collector? <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary><div class="acc-body">Predictable latency. A GC introduces pauses that are unacceptable for the tail latencies we care about in this workload. Ownership gives us deterministic destruction instead.</div></details>
+          <div class="button-block"><a class="btn btn-primary" href="#" onclick="return false">Read the full benchmark →</a><div class="subtext">Includes the raw flamegraphs and the harness.</div></div>
+        </section>
+
+        <!-- TOC -->
+        <section class="comp" id="toc">
+          <h2><span class="num">B.15</span> Table of contents</h2>
+          <p class="desc">Sticky right aside at ≥lg with scroll-spy; collapses to a “Contents” disclosure below. Live demo on the <a href="public/post.html" style="color:var(--accent)">post page</a>.</p>
+          <div class="demo" style="max-width: 280px">
+            <nav class="toc">
+              <div class="toc-label">On this page</div>
+              <ul>
+                <li><a href="#" class="active" onclick="return false">Introduction</a></li>
+                <li><a href="#" onclick="return false">Setup</a></li>
+                <li><a href="#" class="sub" onclick="return false">Dependencies</a></li>
+                <li><a href="#" onclick="return false">Benchmark</a></li>
+                <li><a href="#" onclick="return false">Results</a></li>
+              </ul>
+            </nav>
+          </div>
+        </section>
+
+        <!-- SEARCH -->
+        <section class="comp" id="search">
+          <h2><span class="num">B.20</span> Search box &amp; results</h2>
+          <p class="desc">Leading icon, debounced instant results, matched-term highlight, keyboard up/down. Type below.</p>
+          <div class="demo" style="background:var(--bg)">
+            <div class="search-box">
+              <span class="s-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+              <input type="search" id="demo-search" placeholder="Search posts…" value="zero" />
+            </div>
+            <div class="search-results" id="demo-results">
+              <a class="search-result kbd-active" href="#" onclick="return false"><strong>Building a <mark>zero</mark>-copy log parser</strong><div class="meta" style="margin-top:4px">6 min read · rust, performance</div></a>
+              <a class="search-result" href="#" onclick="return false"><strong>From <mark>zero</mark> to a working allocator</strong><div class="meta" style="margin-top:4px">11 min read · systems</div></a>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGINATION -->
+        <section class="comp" id="pagination">
+          <h2><span class="num">B.18 · B.19</span> Pagination &amp; breadcrumb</h2>
+          <div class="demo" style="background:var(--bg)">
+            <div class="breadcrumb"><a href="#" onclick="return false">Home</a><span class="sep">/</span><a href="#" onclick="return false">Tags</a><span class="sep">/</span><span>rust</span></div>
+            <nav class="pagination" aria-label="Pagination">
+              <a href="#" onclick="return false">‹ Prev</a>
+              <span class="current">1</span><a href="#" onclick="return false">2</a><a href="#" onclick="return false">3</a><span class="ellipsis">…</span><a href="#" onclick="return false">9</a>
+              <a href="#" onclick="return false">Next ›</a>
+            </nav>
+          </div>
+        </section>
+
+        <!-- EMPTY -->
+        <section class="comp" id="empty">
+          <h2><span class="num">B.23</span> Empty state</h2>
+          <div class="demo" style="background:var(--bg)">
+            <div class="empty-state">
+              <div class="es-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg></div>
+              <h3>No posts yet</h3>
+              <p>When you publish your first article it’ll show up here.</p>
+              <a class="btn btn-primary" href="admin/editor.html">Write your first post</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- OVERLAYS -->
+        <section class="comp" id="overlays">
+          <h2><span class="num">B.30</span> Modal &amp; drawer</h2>
+          <p class="desc">Centered confirm modal and right settings drawer. Backdrop, focus, Esc to close, <code>--shadow-md</code>.</p>
+          <div class="demo" style="background:var(--bg)">
+            <div class="demo-row">
+              <button class="btn btn-danger" data-open="demo-modal">Delete post…</button>
+              <button class="btn btn-secondary" data-open="demo-drawer">Open settings drawer</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- TOAST -->
+        <section class="comp" id="toast">
+          <h2><span class="num">B.22</span> Toast</h2>
+          <div class="demo" style="background:var(--bg)">
+            <div class="demo-row">
+              <button class="btn btn-secondary" onclick="toast('Post published','success')">Success toast</button>
+              <button class="btn btn-secondary" onclick="toast('Upload failed — file too large','error')">Error toast</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- TABLE -->
+        <section class="comp" id="table">
+          <h2><span class="num">B.27</span> Data table (admin)</h2>
+          <p class="desc">Hairline rows, sortable header, row hover, status badges. Full version on the <a href="admin/posts.html" style="color:var(--accent)">posts list</a>.</p>
+          <div class="demo" style="background:var(--bg); padding:0; overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th class="checkbox-cell"><input type="checkbox" /></th><th class="sortable">Title ↓</th><th>Status</th><th>Tags</th><th>Updated</th><th>Views</th></tr></thead>
+              <tbody>
+                <tr><td><input type="checkbox" /></td><td><a class="t-title" href="admin/editor.html">The cost of a syscall</a></td><td><span class="badge published">Published</span></td><td><span class="meta">perf, linux</span></td><td><span class="meta">May 28</span></td><td><span class="meta">1,204</span></td></tr>
+                <tr><td><input type="checkbox" /></td><td><a class="t-title" href="admin/editor.html">Async cancellation, done right</a></td><td><span class="badge scheduled">Scheduled</span></td><td><span class="meta">async, rust</span></td><td><span class="meta">Jun 3</span></td><td><span class="meta">—</span></td></tr>
+                <tr><td><input type="checkbox" /></td><td><a class="t-title" href="admin/editor.html">Notes on the borrow checker</a></td><td><span class="badge draft">Draft</span></td><td><span class="meta">rust</span></td><td><span class="meta">2h ago</span></td><td><span class="meta">—</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div style="height: var(--space-8)"></div>
+      </div>
+    </div>
+  </main>
+
+  <div data-chrome-footer></div>
+
+  <!-- Modal -->
+  <div class="overlay" id="demo-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dm-t">
+      <h3 id="dm-t">Delete this post?</h3>
+      <p>“The cost of a syscall” will be moved to trash. This is a soft delete — you can restore it within 30 days.</p>
+      <div class="modal-actions"><button class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-danger" data-close onclick="toast('Post moved to trash','success')">Delete</button></div>
+    </div>
+  </div>
+  <!-- Drawer -->
+  <div class="drawer" id="demo-drawer" role="dialog" aria-modal="true">
+    <div style="padding: var(--space-5); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between"><h3 style="font-size:1.1rem">Post settings</h3><button class="icon-btn" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div style="padding: var(--space-5)">
+      <div class="field"><label>Excerpt</label><textarea class="textarea" placeholder="Short summary…"></textarea></div>
+      <div class="field"><label>Tags</label><div class="row-wrap"><span class="tag">rust</span><span class="tag">perf</span><input class="input" placeholder="Add tag…" style="width:100px; padding:4px 8px" /></div></div>
+      <div class="field"><label>Series</label><select class="select"><option>None</option><option>Systems from scratch</option></select></div>
+      <div class="field"><label>Schedule</label><input class="input" type="datetime-local" /></div>
+      <button class="btn btn-primary" style="width:100%" data-close onclick="toast('Settings saved','success')">Save settings</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/chrome.js"></script>
+  <script>
+    // code-card run demo
+    function runDemo() {
+      var out = document.getElementById('cc-out');
+      out.classList.remove('hide');
+      out.innerHTML = '<span style="color:#8b949e">$ cargo run</span><br>   <span style="color:#8b949e">Compiling</span> demo v0.1.0<br>    <span class="ok">Finished</span> dev profile<br>     <span style="color:#8b949e">Running</span> `target/debug/demo`<br>[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]';
+    }
+    // search highlight demo
+    (function(){
+      var inp = document.getElementById('demo-search');
+      var data = [
+        {t:'Building a zero-copy log parser', m:'6 min read · rust, performance'},
+        {t:'From zero to a working allocator', m:'11 min read · systems'},
+        {t:'Zero-downtime deploys with systemd', m:'4 min read · ops'},
+        {t:'Profiling async runtimes', m:'9 min read · async, rust'}
+      ];
+      var box = document.getElementById('demo-results');
+      var idx = 0;
+      function render(q){
+        var ql = q.trim().toLowerCase();
+        var hits = data.filter(function(d){ return d.t.toLowerCase().indexOf(ql) > -1; });
+        if (!ql) { box.innerHTML = '<div class="empty-state" style="padding:24px"><p>Start typing to search…</p></div>'; return; }
+        if (!hits.length) { box.innerHTML = '<div class="empty-state" style="padding:24px"><h3 style="font-size:1rem">No matches for “'+q+'”</h3></div>'; return; }
+        idx = 0;
+        box.innerHTML = hits.map(function(d,i){
+          var re = new RegExp('('+ql.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
+          var t = d.t.replace(re,'<mark>$1</mark>');
+          return '<a class="search-result'+(i===0?' kbd-active':'')+'" href="#" onclick="return false"><strong>'+t+'</strong><div class="meta" style="margin-top:4px">'+d.m+'</div></a>';
+        }).join('');
+      }
+      var deb;
+      inp.addEventListener('input', function(){ clearTimeout(deb); deb = setTimeout(function(){ render(inp.value); }, 200); });
+      inp.addEventListener('keydown', function(e){
+        var items = box.querySelectorAll('.search-result'); if(!items.length) return;
+        if(e.key==='ArrowDown'){ e.preventDefault(); idx=Math.min(idx+1,items.length-1); }
+        else if(e.key==='ArrowUp'){ e.preventDefault(); idx=Math.max(idx-1,0); }
+        else return;
+        items.forEach(function(it,i){ it.classList.toggle('kbd-active', i===idx); });
+      });
+    })();
+    // chart with skeleton delay
+    window.addEventListener('load', function(){
+      setTimeout(function(){
+        var skel = document.getElementById('chart-skel'); var cv = document.getElementById('benchChart');
+        skel.classList.add('hide'); cv.classList.remove('hide');
+        var css = getComputedStyle(document.documentElement);
+        var accent = css.getPropertyValue('--accent').trim();
+        var muted = css.getPropertyValue('--text-muted').trim();
+        var grid = css.getPropertyValue('--border').trim();
+        new Chart(cv, {
+          type:'bar',
+          data:{ labels:['1 KB','16 KB','256 KB','1 MB','16 MB'],
+            datasets:[
+              {label:'before', data:[42,118,640,2400,38000], backgroundColor: muted, borderRadius:4},
+              {label:'after', data:[28,52,210,820,12400], backgroundColor: accent, borderRadius:4}
+            ]},
+          options:{ responsive:true, maintainAspectRatio:false,
+            scales:{ y:{ type:'logarithmic', grid:{color:grid}, ticks:{color:muted, font:{family:'JetBrains Mono', size:10}} },
+                     x:{ grid:{display:false}, ticks:{color:muted, font:{family:'JetBrains Mono', size:10}} } },
+            plugins:{ legend:{ labels:{ color:muted, font:{family:'JetBrains Mono', size:11}, boxWidth:12 } } } }
+        });
+      }, 700);
+    });
+  </script>
+</body>
+</html>

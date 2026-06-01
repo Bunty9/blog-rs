@@ -5,30 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf }}" />
     <title>{% block title %}Admin · blog-rs{% endblock %}</title>
-    <link rel="stylesheet" href="/assets/admin/admin.css" />
+    <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+    <link rel="stylesheet" href="/assets/reader/base.css" />
+    <link rel="stylesheet" href="/assets/reader/components.css" />
     <script src="/assets/admin/htmx.min.js" defer></script>
-    <script src="/assets/admin/alpine.min.js" defer></script>
     <script src="/assets/admin/admin.js" defer></script>
+    <script src="/assets/reader/app.js" defer></script>
+    <script src="/assets/admin/admin-shell.js" defer></script>
 </head>
 <body>
-<div class="admin-shell">
+<div class="admin">
     <aside class="admin-sidebar">
-        <h1>blog-rs</h1>
-        <nav>
-            <a href="/admin">Dashboard</a>
-            <a href="/admin/posts">Posts</a>
-            <a href="/admin/members">Members</a>
-            <a href="/admin/settings">Settings</a>
+        <div class="as-brand">
+            <a class="wordmark" href="/admin"><span class="dot"></span><span>blog-rs</span></a>
+        </div>
+        <nav aria-label="Admin">
+            <a href="/admin"{% if nav == "dashboard" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                <span class="label">Dashboard</span>
+            </a>
+            <a href="/admin/posts"{% if nav == "posts" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+                <span class="label">Posts</span>
+            </a>
+            <a href="/admin/pages"{% if nav == "pages" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+                <span class="label">Pages</span>
+            </a>
+            <a href="/admin/media"{% if nav == "media" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span class="label">Media</span>
+            </a>
+            <a href="/admin/members"{% if nav == "members" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                <span class="label">Members</span>
+            </a>
+            <a href="/admin/analytics"{% if nav == "analytics" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+                <span class="label">Analytics</span>
+            </a>
+            <a href="/admin/settings"{% if nav == "settings" %} class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span class="label">Settings</span>
+            </a>
         </nav>
-        <form action="/admin/logout" method="post" style="margin-top:1.5rem;">
-            <input type="hidden" name="csrf_token" value="{{ csrf }}" />
-            <button type="submit">Log out</button>
-        </form>
+        <div class="as-foot">
+            <form action="/admin/logout" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+                <button type="submit" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;background:transparent;border:none;cursor:pointer;color:var(--text-2);font-size:0.9rem;width:100%;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                    <span class="label">Log out</span>
+                </button>
+            </form>
+        </div>
     </aside>
-    <main class="admin-main">
-        {% block flash %}{% endblock %}
-        {% block content %}{% endblock %}
-    </main>
+    <div class="admin-main">
+        <header class="admin-topbar">
+            <button class="icon-btn" aria-label="Toggle sidebar" onclick="toggleSidebar()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+            <div>
+                <h1>{% block topbar_title %}{{ page_title }}{% endblock %}</h1>
+            </div>
+            <div class="at-actions">
+                {% block topbar_actions %}{% endblock %}
+                <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+                </button>
+            </div>
+        </header>
+        <div class="admin-content">
+            {% block flash %}{% endblock %}
+            {% block content %}{% endblock %}
+        </div>
+    </div>
 </div>
 </body>
 </html>

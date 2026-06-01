@@ -1,3 +1,4 @@
+use crate::toc::Toc;
 use crate::{shortcode_lexer, ContentError, Frontmatter};
 use shortcodes::{default_registry, Registry, RenderedBlock};
 
@@ -6,6 +7,10 @@ pub struct RenderOutput {
     pub frontmatter: Frontmatter,
     pub html: String,
     pub assets: crate::AssetManifest,
+    /// Nested table of contents built from heading events.
+    pub toc: Toc,
+    /// Estimated reading time in minutes (ceil(word_count / 220), min 1).
+    pub reading_minutes: i64,
 }
 
 /// Public entry point - uses the default registry of v1 shortcodes.
@@ -23,11 +28,18 @@ pub fn render_with_registry(src: &str, reg: &Registry) -> Result<RenderOutput, C
     let tokens = shortcode_lexer::tokenize(body, &paired)?;
     let mut html = String::with_capacity(body.len() * 2);
     let mut manifest = crate::AssetManifest::default();
+    let mut flat_headings: Vec<(u8, String, String)> = Vec::new();
+    let mut total_word_count: usize = 0;
 
     for tok in tokens {
         match tok {
             shortcode_lexer::Token::Text(t) => {
-                html.push_str(&crate::markdown::to_html(t));
+                let md_out = crate::markdown::to_html_full(t);
+                html.push_str(&md_out.html);
+                total_word_count += md_out.word_count;
+                for h in md_out.headings {
+                    flat_headings.push((h.level, h.id, h.text));
+                }
             }
             shortcode_lexer::Token::Self_ { name, raw_args, .. } => {
                 let block = resolve(reg, name, raw_args, None)?;
@@ -53,11 +65,22 @@ pub fn render_with_registry(src: &str, reg: &Registry) -> Result<RenderOutput, C
         }
     }
 
+    let toc = Toc::from_flat(flat_headings);
+    let reading_minutes = reading_time(total_word_count);
+
     Ok(RenderOutput {
         frontmatter: fm,
         html,
         assets: manifest,
+        toc,
+        reading_minutes,
     })
+}
+
+/// Convert word count to reading minutes: ceil(words / 220), minimum 1.
+fn reading_time(word_count: usize) -> i64 {
+    let minutes = (word_count as f64 / 220.0).ceil() as i64;
+    minutes.max(1)
 }
 
 fn resolve(
@@ -97,9 +120,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn plain_markdown_passes_through() {
+    fn plain_markdown_has_id_on_heading() {
         let out = render("# hi\n\nbody").unwrap();
-        assert!(out.html.contains("<h1>hi</h1>"));
+        // New behaviour: id attribute is added.
+        assert!(out.html.contains(r#"<h1 id="hi">"#));
         assert!(out.html.contains("<p>body</p>"));
         assert!(out.assets.is_empty());
     }
@@ -137,5 +161,46 @@ mod tests {
 "#;
         let out = render(src).unwrap();
         assert_eq!(out.assets.assets.len(), 3);
+    }
+
+    #[test]
+    fn heading_ids_and_toc_and_reading_minutes() {
+        let src = "# Alpha\n\n## Beta\n\nsome words here";
+        let out = render(src).unwrap();
+        // Heading id attributes
+        assert!(
+            out.html.contains(r#"<h1 id="alpha">"#),
+            "expected h1 with id=alpha, got: {}",
+            out.html
+        );
+        assert!(
+            out.html.contains(r#"<h2 id="beta">"#),
+            "expected h2 with id=beta, got: {}",
+            out.html
+        );
+        // TOC structure
+        assert_eq!(out.toc.0.len(), 1, "expected 1 root in TOC");
+        assert_eq!(out.toc.0[0].id, "alpha");
+        assert_eq!(out.toc.0[0].children.len(), 1);
+        assert_eq!(out.toc.0[0].children[0].id, "beta");
+        // Reading time: "some words here" = 3 words → ceil(3/220) = 1 minute.
+        assert_eq!(out.reading_minutes, 1);
+    }
+
+    #[test]
+    fn heading_ids_deduplicated() {
+        let src = "# Intro\n\n## Intro\n\ntext";
+        let out = render(src).unwrap();
+        assert!(out.html.contains(r#"<h1 id="intro">"#));
+        assert!(out.html.contains(r#"<h2 id="intro-2">"#));
+    }
+
+    #[test]
+    fn reading_minutes_excludes_code_blocks() {
+        // A document with only a code block should still have reading_minutes >= 1
+        // (min 1 rule), but word count should exclude code content.
+        let src = "intro word\n\n```rust\nfn main() { /* lots of code tokens */ }\n```";
+        let out = render(src).unwrap();
+        assert!(out.reading_minutes >= 1);
     }
 }

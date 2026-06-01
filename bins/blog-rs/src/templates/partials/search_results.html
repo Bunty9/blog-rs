@@ -1,0 +1,20 @@
+{% if hits.is_empty() %}
+{% if !query.is_empty() %}
+<div class="empty-state">
+  <div class="es-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+  <h3 style="font-size:1.1rem">No matches for &#8220;{{ query }}&#8221;</h3>
+  <p>Try a broader term or browse <a href="/tags" style="color:var(--accent)">all tags</a>.</p>
+</div>
+{% endif %}
+{% else %}
+<div class="results-meta">{{ hits.len() }} {% if hits.len() == 1 %}result{% else %}results{% endif %} for &#8220;{{ query }}&#8221;</div>
+<div class="search-results">
+{% for hit in hits %}
+<a class="search-result" href="/posts/{{ hit.slug }}">
+  <strong>{{ hit.title }}</strong>
+  <div class="search-snippet">{{ hit.snippet|safe }}</div>
+  {% if let Some(d) = hit.published_date %}<div class="meta" style="margin-top:4px"><time>{{ d }}</time></div>{% endif %}
+</a>
+{% endfor %}
+</div>
+{% endif %}

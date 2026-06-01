@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>#rust — blog-rs</title>
+  <script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <style>
+    .tag-band { padding: var(--space-7) 0 var(--space-6); border-bottom: 1px solid var(--border); margin-bottom: var(--space-6); }
+    .tag-band .tag-name { font-family: var(--font-mono); font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 650; }
+    .tag-band .tag-name .hash { color: var(--accent); }
+    .tag-band .tag-count { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); margin-top: var(--space-2); }
+    .tag-band p { color: var(--text-2); margin-top: var(--space-4); max-width: 60ch; font-size: 1.05rem; }
+    .post-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  </style>
+</head>
+<body data-chrome data-base="../" data-nav="tags">
+  <div data-chrome-header></div>
+  <main id="main" class="container measure">
+    <div class="breadcrumb" style="margin-top: var(--space-5)"><a href="home.html">Home</a><span class="sep">/</span><a href="tags.html">Tags</a><span class="sep">/</span><span>rust</span></div>
+    <div class="tag-band">
+      <div class="tag-name"><span class="hash">#</span>rust</div>
+      <div class="tag-count">18 posts</div>
+      <p>Everything written in and about Rust — ownership, async, unsafe, and the performance work that the language makes tractable.</p>
+    </div>
+
+    <div class="post-list">
+      <a class="post-card" href="post.html"><h3>Building a zero-copy log parser in Rust</h3><p class="excerpt">How we cut allocation overhead to near-zero by parsing directly out of the mmap’d ring buffer.</p><div class="pc-meta"><span class="meta">9 min read · Jun 1</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">performance</a></div></a>
+      <a class="post-card" href="post.html"><h3>Async cancellation, done right</h3><p class="excerpt">Drop is your cancellation signal. Here’s how to make cancellation composable across an async call tree.</p><div class="pc-meta"><span class="meta">5 min read · May 21</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">async</a></div></a>
+      <a class="post-card" href="post.html"><h3>Notes on the borrow checker</h3><p class="excerpt">The borrow checker is not a tax — it’s a proof obligation you discharge once. Five mental models.</p><div class="pc-meta"><span class="meta">6 min read · May 7</span></div></a>
+      <a class="post-card" href="post.html"><h3>Trait objects vs. enums: a dispatch microbenchmark</h3><p class="excerpt">When does dynamic dispatch actually cost you? We measure across realistic branch-prediction conditions.</p><div class="pc-meta"><span class="meta">7 min read · Apr 16</span><a class="tag" href="tag.html" onclick="event.stopPropagation()">performance</a></div></a>
+      <a class="post-card" href="post.html"><h3>Writing a derive macro from scratch</h3><p class="excerpt">syn, quote, and the proc-macro pipeline, building a tiny #[derive(Builder)] step by step.</p><div class="pc-meta"><span class="meta">12 min read · Apr 2</span></div></a>
+    </div>
+
+    <nav class="pagination" aria-label="Pagination"><span class="current">1</span><a href="#">2</a><a href="#">3</a><a href="#">4</a><a href="#">Next ›</a></nav>
+  </main>
+  <div data-chrome-footer></div>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/chrome.js"></script>
+</body>
+</html>
