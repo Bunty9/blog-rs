@@ -9,7 +9,7 @@
 <p class="empty-feed">No posts in this series yet.</p>
 {% else %}
 <ol class="series-list">
-{% for post in cards %}
+{% for card in cards %}
 <li>{% include "partials/post_card.html" %}</li>
 {% endfor %}
 </ol>

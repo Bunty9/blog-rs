@@ -133,6 +133,10 @@ mod tests {
             "slug link missing: {body}"
         );
         assert!(body.contains("2023-11-14"), "iso date missing: {body}");
+        assert!(
+            body.contains("class=\"post-card\""),
+            "post-card class missing: {body}"
+        );
     }
 
     #[tokio::test]

@@ -8,7 +8,7 @@
 {% if cards.is_empty() %}
 <p class="empty-feed">No posts under this tag yet.</p>
 {% else %}
-{% for post in cards %}
+{% for card in cards %}
 {% include "partials/post_card.html" %}
 {% endfor %}
 {% endif %}
