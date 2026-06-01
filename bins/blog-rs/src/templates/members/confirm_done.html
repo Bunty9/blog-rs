@@ -3,26 +3,41 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
 <title>{% if ok %}Subscribed{% else %}Confirmation failed{% endif %} — {{ site_title }}</title>
 <link rel="stylesheet" href="/assets/reader/base.css" />
+<link rel="stylesheet" href="/assets/reader/components.css" />
+<style>
+  .txn-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-7) var(--space-5); }
+  .txn-card { max-width: 420px; width: 100%; border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--space-7); background: var(--bg); text-align: center; }
+  .txn-card .tc-icon { width: 52px; height: 52px; margin: 0 auto var(--space-4); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; }
+  .txn-card.ok .tc-icon { background: var(--success-subtle); color: var(--success); }
+  .txn-card.err .tc-icon { background: var(--danger-subtle); color: var(--danger); }
+  .txn-card h1 { font-size: 1.5rem; }
+  .txn-card p { color: var(--text-2); margin-top: var(--space-3); line-height: 1.55; }
+  .txn-foot { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-5); }
+</style>
 </head>
 <body>
-<header class="site-header">
-<a class="site-title" href="/">{{ site_title }}</a>
-</header>
-
-<main class="container">
-<section class="confirmed">
-  {% if ok %}
+<div class="txn-wrap">
+{% if ok %}
+  <div class="txn-card ok">
+    <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
     <h1>You're subscribed</h1>
-    <p>Thanks — you're on the list for {{ site_title }}.</p>
-    <p><a href="/">Back to the home page</a></p>
-  {% else %}
+    <p>Thanks — you're on the list for {{ site_title }}. The next post will land in your inbox.</p>
+    <a class="btn btn-secondary" href="/" style="margin-top: var(--space-5)">Back to the blog</a>
+    <div class="txn-foot">HMAC token validated</div>
+  </div>
+{% else %}
+  <div class="txn-card err">
+    <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
     <h1>That link didn't work</h1>
     <p>{{ message }}</p>
-    <p><a href="/signup">Try again</a></p>
-  {% endif %}
-</section>
-</main>
+    <a class="btn btn-primary" href="/signup" style="margin-top: var(--space-5)">Try again</a>
+    <div class="txn-foot">HMAC token invalid or expired</div>
+  </div>
+{% endif %}
+</div>
+<script src="/assets/reader/app.js" defer></script>
 </body>
 </html>

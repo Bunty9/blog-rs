@@ -7,8 +7,11 @@
   {% endif %}
   <div class="pc-meta">
     <span class="meta">
-      {% if let Some(m) = card.reading_minutes %}{{ m }} min read{% endif %}
-      {% if let Some(d) = card.published_date %} · {{ d }}{% endif %}
+      {% if let Some(m) = card.reading_minutes %}
+        {{ m }} min read{% if let Some(d) = card.published_date %} · {{ d }}{% endif %}
+      {% else if let Some(d) = card.published_date %}
+        {{ d }}
+      {% endif %}
     </span>
   </div>
 </a>

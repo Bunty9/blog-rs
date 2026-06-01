@@ -1,22 +1,41 @@
 {% extends "reader/base.html" %}
 {% block title %}Subscribe — {{ site.title }}{% endblock %}
+{% block extra_head %}
+<style>
+  .txn-wrap { min-height: calc(100vh - var(--header-h)); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-7) var(--space-5); }
+  .txn-card { max-width: 420px; width: 100%; border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--space-7); background: var(--bg); text-align: center; }
+  .txn-card .tc-icon { width: 52px; height: 52px; margin: 0 auto var(--space-4); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; background: var(--accent-subtle); color: var(--accent-hover); }
+  .txn-card.ok .tc-icon { background: var(--success-subtle); color: var(--success); }
+  .txn-card h1 { font-size: 1.5rem; }
+  .txn-card p { color: var(--text-2); margin-top: var(--space-3); line-height: 1.55; }
+  .txn-card form { margin-top: var(--space-5); }
+  .txn-card .field { text-align: left; }
+  .txn-foot { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-5); }
+</style>
+{% endblock %}
 {% block content %}
+<div class="txn-wrap">
 {% if pending %}
-<section class="signup-pending">
-  <h1>Check your inbox</h1>
-  <p>We sent a confirmation link to <strong>{{ email }}</strong>. It expires in {{ ttl_hours }} hours.</p>
-</section>
+  <div class="txn-card ok">
+    <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <h1>Check your inbox</h1>
+    <p>We sent a confirmation link to <strong>{{ email }}</strong>. It expires in {{ ttl_hours }} hours.</p>
+    <a class="btn btn-secondary" href="/" style="margin-top: var(--space-5)">Back to the blog</a>
+    <div class="txn-foot">Double opt-in · HMAC-signed link</div>
+  </div>
 {% else %}
-<section class="signup">
-  <h1>Subscribe to {{ site_title }}</h1>
-  <p>One email per published post. Unsubscribe with one click.</p>
-  <form method="post" action="/signup" novalidate>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" required autocomplete="email" value="{{ email }}" />
-    <button type="submit">Subscribe</button>
-    {% if let Some(err) = error %}<p class="error">{{ err }}</p>{% endif %}
-  </form>
-</section>
+  <div class="txn-card">
+    <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></div>
+    <h1>Subscribe to {{ site_title }}</h1>
+    <p>New writing in your inbox. Free, no spam, one-click unsubscribe.</p>
+    <form method="post" action="/signup" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <div class="field"><label for="email">Email address</label><input class="input" type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" value="{{ email }}" /></div>
+      {% if let Some(err) = error %}<p class="error" style="text-align:left; margin-top: var(--space-2)">{{ err }}</p>{% endif %}
+      <button class="btn btn-primary" type="submit" style="width:100%; margin-top: var(--space-4)">Subscribe</button>
+    </form>
+    <div class="txn-foot">CSRF-protected · double opt-in</div>
+  </div>
 {% endif %}
+</div>
 {% endblock %}

@@ -2,17 +2,55 @@
 
 {% block title %}Series: {{ series.slug }} — {{ site.title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .series-head { padding: var(--space-7) 0 var(--space-6); }
+  .series-head .eyebrow { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); letter-spacing: 0.04em; }
+  .series-head h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin-top: var(--space-3); }
+  .series-list { counter-reset: ep; display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-6); }
+  .ep { display: grid; grid-template-columns: 48px 1fr auto; gap: var(--space-4); align-items: center; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--r-md); text-decoration: none; transition: border-color var(--t-fast), background var(--t-fast); }
+  .ep:hover { border-color: var(--border-strong); background: var(--surface); }
+  .ep .ep-num { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 650; color: var(--accent); }
+  .ep h3 { font-size: 1.2rem; }
+  .ep .excerpt { color: var(--text-2); font-size: 0.95rem; margin-top: var(--space-1); }
+  .ep .ep-meta { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+  @media (max-width:600px){ .ep { grid-template-columns: 36px 1fr; } .ep .ep-meta { grid-column: 2; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="series-page">
-<h1>Series: <span class="series-name">{{ series.slug }}</span></h1>
+<div class="breadcrumb" style="margin-top: var(--space-5)">
+  <a href="/">Home</a><span class="sep">/</span><a href="/series">Series</a><span class="sep">/</span><span>{{ series.slug }}</span>
+</div>
+
+<header class="series-head">
+  <div class="eyebrow">&#8801; A SERIES</div>
+  <h1>{{ series.slug }}</h1>
+  {% if !cards.is_empty() %}
+  <div style="margin-top: var(--space-5)"><a class="btn btn-primary" href="/posts/{{ cards[0].slug }}">Start reading &rarr;</a></div>
+  {% endif %}
+</header>
+
 {% if cards.is_empty() %}
 <p class="empty-feed">No posts in this series yet.</p>
 {% else %}
-<ol class="series-list">
-{% for card in cards %}
-<li>{% include "partials/post_card.html" %}</li>
-{% endfor %}
-</ol>
+<div class="series-list">
+  {% for card in cards %}
+  <a class="ep" href="/posts/{{ card.slug }}">
+    <div class="ep-num">{{ loop.index }}</div>
+    <div>
+      <h3>{{ card.title }}</h3>
+      {% if let Some(ex) = card.excerpt %}
+      <div class="excerpt">{{ ex }}</div>
+      {% else if let Some(sub) = card.subtitle %}
+      <div class="excerpt">{{ sub }}</div>
+      {% endif %}
+    </div>
+    <div class="ep-meta">
+      {% if let Some(m) = card.reading_minutes %}{{ m }} min{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
 {% endif %}
-</section>
 {% endblock %}

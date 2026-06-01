@@ -3,6 +3,7 @@
 use crate::state::AppState;
 use axum::{routing::get, Router};
 
+pub mod error;
 pub mod feed;
 pub mod home;
 pub mod post;

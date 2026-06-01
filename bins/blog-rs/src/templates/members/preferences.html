@@ -3,29 +3,39 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script>(function(){var t=localStorage.getItem('blogrs-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));})();</script>
 <title>Preferences — {{ site_title }}</title>
 <link rel="stylesheet" href="/assets/reader/base.css" />
+<link rel="stylesheet" href="/assets/reader/components.css" />
+<style>
+  .txn-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-7) var(--space-5); }
+  .txn-card { max-width: 420px; width: 100%; border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--space-7); background: var(--bg); text-align: center; }
+  .txn-card .tc-icon { width: 52px; height: 52px; margin: 0 auto var(--space-4); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; background: var(--accent-subtle); color: var(--accent-hover); }
+  .txn-card h1 { font-size: 1.5rem; }
+  .txn-card p { color: var(--text-2); margin-top: var(--space-3); line-height: 1.55; }
+  .txn-foot { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-5); }
+  .pref-row { text-align: left; border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--space-4); display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-5); }
+  .pref-row label { display: flex; align-items: center; gap: var(--space-3); cursor: pointer; }
+</style>
 </head>
 <body>
-<header class="site-header">
-<a class="site-title" href="/">{{ site_title }}</a>
-</header>
-
-<main class="container">
-<section class="preferences">
-  <h1>Preferences</h1>
-  <form method="post" action="/preferences">
-    <input type="hidden" name="token" value="{{ token }}" />
-    <fieldset>
-      <legend>Subscription</legend>
-      <label>
-        <input type="checkbox" name="subscribed" {% if subscribed %}checked{% endif %} />
-        Receive new posts by email
-      </label>
-    </fieldset>
-    <button type="submit">Save</button>
-  </form>
-</section>
-</main>
+<div class="txn-wrap">
+  <div class="txn-card">
+    <div class="tc-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+    <h1>Email preferences</h1>
+    <form method="post" action="/preferences">
+      <input type="hidden" name="token" value="{{ token }}" />
+      <div class="pref-row">
+        <label>
+          <input type="checkbox" name="subscribed" {% if subscribed %}checked{% endif %} />
+          Receive new posts by email
+        </label>
+      </div>
+      <button class="btn btn-primary" type="submit" style="width:100%; margin-top: var(--space-4)">Save preferences</button>
+    </form>
+    <div class="txn-foot">Token-based · no login required</div>
+  </div>
+</div>
+<script src="/assets/reader/app.js" defer></script>
 </body>
 </html>

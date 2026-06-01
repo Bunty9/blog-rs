@@ -25,6 +25,7 @@ pub fn router(state: AppState) -> Router {
         .merge(members::router())
         .nest("/admin", admin::router(state.clone()))
         .route("/assets/*path", axum::routing::get(crate::embed::handler))
+        .fallback(reader::error::fallback)
         .layer(service)
         .with_state(state)
 }

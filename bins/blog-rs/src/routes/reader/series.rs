@@ -136,4 +136,52 @@ mod tests {
             .unwrap();
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
     }
+
+    #[tokio::test]
+    async fn series_shows_member_titles_with_links() {
+        let (app, pool) = test_app().await;
+        insert(
+            &pool,
+            "intro-post",
+            "Introduction",
+            r#"{"series":"my-series","series_order":1}"#,
+        )
+        .await;
+        insert(
+            &pool,
+            "deep-dive",
+            "Deep Dive",
+            r#"{"series":"my-series","series_order":2}"#,
+        )
+        .await;
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/series/my-series")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let body = std::str::from_utf8(&bytes).unwrap();
+
+        assert!(body.contains("Introduction"), "first title missing: {body}");
+        assert!(body.contains("Deep Dive"), "second title missing: {body}");
+        assert!(
+            body.contains("/posts/intro-post"),
+            "first post link missing: {body}"
+        );
+        assert!(
+            body.contains("/posts/deep-dive"),
+            "second post link missing: {body}"
+        );
+        // The new design uses numbered episode cards; check the slug appears as breadcrumb
+        assert!(
+            body.contains("my-series"),
+            "series slug missing from breadcrumb: {body}"
+        );
+    }
 }
