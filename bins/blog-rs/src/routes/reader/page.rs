@@ -13,7 +13,7 @@ use db::pages::Page;
 use crate::error::AppError;
 use crate::routes::reader::error::ErrorTemplate;
 use crate::state::AppState;
-use crate::view::{AssetTag, SiteCtx};
+use crate::view::{AssetTag, PageMeta, SiteCtx};
 
 /// Slugs that must not be captured by the static page route. These are all
 /// handled by more-specific routes registered earlier in the router.
@@ -46,6 +46,10 @@ pub struct PageTemplate {
     pub asset_tags: Vec<AssetTag>,
     pub nav: &'static str,
     pub page: PageView,
+    /// Per-page SEO/social metadata (from meta_json).
+    pub meta: PageMeta,
+    /// Pre-serialized JSON-LD string (WebPage schema). Rendered with `|safe`.
+    pub jsonld: String,
 }
 
 fn not_found(state: &AppState) -> axum::response::Response {
@@ -102,6 +106,34 @@ pub async fn handler(
     let toc: Vec<content::TocEntry> =
         serde_json::from_str::<Vec<content::TocEntry>>(&page.toc_json).unwrap_or_default();
 
+    let meta = PageMeta::from_meta_json(page.meta_json.as_deref());
+    let site = SiteCtx::placeholder();
+
+    let canonical = meta.canonical_url.clone().unwrap_or_else(|| {
+        format!("{}/{}", site.base_url, page.slug)
+    });
+
+    // Build JSON-LD in Rust so serde_json handles all escaping.
+    let jsonld = {
+        let description = meta
+            .description
+            .clone()
+            .unwrap_or_else(|| site.description.clone());
+        let mut obj = serde_json::json!({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": page.title,
+            "description": description,
+            "url": canonical,
+            "author": { "@type": "Person", "name": site.title },
+            "publisher": { "@type": "Organization", "name": site.title },
+        });
+        if let Some(ref img) = meta.og_image {
+            obj["image"] = serde_json::Value::String(img.clone());
+        }
+        serde_json::to_string(&obj).unwrap_or_default()
+    };
+
     let view = PageView {
         slug: page.slug.clone(),
         title: page.title.clone(),
@@ -110,10 +142,12 @@ pub async fn handler(
     };
 
     Ok(PageTemplate {
-        site: SiteCtx::placeholder(),
+        site,
         asset_tags: vec![],
         nav: "",
         page: view,
+        meta,
+        jsonld,
     }
     .into_response())
 }
@@ -256,6 +290,100 @@ mod tests {
             !body.contains("About This Blog"),
             "tags slug should not resolve to page handler"
         );
+    }
+
+    #[tokio::test]
+    async fn seo_page_with_meta_json_renders_og_twitter_jsonld() {
+        let (app, pool) = test_app().await;
+        let meta_json = r#"{"meta_description":"A great page","og_image":"https://cdn.example.com/page.png","canonical_url":"https://example.com/custom-page"}"#;
+        sqlx::query(
+            "INSERT INTO pages (slug, title, body_md, body_html, body_html_version,
+                                toc_json, meta_json, status, created_at, updated_at)
+             VALUES ('seo-page', 'SEO Page', '# SEO', '<h1>SEO</h1>',
+                     ?, '[]', ?, 'published', 0, 0)",
+        )
+        .bind(content::RENDER_VERSION as i64)
+        .bind(meta_json)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/seo-page")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+
+        // Canonical uses meta_json value
+        assert!(
+            body.contains(r#"href="https://example.com/custom-page""#),
+            "canonical url missing: {body}"
+        );
+        // OG image from meta_json
+        assert!(
+            body.contains(r#"content="https://cdn.example.com/page.png""#),
+            "og:image missing: {body}"
+        );
+        // meta description from meta_description field
+        assert!(
+            body.contains(r#"content="A great page""#),
+            "meta description missing: {body}"
+        );
+        // JSON-LD WebPage present
+        assert!(
+            body.contains(r#"application/ld+json"#),
+            "json-ld script tag missing: {body}"
+        );
+        assert!(body.contains(r#"WebPage"#), "WebPage type missing: {body}");
+        // Exactly one <meta name="description"
+        let count = body.matches(r#"<meta name="description""#).count();
+        assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
+    }
+
+    #[tokio::test]
+    async fn seo_page_without_meta_json_falls_back_to_page_title() {
+        let (app, pool) = test_app().await;
+        sqlx::query(
+            "INSERT INTO pages (slug, title, body_md, body_html, body_html_version,
+                                toc_json, meta_json, status, created_at, updated_at)
+             VALUES ('seo-fallback-page', 'Fallback Page Title', '# Fallback', '<h1>Fallback</h1>',
+                     ?, '[]', NULL, 'published', 0, 0)",
+        )
+        .bind(content::RENDER_VERSION as i64)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/seo-fallback-page")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+
+        // Canonical falls back to /{slug}
+        assert!(
+            body.contains(r#"/seo-fallback-page"#),
+            "fallback canonical missing: {body}"
+        );
+        // JSON-LD WebPage present
+        assert!(body.contains(r#"WebPage"#), "WebPage missing: {body}");
+        // Exactly one <meta name="description"
+        let count = body.matches(r#"<meta name="description""#).count();
+        assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
     }
 
     #[tokio::test]

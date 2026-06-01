@@ -1,10 +1,22 @@
 {% extends "reader/base.html" %}
 
 {% block title %}{{ page.title }} — {{ site.title }}{% endblock %}
-{% block description %}{{ page.title }}{% endblock %}
+{% block description %}{% if let Some(d) = meta.description %}{{ d }}{% else %}{{ page.title }}{% endif %}{% endblock %}
 
 {% block extra_head %}
-<link rel="canonical" href="{{ site.base_url }}/{{ page.slug }}" />
+<link rel="canonical" href="{% if let Some(c) = meta.canonical_url %}{{ c }}{% else %}{{ site.base_url }}/{{ page.slug }}{% endif %}" />
+<meta property="og:title" content="{{ page.title }}" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{% if let Some(c) = meta.canonical_url %}{{ c }}{% else %}{{ site.base_url }}/{{ page.slug }}{% endif %}" />
+{% if let Some(img) = meta.og_image %}<meta property="og:image" content="{{ img }}" />
+{% endif -%}
+<meta property="og:description" content="{% if let Some(d) = meta.description %}{{ d }}{% else %}{{ page.title }}{% endif %}" />
+<meta name="twitter:card" content="{% if let Some(tc) = meta.twitter_card %}{{ tc }}{% else if meta.og_image.is_some() %}summary_large_image{% else %}summary{% endif %}" />
+<meta name="twitter:title" content="{{ page.title }}" />
+<meta name="twitter:description" content="{% if let Some(d) = meta.description %}{{ d }}{% else %}{{ page.title }}{% endif %}" />
+{% if let Some(img) = meta.og_image %}<meta name="twitter:image" content="{{ img }}" />
+{% endif -%}
+<script type="application/ld+json">{{ jsonld|safe }}</script>
 <style>
   .page-layout { display: grid; grid-template-columns: 1fr minmax(0, var(--measure)) 1fr; gap: var(--space-6); padding-top: var(--space-6); }
   .page-aside { position: relative; }

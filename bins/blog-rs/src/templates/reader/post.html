@@ -1,13 +1,24 @@
 {% extends "reader/base.html" %}
 
 {% block title %}{{ post.title }} — {{ site.title }}{% endblock %}
-{% block description %}{% if let Some(sub) = post.subtitle %}{{ sub }}{% else %}{{ site.description }}{% endif %}{% endblock %}
+{% block description %}{% if let Some(d) = meta.description %}{{ d }}{% else if let Some(sub) = post.subtitle %}{{ sub }}{% else %}{{ site.description }}{% endif %}{% endblock %}
 
 {% block extra_head %}
+<link rel="canonical" href="{% if let Some(c) = meta.canonical_url %}{{ c }}{% else %}{{ site.base_url }}/posts/{{ post.slug }}{% endif %}" />
 <meta property="og:title" content="{{ post.title }}" />
 <meta property="og:type" content="article" />
-{% if let Some(c) = post.cover_image %}<meta property="og:image" content="{{ c }}" />{% endif %}
-<link rel="canonical" href="{{ site.base_url }}/posts/{{ post.slug }}" />
+<meta property="og:url" content="{% if let Some(c) = meta.canonical_url %}{{ c }}{% else %}{{ site.base_url }}/posts/{{ post.slug }}{% endif %}" />
+{% if let Some(img) = meta.og_image %}<meta property="og:image" content="{{ img }}" />
+{% else if let Some(c) = post.cover_image %}<meta property="og:image" content="{{ c }}" />
+{% endif -%}
+<meta property="og:description" content="{% if let Some(d) = meta.description %}{{ d }}{% else if let Some(sub) = post.subtitle %}{{ sub }}{% else %}{{ site.description }}{% endif %}" />
+<meta name="twitter:card" content="{% if let Some(tc) = meta.twitter_card %}{{ tc }}{% else if meta.og_image.is_some() || post.cover_image.is_some() %}summary_large_image{% else %}summary{% endif %}" />
+<meta name="twitter:title" content="{{ post.title }}" />
+<meta name="twitter:description" content="{% if let Some(d) = meta.description %}{{ d }}{% else if let Some(sub) = post.subtitle %}{{ sub }}{% else %}{{ site.description }}{% endif %}" />
+{% if let Some(img) = meta.og_image %}<meta name="twitter:image" content="{{ img }}" />
+{% else if let Some(c) = post.cover_image %}<meta name="twitter:image" content="{{ c }}" />
+{% endif -%}
+<script type="application/ld+json">{{ jsonld|safe }}</script>
 <style>
   .post-layout { display: grid; grid-template-columns: 1fr minmax(0, var(--measure)) 1fr; gap: var(--space-6); padding-top: var(--space-6); }
   .post-aside { position: relative; }

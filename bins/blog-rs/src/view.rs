@@ -37,6 +37,47 @@ impl From<&Asset> for AssetTag {
     }
 }
 
+/// Per-page SEO/social metadata parsed from the post or page's `meta_json` blob.
+///
+/// All fields are `None` when the key is absent or the JSON is invalid; callers
+/// apply site-level fallbacks in the handler before passing this to the template.
+#[derive(Debug, Clone, Default)]
+pub struct PageMeta {
+    /// Explicit meta description (overrides subtitle / site description).
+    pub description: Option<String>,
+    /// Absolute URL of the Open-Graph image.
+    pub og_image: Option<String>,
+    /// Explicit canonical URL (overrides the derived `/posts/{slug}` path).
+    pub canonical_url: Option<String>,
+    /// Twitter card type: `"summary"` or `"summary_large_image"`.
+    pub twitter_card: Option<String>,
+}
+
+impl PageMeta {
+    /// Parse SEO keys out of the raw `meta_json` string.  Tolerates missing
+    /// or malformed JSON — returns all-`None` in that case.
+    pub fn from_meta_json(meta_json: Option<&str>) -> Self {
+        let Some(raw) = meta_json else {
+            return Self::default();
+        };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(raw) else {
+            return Self::default();
+        };
+        let str_field = |key: &str| {
+            v.get(key)
+                .and_then(|x| x.as_str())
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+        };
+        Self {
+            description: str_field("meta_description"),
+            og_image: str_field("og_image"),
+            canonical_url: str_field("canonical_url"),
+            twitter_card: str_field("twitter_card"),
+        }
+    }
+}
+
 /// Cheap site-wide context handed to every template via the base layout.
 ///
 /// Valid `nav` discriminants: `"" | "home" | "tags" | "series"`.
@@ -204,5 +245,36 @@ mod tests {
     #[test]
     fn iso_date_known_epoch() {
         assert_eq!(iso_date(1_700_000_000), "2023-11-14");
+    }
+
+    #[test]
+    fn page_meta_parses_all_fields() {
+        let json = r#"{"meta_description":"A great post","og_image":"https://ex.com/img.png","canonical_url":"https://ex.com/custom","twitter_card":"summary_large_image"}"#;
+        let m = PageMeta::from_meta_json(Some(json));
+        assert_eq!(m.description.as_deref(), Some("A great post"));
+        assert_eq!(m.og_image.as_deref(), Some("https://ex.com/img.png"));
+        assert_eq!(m.canonical_url.as_deref(), Some("https://ex.com/custom"));
+        assert_eq!(m.twitter_card.as_deref(), Some("summary_large_image"));
+    }
+
+    #[test]
+    fn page_meta_all_none_on_missing_keys() {
+        let m = PageMeta::from_meta_json(Some("{}"));
+        assert!(m.description.is_none());
+        assert!(m.og_image.is_none());
+        assert!(m.canonical_url.is_none());
+        assert!(m.twitter_card.is_none());
+    }
+
+    #[test]
+    fn page_meta_all_none_on_invalid_json() {
+        let m = PageMeta::from_meta_json(Some("not-json"));
+        assert!(m.description.is_none());
+    }
+
+    #[test]
+    fn page_meta_all_none_on_none_input() {
+        let m = PageMeta::from_meta_json(None);
+        assert!(m.description.is_none());
     }
 }
