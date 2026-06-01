@@ -23,6 +23,8 @@ use crate::state::AppState;
 #[template(path = "admin/settings.html")]
 struct SettingsTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: &'static str,
     flash: Option<String>,
     flash_kind: String,
     site_title: String,
@@ -49,6 +51,8 @@ impl SettingsTpl {
         let take = |m: &mut BTreeMap<String, String>, k: &str| m.remove(k).unwrap_or_default();
         Self {
             csrf,
+            nav: "settings",
+            page_title: "Settings",
             flash,
             flash_kind,
             site_title: take(&mut values, "site_title"),

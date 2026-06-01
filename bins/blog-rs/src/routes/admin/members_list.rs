@@ -21,6 +21,8 @@ use db::members::{self, AdminMemberRow};
 #[allow(dead_code)] // flash + flash_kind reserved for Plan 1e flash messaging
 struct MembersTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: &'static str,
     flash: Option<String>,
     flash_kind: String,
     total: i64,
@@ -37,6 +39,8 @@ pub async fn handler(
     let rows = members::list_admin(&state.pool, 500).await?;
     Ok(MembersTpl {
         csrf: session.csrf_token.clone(),
+        nav: "members",
+        page_title: "Members",
         flash: None,
         flash_kind: String::new(),
         total,

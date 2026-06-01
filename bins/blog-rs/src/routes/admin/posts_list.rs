@@ -27,6 +27,8 @@ pub struct ListQuery {
 #[allow(dead_code)] // flash + flash_kind reserved for Plan 1e flash messaging
 struct PostsListTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: &'static str,
     flash: Option<String>,
     flash_kind: String,
     status: String,
@@ -48,6 +50,8 @@ pub async fn handler(
     let rows = posts::list_admin(&state.pool, filter, search, 200).await?;
     Ok(PostsListTpl {
         csrf: session.csrf_token.clone(),
+        nav: "posts",
+        page_title: "Posts",
         flash: None,
         flash_kind: String::new(),
         status: filter.to_string(),

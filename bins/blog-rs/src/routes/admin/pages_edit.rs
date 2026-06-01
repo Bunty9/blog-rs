@@ -16,6 +16,8 @@ use crate::state::AppState;
 #[allow(dead_code)] // flash + flash_kind reserved for flash messaging
 struct EditTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: String,
     flash: Option<String>,
     flash_kind: String,
     id: i64,
@@ -41,6 +43,8 @@ pub async fn handler(
 
     Ok(EditTpl {
         csrf: session.csrf_token.clone(),
+        nav: "pages",
+        page_title: format!("Edit · {}", &page.title),
         flash: None,
         flash_kind: String::new(),
         id: page.id,

@@ -17,6 +17,8 @@ use crate::state::AppState;
 #[allow(dead_code)] // flash + flash_kind reserved for flash messaging
 struct PagesListTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: &'static str,
     flash: Option<String>,
     flash_kind: String,
     rows: Vec<Page>,
@@ -29,6 +31,8 @@ pub async fn handler(
     let rows = db::pages::list_all(&state.pool).await?;
     Ok(PagesListTpl {
         csrf: session.csrf_token.clone(),
+        nav: "pages",
+        page_title: "Pages",
         flash: None,
         flash_kind: String::new(),
         rows,

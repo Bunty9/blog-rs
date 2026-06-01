@@ -14,6 +14,8 @@ use crate::state::AppState;
 #[template(path = "admin/dashboard.html")]
 struct DashboardTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: &'static str,
     drafts: i64,
     scheduled: i64,
     published: i64,
@@ -32,6 +34,8 @@ pub async fn handler(
 
     Ok(DashboardTpl {
         csrf: session.csrf_token,
+        nav: "dashboard",
+        page_title: "Dashboard",
         drafts,
         scheduled,
         published,

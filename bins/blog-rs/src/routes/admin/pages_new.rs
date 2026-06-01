@@ -19,6 +19,8 @@ use db::pages::{self, NewPage};
 #[allow(dead_code)] // flash + flash_kind reserved for flash messaging
 struct NewTpl {
     csrf: String,
+    nav: &'static str,
+    page_title: &'static str,
     flash: Option<String>,
     flash_kind: String,
 }
@@ -26,6 +28,8 @@ struct NewTpl {
 pub async fn get(Extension(session): Extension<SessionCtx>) -> Result<impl IntoResponse, AppError> {
     Ok(NewTpl {
         csrf: session.csrf_token.clone(),
+        nav: "pages",
+        page_title: "New page",
         flash: None,
         flash_kind: String::new(),
     })
