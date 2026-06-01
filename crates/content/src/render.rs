@@ -1,5 +1,5 @@
-use crate::{shortcode_lexer, ContentError, Frontmatter};
 use crate::toc::Toc;
+use crate::{shortcode_lexer, ContentError, Frontmatter};
 use shortcodes::{default_registry, Registry, RenderedBlock};
 
 #[derive(Debug)]

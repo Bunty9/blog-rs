@@ -109,9 +109,10 @@ pub async fn handler(
     let meta = PageMeta::from_meta_json(page.meta_json.as_deref());
     let site = SiteCtx::placeholder();
 
-    let canonical = meta.canonical_url.clone().unwrap_or_else(|| {
-        format!("{}/{}", site.base_url, page.slug)
-    });
+    let canonical = meta
+        .canonical_url
+        .clone()
+        .unwrap_or_else(|| format!("{}/{}", site.base_url, page.slug));
 
     // Build JSON-LD in Rust so serde_json handles all escaping.
     let jsonld = {
@@ -275,12 +276,7 @@ mod tests {
         seed_page(&pool, "tags", "published").await;
 
         let res = app
-            .oneshot(
-                Request::builder()
-                    .uri("/tags")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/tags").body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
@@ -344,7 +340,10 @@ mod tests {
         assert!(body.contains(r#"WebPage"#), "WebPage type missing: {body}");
         // Exactly one <meta name="description"
         let count = body.matches(r#"<meta name="description""#).count();
-        assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
+        assert_eq!(
+            count, 1,
+            "expected exactly 1 meta description tag, got {count}"
+        );
     }
 
     #[tokio::test]
@@ -383,7 +382,10 @@ mod tests {
         assert!(body.contains(r#"WebPage"#), "WebPage missing: {body}");
         // Exactly one <meta name="description"
         let count = body.matches(r#"<meta name="description""#).count();
-        assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
+        assert_eq!(
+            count, 1,
+            "expected exactly 1 meta description tag, got {count}"
+        );
     }
 
     #[tokio::test]
@@ -454,7 +456,13 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = res.into_body().collect().await.unwrap().to_bytes();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(!body.contains("STALE"), "stale body_html should be replaced");
-        assert!(body.contains("Fresh Heading"), "re-rendered content missing");
+        assert!(
+            !body.contains("STALE"),
+            "stale body_html should be replaced"
+        );
+        assert!(
+            body.contains("Fresh Heading"),
+            "re-rendered content missing"
+        );
     }
 }

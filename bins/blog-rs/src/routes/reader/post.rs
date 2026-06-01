@@ -132,13 +132,11 @@ pub async fn handler(
     let site = SiteCtx::placeholder();
 
     let published_date_str = post.published_at.map(iso_date);
-    let canonical = meta.canonical_url.clone().unwrap_or_else(|| {
-        format!("{}/posts/{}", site.base_url, post.slug)
-    });
-    let og_image = meta
-        .og_image
+    let canonical = meta
+        .canonical_url
         .clone()
-        .or_else(|| post.cover_image.clone());
+        .unwrap_or_else(|| format!("{}/posts/{}", site.base_url, post.slug));
+    let og_image = meta.og_image.clone().or_else(|| post.cover_image.clone());
 
     // Build JSON-LD in Rust so serde_json handles all escaping — the template
     // renders this with `|safe` to avoid double-escaping the braces/quotes.
@@ -347,7 +345,10 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = res.into_body().collect().await.unwrap().to_bytes();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(body.contains("class=\"meta-strip\""), "meta-strip div missing");
+        assert!(
+            body.contains("class=\"meta-strip\""),
+            "meta-strip div missing"
+        );
         assert!(body.contains("5 min read"), "reading minutes missing");
         assert!(body.contains("2023-11-14"), "published date missing");
         assert!(body.contains("a subtitle"), "subtitle missing");
@@ -392,10 +393,7 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = res.into_body().collect().await.unwrap().to_bytes();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(
-            body.contains("class=\"toc\""),
-            "toc nav missing: {body}"
-        );
+        assert!(body.contains("class=\"toc\""), "toc nav missing: {body}");
         assert!(
             body.contains("href=\"#introduction\"") || body.contains("href=\"#"),
             "toc anchor link missing"
@@ -461,7 +459,10 @@ mod tests {
         );
         // Exactly one <meta name="description"
         let count = body.matches(r#"<meta name="description""#).count();
-        assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
+        assert_eq!(
+            count, 1,
+            "expected exactly 1 meta description tag, got {count}"
+        );
     }
 
     #[tokio::test]
@@ -511,10 +512,16 @@ mod tests {
             "twitter card fallback missing: {body}"
         );
         // JSON-LD BlogPosting present
-        assert!(body.contains(r#"BlogPosting"#), "BlogPosting missing: {body}");
+        assert!(
+            body.contains(r#"BlogPosting"#),
+            "BlogPosting missing: {body}"
+        );
         // Exactly one <meta name="description"
         let count = body.matches(r#"<meta name="description""#).count();
-        assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
+        assert_eq!(
+            count, 1,
+            "expected exactly 1 meta description tag, got {count}"
+        );
     }
 
     #[tokio::test]
@@ -611,6 +618,9 @@ mod tests {
         assert!(body.contains("Previous Post"), "prev title missing");
         assert!(body.contains("Next Post"), "next title missing");
         // related grid should contain the two other posts
-        assert!(body.contains("class=\"related-grid\""), "related-grid missing");
+        assert!(
+            body.contains("class=\"related-grid\""),
+            "related-grid missing"
+        );
     }
 }

@@ -104,9 +104,7 @@ pub async fn handler(
         let out = content::render(md).map_err(|e| AppError::BadRequest(e.to_string()))?;
         update.body_md = Some(md.clone());
         update.body_html = Some(out.html);
-        update.toc_json = Some(
-            serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()),
-        );
+        update.toc_json = Some(serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()));
         update.reading_minutes = Some(out.reading_minutes);
     }
 
@@ -136,7 +134,11 @@ pub async fn handler(
 
         // Each field: if Some("") → remove key; Some(non-empty) → set; None → leave alone.
         set_or_remove(&mut map, "series", form.series.as_deref());
-        set_or_remove(&mut map, "meta_description", form.meta_description.as_deref());
+        set_or_remove(
+            &mut map,
+            "meta_description",
+            form.meta_description.as_deref(),
+        );
         set_or_remove(&mut map, "og_image", form.og_image.as_deref());
         set_or_remove(&mut map, "canonical_url", form.canonical_url.as_deref());
         set_or_remove(&mut map, "twitter_card", form.twitter_card.as_deref());
@@ -280,15 +282,13 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
 
         // Verify meta_json was persisted correctly.
-        let raw: Option<String> =
-            sqlx::query_scalar("SELECT meta_json FROM posts WHERE id = ?")
-                .bind(post_id)
-                .fetch_one(&state.pool)
-                .await
-                .unwrap();
+        let raw: Option<String> = sqlx::query_scalar("SELECT meta_json FROM posts WHERE id = ?")
+            .bind(post_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap();
 
-        let meta: serde_json::Value =
-            serde_json::from_str(raw.as_deref().unwrap_or("{}")).unwrap();
+        let meta: serde_json::Value = serde_json::from_str(raw.as_deref().unwrap_or("{}")).unwrap();
         assert_eq!(meta["meta_description"], "A great post");
         assert_eq!(meta["og_image"], "https://cdn.example.com/og.png");
         assert_eq!(meta["canonical_url"], "https://example.com/posts/test");
@@ -301,9 +301,12 @@ mod tests {
         let (sid, csrf) = seed_admin_session(&state).await;
 
         // Seed a post with existing series in meta_json.
-        let post_id =
-            seed_draft_post(&state, "series-preserve", r#"{"series":"my-series","series_order":2}"#)
-                .await;
+        let post_id = seed_draft_post(
+            &state,
+            "series-preserve",
+            r#"{"series":"my-series","series_order":2}"#,
+        )
+        .await;
 
         let cookie = format!(
             "{}={}; {}={}",
@@ -331,15 +334,13 @@ mod tests {
 
         assert_eq!(res.status(), StatusCode::OK);
 
-        let raw: Option<String> =
-            sqlx::query_scalar("SELECT meta_json FROM posts WHERE id = ?")
-                .bind(post_id)
-                .fetch_one(&state.pool)
-                .await
-                .unwrap();
+        let raw: Option<String> = sqlx::query_scalar("SELECT meta_json FROM posts WHERE id = ?")
+            .bind(post_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap();
 
-        let meta: serde_json::Value =
-            serde_json::from_str(raw.as_deref().unwrap_or("{}")).unwrap();
+        let meta: serde_json::Value = serde_json::from_str(raw.as_deref().unwrap_or("{}")).unwrap();
         // SEO field saved.
         assert_eq!(meta["meta_description"], "Desc only");
         // Series keys preserved — not clobbered by the SEO-only save.

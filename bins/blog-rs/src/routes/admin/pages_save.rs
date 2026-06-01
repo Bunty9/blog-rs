@@ -58,9 +58,7 @@ pub async fn handler(
         let out = content::render(md).map_err(|e| AppError::BadRequest(e.to_string()))?;
         update.body_md = Some(md.clone());
         update.body_html = Some(out.html);
-        update.toc_json = Some(
-            serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()),
-        );
+        update.toc_json = Some(serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()));
     }
 
     pages::update_fields(&state.pool, id, &update).await?;

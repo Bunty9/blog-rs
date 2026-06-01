@@ -35,9 +35,7 @@ pub async fn get(Extension(session): Extension<SessionCtx>) -> Result<impl IntoR
     })
 }
 
-pub async fn post(
-    State(state): State<AppState>,
-) -> Result<Redirect, AppError> {
+pub async fn post(State(state): State<AppState>) -> Result<Redirect, AppError> {
     let now = time::OffsetDateTime::now_utc().unix_timestamp();
     let slug = format!("draft-page-{now}");
     let id = pages::create(

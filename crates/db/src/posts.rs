@@ -646,15 +646,15 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result
             "UPDATE posts SET body_md = ?, body_html = ?, toc_json = ?, reading_minutes = ?,
                               body_html_version = ?, updated_at = ? WHERE id = ?",
         )
-            .bind(md)
-            .bind(html)
-            .bind(toc)
-            .bind(mins)
-            .bind(content::RENDER_VERSION as i64)
-            .bind(now)
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
+        .bind(md)
+        .bind(html)
+        .bind(toc)
+        .bind(mins)
+        .bind(content::RENDER_VERSION as i64)
+        .bind(now)
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
     }
     if let Some(v) = &u.status {
         sqlx::query("UPDATE posts SET status = ?, updated_at = ? WHERE id = ?")
@@ -1266,12 +1266,11 @@ mod toc_tests {
             row.reading_minutes.unwrap_or(0) >= 1,
             "reading_minutes should be >= 1"
         );
-        let v: i64 =
-            sqlx::query_scalar("SELECT body_html_version FROM posts WHERE id = ?")
-                .bind(id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let v: i64 = sqlx::query_scalar("SELECT body_html_version FROM posts WHERE id = ?")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         assert_eq!(v, content::RENDER_VERSION as i64);
     }
 }
@@ -1387,8 +1386,14 @@ mod neighbor_tests {
 
         let results = related(&pool, target, 2).await.unwrap();
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0].id, post_a, "post_a (2 shared tags) should rank first");
-        assert_eq!(results[1].id, post_b, "post_b (1 shared tag) should rank second");
+        assert_eq!(
+            results[0].id, post_a,
+            "post_a (2 shared tags) should rank first"
+        );
+        assert_eq!(
+            results[1].id, post_b,
+            "post_b (1 shared tag) should rank second"
+        );
     }
 
     #[tokio::test]

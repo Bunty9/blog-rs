@@ -247,9 +247,15 @@ mod tests {
         assert!(!body.contains("<html"));
         assert!(!body.contains("<header"));
         // Hit present with slug link.
-        assert!(body.contains("/posts/instant-post"), "expected slug link in body: {body}");
+        assert!(
+            body.contains("/posts/instant-post"),
+            "expected slug link in body: {body}"
+        );
         // Snippet should contain <mark> from FTS5.
-        assert!(body.contains("<mark>"), "expected <mark> in snippet: {body}");
+        assert!(
+            body.contains("<mark>"),
+            "expected <mark> in snippet: {body}"
+        );
     }
 
     #[tokio::test]

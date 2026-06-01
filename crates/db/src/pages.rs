@@ -82,11 +82,9 @@ pub async fn find_by_id(pool: &SqlitePool, id: i64) -> Result<Page, DbError> {
 
 /// List all pages (for admin). Ordered by updated_at DESC.
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Page>, DbError> {
-    let rows = sqlx::query_as::<_, Page>(
-        "SELECT * FROM pages ORDER BY updated_at DESC",
-    )
-    .fetch_all(pool)
-    .await?;
+    let rows = sqlx::query_as::<_, Page>("SELECT * FROM pages ORDER BY updated_at DESC")
+        .fetch_all(pool)
+        .await?;
     Ok(rows)
 }
 

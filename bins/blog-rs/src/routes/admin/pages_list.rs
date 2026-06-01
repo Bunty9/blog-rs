@@ -124,6 +124,9 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = res.into_body().collect().await.unwrap().to_bytes();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(body.contains("About the blog"), "page title missing from list: {body}");
+        assert!(
+            body.contains("About the blog"),
+            "page title missing from list: {body}"
+        );
     }
 }

@@ -273,7 +273,9 @@ mod tests {
 
     #[test]
     fn harden_jsonld_escapes_angle_brackets_and_ampersand() {
-        let input = r#"{"headline":"</script><script>alert(1)</script>","url":"https://example.com/a&b"}"#.to_string();
+        let input =
+            r#"{"headline":"</script><script>alert(1)</script>","url":"https://example.com/a&b"}"#
+                .to_string();
         let hardened = harden_jsonld(input);
         // No raw angle brackets remain.
         assert!(!hardened.contains('<'), "raw '<' found after hardening");

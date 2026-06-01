@@ -65,12 +65,7 @@ mod tests {
         seed_tag(&pool, "rust", "Rust").await;
 
         let res = app
-            .oneshot(
-                Request::builder()
-                    .uri("/tags")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/tags").body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
@@ -83,17 +78,15 @@ mod tests {
     async fn tags_index_empty_db_returns_200() {
         let (app, _pool) = test_app().await;
         let res = app
-            .oneshot(
-                Request::builder()
-                    .uri("/tags")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/tags").body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = res.into_body().collect().await.unwrap().to_bytes();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(body.contains("No tags yet."), "empty marker missing: {body}");
+        assert!(
+            body.contains("No tags yet."),
+            "empty marker missing: {body}"
+        );
     }
 }
