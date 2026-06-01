@@ -1,54 +1,87 @@
 {% extends "admin/base.html" %}
 {% block title %}Settings · blog-rs{% endblock %}
-{% block flash %}{% include "admin/partials/flash.html" %}{% endblock %}
-{% block content %}
-<h2>Settings</h2>
 
-<form method="post" action="/admin/settings" style="max-width:600px;">
+{% block content %}
+{% include "admin/partials/flash.html" %}
+
+<form method="post" action="/admin/settings" class="settings-layout" style="max-width:720px">
     <input type="hidden" name="csrf_token" value="{{ csrf }}" />
 
-    <h3>Site</h3>
-    <div class="field">
-        <label for="site_title">Site title</label>
-        <input id="site_title" name="site_title" type="text" value="{{ site_title }}" />
-    </div>
-    <div class="field">
-        <label for="site_subtitle">Site subtitle</label>
-        <input id="site_subtitle" name="site_subtitle" type="text" value="{{ site_subtitle }}" />
-    </div>
-    <div class="field">
-        <label for="site_url">Site URL</label>
-        <input id="site_url" name="site_url" type="text" value="{{ site_url }}" />
-    </div>
-    <div class="field">
-        <label for="default_author_email">Default author email</label>
-        <input id="default_author_email" name="default_author_email" type="email" value="{{ default_author_email }}" />
+    <div class="tabs" id="settings-tabs">
+        <button type="button" data-tab="general" class="active" onclick="switchTab('general')">General</button>
+        <button type="button" data-tab="newsletter" onclick="switchTab('newsletter')">Newsletter</button>
     </div>
 
-    <h3>SMTP</h3>
-    <div class="field">
-        <label for="smtp_host">Host</label>
-        <input id="smtp_host" name="smtp_host" type="text" value="{{ smtp_host }}" />
-    </div>
-    <div class="field">
-        <label for="smtp_port">Port</label>
-        <input id="smtp_port" name="smtp_port" type="number" value="{{ smtp_port }}" />
-    </div>
-    <div class="field">
-        <label for="smtp_user">Username</label>
-        <input id="smtp_user" name="smtp_user" type="text" value="{{ smtp_user }}" />
-    </div>
-    <div class="field">
-        <label for="smtp_password">Password</label>
-        <input id="smtp_password" name="smtp_password" type="password" value="{{ smtp_password }}" />
-    </div>
-    <div class="field">
-        <label for="smtp_from">From address</label>
-        <input id="smtp_from" name="smtp_from" type="email" value="{{ smtp_from }}" />
+    <!-- GENERAL -->
+    <div id="tab-general">
+        <div class="field">
+            <label for="site_title">Site title</label>
+            <input class="input" id="site_title" name="site_title" type="text" value="{{ site_title }}" />
+        </div>
+        <div class="field">
+            <label for="site_subtitle">Tagline / description</label>
+            <input class="input" id="site_subtitle" name="site_subtitle" type="text" value="{{ site_subtitle }}" />
+        </div>
+        <div class="field">
+            <label for="site_url">Base URL</label>
+            <input class="input" id="site_url" name="site_url" type="text" value="{{ site_url }}" />
+        </div>
+        <div class="field">
+            <label for="default_author_email">Default author email</label>
+            <input class="input" id="default_author_email" name="default_author_email" type="email" value="{{ default_author_email }}" />
+        </div>
     </div>
 
-    <div class="actions">
-        <button type="submit" class="primary">Save settings</button>
+    <!-- NEWSLETTER / SMTP -->
+    <div id="tab-newsletter" style="display:none">
+        <div class="field">
+            <label for="smtp_from">From address</label>
+            <input class="input" id="smtp_from" name="smtp_from" type="email" value="{{ smtp_from }}" />
+        </div>
+        <div class="field">
+            <label for="smtp_host">SMTP host</label>
+            <input class="input" id="smtp_host" name="smtp_host" type="text" value="{{ smtp_host }}" />
+        </div>
+        <div class="field">
+            <label for="smtp_port">SMTP port</label>
+            <input class="input" id="smtp_port" name="smtp_port" type="number" value="{{ smtp_port }}" />
+        </div>
+        <div class="field">
+            <label for="smtp_user">SMTP username</label>
+            <input class="input" id="smtp_user" name="smtp_user" type="text" value="{{ smtp_user }}" />
+        </div>
+        <div class="field">
+            <label for="smtp_password">SMTP password</label>
+            <input class="input" id="smtp_password" name="smtp_password" type="password" value="{{ smtp_password }}" />
+        </div>
+        <div class="field" style="flex-direction:row;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:var(--r-md);padding:var(--space-4)">
+            <div>
+                <label style="margin:0">Analytics tracking</label>
+                <div class="help">Track opens &amp; clicks — backend not yet built.</div>
+            </div>
+            <input type="checkbox" disabled title="Coming soon" />
+        </div>
+        <div class="callout info" style="margin-top:var(--space-3)">
+            <span class="co-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </span>
+            <div class="co-body" style="font-size:0.9rem">Double opt-in is always on — new subscribers confirm via an HMAC-signed email link.</div>
+        </div>
+    </div>
+
+    <div class="save-bar" style="position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:var(--space-2);padding:var(--space-4) 0;background:linear-gradient(transparent,var(--bg) 40%);margin-top:var(--space-5)">
+        <button type="reset" class="btn btn-ghost">Reset</button>
+        <button type="submit" class="btn btn-primary">Save changes</button>
     </div>
 </form>
+
+<script>
+function switchTab(name) {
+    document.querySelectorAll('#settings-tabs button').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.tab === name);
+    });
+    document.getElementById('tab-general').style.display = name === 'general' ? '' : 'none';
+    document.getElementById('tab-newsletter').style.display = name === 'newsletter' ? '' : 'none';
+}
+</script>
 {% endblock %}

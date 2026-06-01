@@ -1,29 +1,58 @@
 {% extends "admin/base.html" %}
 {% block title %}Posts · blog-rs{% endblock %}
-{% block content %}
-<h2>Posts</h2>
 
-<form class="toolbar" method="get" action="/admin/posts">
-    <select name="status" onchange="this.form.submit()">
-        <option value="all"       {% if status == "all" %}selected{% endif %}>All</option>
-        <option value="draft"     {% if status == "draft" %}selected{% endif %}>Drafts</option>
+{% block topbar_actions %}
+<a class="btn btn-primary btn-sm" href="/admin/posts/new">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    New post
+</a>
+{% endblock %}
+
+{% block content %}
+{% include "admin/partials/flash.html" %}
+
+<form class="filter-bar" method="get" action="/admin/posts">
+    <div class="search-box">
+        <span class="s-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <input type="search" name="q" placeholder="Search posts…" value="{{ q }}" />
+    </div>
+    <select class="select" name="status" style="width:auto;padding-block:var(--space-2)" onchange="this.form.submit()">
+        <option value="all"       {% if status == "all" %}selected{% endif %}>All statuses</option>
+        <option value="draft"     {% if status == "draft" %}selected{% endif %}>Draft</option>
         <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>Scheduled</option>
         <option value="published" {% if status == "published" %}selected{% endif %}>Published</option>
     </select>
-    <input class="grow" type="search" name="q" placeholder="Search title or slug…" value="{{ q }}" />
-    <button type="submit">Search</button>
-    <a class="btn primary" href="/admin/posts/new">New draft</a>
+    <span class="spacer"></span>
+    <button type="submit" class="btn btn-ghost btn-sm">Search</button>
 </form>
 
-<table class="posts">
-    <thead><tr><th>Title</th><th>Slug</th><th>Status</th><th>Updated</th></tr></thead>
-    <tbody>
-        {% for row in rows %}
-            {% include "admin/partials/post_row.html" %}
-        {% endfor %}
-        {% if rows.is_empty() %}
-            <tr><td colspan="4" style="text-align:center;color:var(--muted);">No posts match.</td></tr>
-        {% endif %}
-    </tbody>
-</table>
+<div class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Status</th>
+                    <th class="sortable">Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    {% include "admin/partials/post_row.html" %}
+                {% endfor %}
+                {% if rows.is_empty() %}
+                    <tr>
+                        <td colspan="5" style="text-align:center;color:var(--text-muted);padding:var(--space-7)">
+                            No posts match your filters.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

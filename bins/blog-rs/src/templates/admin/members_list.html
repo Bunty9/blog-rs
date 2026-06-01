@@ -1,34 +1,66 @@
 {% extends "admin/base.html" %}
 {% block title %}Members · blog-rs{% endblock %}
-{% block content %}
-<h2 style="display:flex;justify-content:space-between;align-items:center;">
-    <span>Members</span>
-    <a class="btn" href="/admin/members/export.csv">Export CSV</a>
-</h2>
 
-<div class="stat-grid">
-    <div class="stat-card"><div class="n">{{ total }}</div><div class="label">Total</div></div>
-    <div class="stat-card"><div class="n">{{ confirmed }}</div><div class="label">Confirmed</div></div>
-    <div class="stat-card"><div class="n">{{ unsubscribed }}</div><div class="label">Unsubscribed</div></div>
+{% block topbar_actions %}
+<a class="btn btn-secondary btn-sm" href="/admin/members/export.csv">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Export CSV
+</a>
+{% endblock %}
+
+{% block content %}
+{% include "admin/partials/flash.html" %}
+
+<div class="stat-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);margin-bottom:var(--space-5)">
+    <div class="stat-card">
+        <div class="sc-label">Total</div>
+        <div class="sc-value">{{ total }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Confirmed</div>
+        <div class="sc-value">{{ confirmed }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Unsubscribed</div>
+        <div class="sc-value">{{ unsubscribed }}</div>
+    </div>
 </div>
 
-<table class="posts">
-    <thead><tr><th>Email</th><th>Status</th><th>Joined</th></tr></thead>
-    <tbody>
-        {% for m in rows %}
-            <tr>
-                <td>{{ m.email }}</td>
-                <td>
-                    {% if m.unsubscribed_at.is_some() %}<span class="status-badge status-draft">unsubscribed</span>
-                    {% else if m.confirmed_at.is_some() %}<span class="status-badge status-published">confirmed</span>
-                    {% else %}<span class="status-badge status-scheduled">pending</span>{% endif %}
-                </td>
-                <td>{{ m.created_at }}</td>
-            </tr>
-        {% endfor %}
-        {% if rows.is_empty() %}
-            <tr><td colspan="3" style="text-align:center;color:var(--muted);">No members yet.</td></tr>
-        {% endif %}
-    </tbody>
-</table>
+<div class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th class="sortable">Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in rows %}
+                <tr>
+                    <td>{{ m.email }}</td>
+                    <td>
+                        {% if m.unsubscribed_at.is_some() %}
+                            <span class="badge unsub">Unsubscribed</span>
+                        {% else if m.confirmed_at.is_some() %}
+                            <span class="badge confirmed">Confirmed</span>
+                        {% else %}
+                            <span class="badge pending">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="meta">{{ m.created_at }}</span></td>
+                </tr>
+                {% endfor %}
+                {% if rows.is_empty() %}
+                <tr>
+                    <td colspan="3" style="text-align:center;color:var(--text-muted);padding:var(--space-7)">
+                        No members yet.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
