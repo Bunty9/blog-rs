@@ -2,17 +2,31 @@
 
 {% block title %}#{{ tag.name }} — {{ site.title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .tag-band { padding: var(--space-7) 0 var(--space-6); border-bottom: 1px solid var(--border); margin-bottom: var(--space-6); }
+  .tag-band .tag-name { font-family: var(--font-mono); font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 650; }
+  .tag-band .tag-name .hash { color: var(--accent); }
+  .tag-band .tag-count { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); margin-top: var(--space-2); }
+  .post-list { display: flex; flex-direction: column; gap: var(--space-3); }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="tag-page">
-<h1>Posts tagged <span class="tag-name">#{{ tag.name }}</span></h1>
+<div class="breadcrumb" style="margin-top: var(--space-5)"><a href="/">Home</a><span class="sep">/</span><a href="/tags">Tags</a><span class="sep">/</span><span>{{ tag.name }}</span></div>
+<div class="tag-band">
+  <div class="tag-name"><span class="hash">#</span>{{ tag.name }}</div>
+  <div class="tag-count">{{ tag.count }} {% if tag.count == 1 %}post{% else %}posts{% endif %}</div>
+</div>
 {% if cards.is_empty() %}
 <p class="empty-feed">No posts under this tag yet.</p>
 {% else %}
+<div class="post-list">
 {% for card in cards %}
 {% include "partials/post_card.html" %}
 {% endfor %}
+</div>
 {% endif %}
-</section>
 
 {% include "partials/pagination.html" %}
 {% endblock %}

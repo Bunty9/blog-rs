@@ -12,11 +12,13 @@ pub mod search;
 pub mod series;
 pub mod sitemap;
 pub mod tag;
+pub mod tags;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(home::handler))
         .route("/posts/:slug", get(post::handler))
+        .route("/tags", get(tags::handler))
         .route("/tags/:slug", get(tag::handler))
         .route("/series/:slug", get(series::handler))
         .route("/search", get(search::handler))

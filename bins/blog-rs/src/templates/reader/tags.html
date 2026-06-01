@@ -1,0 +1,28 @@
+{% extends "reader/base.html" %}
+
+{% block title %}Tags — {{ site.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tags-cloud { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+  .tags-cloud a { display: inline-flex; align-items: baseline; gap: var(--space-2); font-family: var(--font-mono); padding: var(--space-2) var(--space-4); border: 1px solid var(--border); border-radius: var(--r-full); text-decoration: none; color: var(--text); transition: border-color var(--t-fast), background var(--t-fast); }
+  .tags-cloud a:hover { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-hover); }
+  .tags-cloud a .c { color: var(--text-muted); font-size: 0.8rem; }
+  .tags-cloud a .hash { color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb" style="margin-top: var(--space-5)"><a href="/">Home</a><span class="sep">/</span><span>Tags</span></div>
+<h1>Tags</h1>
+<p style="color:var(--text-2); margin-top:var(--space-3); max-width:56ch">Browse all topics. Size reflects how much has been written about each.</p>
+{% if tags.is_empty() %}
+<p class="empty-feed" style="margin-top: var(--space-6)">No tags yet.</p>
+{% else %}
+<div class="tags-cloud">
+  {% for tag in tags %}
+  <a href="/tags/{{ tag.slug }}"><span class="hash">#</span>{{ tag.name }} <span class="c">{{ tag.count }}</span></a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
