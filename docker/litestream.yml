@@ -1,0 +1,14 @@
+# Litestream config — continuous replication of the SQLite DB to Cloudflare R2.
+# Litestream expands ${ENV} references at load time; values come from .env.
+# R2 is S3-compatible: use the account R2 endpoint + force-path-style.
+dbs:
+  - path: /data/blog.db
+    replicas:
+      - type: s3
+        endpoint: ${LITESTREAM_ENDPOINT}     # https://<accountid>.r2.cloudflarestorage.com
+        bucket: ${LITESTREAM_BUCKET}          # e.g. blog-rs-backups
+        path: blog.db                         # object key prefix within the bucket
+        region: auto                          # R2 ignores region; "auto" is fine
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        force-path-style: true

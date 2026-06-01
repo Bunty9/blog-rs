@@ -1,0 +1,13 @@
+# Cloudflare Tunnel overlay. Shares the app's network namespace so the
+# connector reaches blog-rs on localhost:8080. No inbound ports are opened;
+# the public hostname (blog.bunty9.com -> http://localhost:8080) is mapped in
+# the Cloudflare Zero-Trust dashboard for the tunnel that owns ${TUNNEL_TOKEN}.
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: blog-rs-tunnel
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - blog-rs
+    network_mode: "service:blog-rs"

@@ -128,7 +128,33 @@ async fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// Resolve when the process is asked to stop. Listens for Ctrl-C (local dev)
+/// and, on Unix, SIGTERM — the signal `docker stop` / Litestream send — so the
+/// outbox worker is cancelled between ticks instead of being SIGKILLed after
+/// the runtime grace period.
 async fn shutdown_signal() {
-    let _ = tokio::signal::ctrl_c().await;
+    let ctrl_c = async {
+        let _ = tokio::signal::ctrl_c().await;
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sig) => {
+                sig.recv().await;
+            }
+            // If we can't install the handler, never resolve via this arm.
+            Err(_) => std::future::pending::<()>().await,
+        }
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {}
+        _ = terminate => {}
+    }
+
     tracing::info!("shutdown signal received");
 }

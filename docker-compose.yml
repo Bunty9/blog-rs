@@ -1,0 +1,27 @@
+# blog-rs — base stack (app only). Add the Cloudflare tunnel with the overlay:
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+services:
+  blog-rs:
+    build: .
+    image: blog-rs:latest
+    container_name: blog-rs
+    env_file: .env
+    environment:
+      - PORT=8080
+    volumes:
+      - blog_data:/data
+    expose:
+      - "8080"
+    # Local debugging without the tunnel — bind to loopback only:
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  blog_data:
