@@ -1,0 +1,18 @@
+# Keep the build context small + reproducible.
+target/
+.git/
+.gitignore
+docs/
+design/
+.remember/
+.claude/
+tests/e2e/node_modules/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+*.eml
+.env
+.env.*
+!.env.example
+README.md
+DEPLOY.md
