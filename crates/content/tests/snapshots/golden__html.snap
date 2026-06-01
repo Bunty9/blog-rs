@@ -2,7 +2,7 @@
 source: crates/content/tests/golden.rs
 expression: normalize(&out.html)
 ---
-<h1>Heading</h1>
+<h1 id="heading">Heading</h1>
 <p>Paragraph with <strong>bold</strong> and <code>inline code</code>.</p>
 <aside class="callout callout-tip" data-callout="tip"><p>Tip body with <a href="https://example.com">a link</a>.</p>
 </aside><figure class="code-block" data-lang="rust" data-playground="rust">
