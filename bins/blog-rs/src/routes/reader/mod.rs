@@ -22,6 +22,7 @@ pub fn router() -> Router<AppState> {
         .route("/tags/:slug", get(tag::handler))
         .route("/series/:slug", get(series::handler))
         .route("/search", get(search::handler))
+        .route("/search/instant", get(search::instant_handler))
         .route("/feed.xml", get(feed::handler))
         .route("/sitemap.xml", get(sitemap::handler))
         .route("/robots.txt", get(robots::handler))
