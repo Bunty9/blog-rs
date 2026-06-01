@@ -6,6 +6,11 @@ pub mod dashboard;
 pub mod login;
 pub mod logout;
 pub mod members_list;
+pub mod pages_delete;
+pub mod pages_edit;
+pub mod pages_list;
+pub mod pages_new;
+pub mod pages_save;
 pub mod posts_delete;
 pub mod posts_edit;
 pub mod posts_list;
@@ -29,6 +34,11 @@ use axum::Router;
 pub fn router(state: AppState) -> Router<AppState> {
     let protected = Router::new()
         .route("/", get(dashboard::handler))
+        .route("/pages", get(pages_list::handler))
+        .route("/pages/new", get(pages_new::get).post(pages_new::post))
+        .route("/pages/:id/edit", get(pages_edit::handler))
+        .route("/pages/:id", post(pages_save::handler))
+        .route("/pages/:id/delete", post(pages_delete::handler))
         .route("/posts", get(posts_list::handler))
         .route("/posts/new", get(posts_new::get).post(posts_new::post))
         .route(

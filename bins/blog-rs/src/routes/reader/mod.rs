@@ -6,6 +6,7 @@ use axum::{routing::get, Router};
 pub mod error;
 pub mod feed;
 pub mod home;
+pub mod page;
 pub mod post;
 pub mod robots;
 pub mod search;
@@ -26,4 +27,7 @@ pub fn router() -> Router<AppState> {
         .route("/feed.xml", get(feed::handler))
         .route("/sitemap.xml", get(sitemap::handler))
         .route("/robots.txt", get(robots::handler))
+        // Static pages: registered LAST so all more-specific routes take priority.
+        // The handler also guards against reserved slugs explicitly.
+        .route("/:slug", get(page::handler))
 }

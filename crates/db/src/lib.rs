@@ -8,6 +8,7 @@ pub mod pool;
 // Tables - filled in by later tasks.
 pub mod members;
 pub mod outbox;
+pub mod pages;
 pub mod posts;
 pub mod search;
 pub mod series;
@@ -19,6 +20,7 @@ pub mod users;
 pub use settings as settings_db;
 
 pub use error::DbError;
+pub use pages::Page;
 pub use pool::connect;
 pub use series::SeriesMeta;
 pub use sqlx::SqlitePool;
