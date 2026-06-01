@@ -492,3 +492,8 @@ details.accordion .acc-body { padding: 0 var(--space-4) var(--space-4); color: v
   .hamburger { display: inline-flex; }
   .header-actions .btn-outline-accent { display: none; }
 }
+
+/* ============== THEME TOGGLE ICON STATE ================== */
+.icon-sun{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="dark"] .icon-sun{display:inline-flex}

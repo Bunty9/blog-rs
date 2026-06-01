@@ -10,12 +10,12 @@
     </nav>
     <div class="header-actions">
       <a class="icon-btn" href="/search" aria-label="Search">{% include "partials/icon_search.html" %}</a>
-      <button class="icon-btn" aria-label="Toggle theme" onclick="toggleTheme()">{% include "partials/icon_moon.html" %}</button>
+      <button class="icon-btn" aria-label="Toggle theme" data-theme-state onclick="toggleTheme()"><span class="icon-moon">{% include "partials/icon_moon.html" %}</span><span class="icon-sun">{% include "partials/icon_sun.html" %}</span></button>
       <a class="btn btn-outline-accent btn-sm" href="/members/signup">Subscribe</a>
       <button class="icon-btn hamburger" data-toggle="mobile-sheet" aria-label="Menu">{% include "partials/icon_menu.html" %}</button>
     </div>
   </div>
 </header>
 <div class="mobile-sheet">
-  <nav><a href="/">Home</a><a href="/tags">Tags</a><a href="/series">Series</a><a href="/about">About</a><a href="/search">Search</a></nav>
+  <nav aria-label="Mobile menu"><a href="/">Home</a><a href="/tags">Tags</a><a href="/series">Series</a><a href="/about">About</a><a href="/search">Search</a></nav>
 </div>

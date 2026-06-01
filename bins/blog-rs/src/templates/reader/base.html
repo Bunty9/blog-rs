@@ -14,7 +14,7 @@
 {% else %}<script src="{{ a.src }}"{% if a.defer %} defer{% endif %}></script>
 {% endif %}{% endfor %}
 </head>
-<body>
+<body{% block body_attrs %}{% endblock %}>
 {% include "partials/site_header.html" %}
 <main id="main" class="container">
 {% block content %}{% endblock %}

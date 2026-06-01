@@ -38,6 +38,8 @@ impl From<&Asset> for AssetTag {
 }
 
 /// Cheap site-wide context handed to every template via the base layout.
+///
+/// Valid `nav` discriminants: `"" | "home" | "tags" | "series"`.
 #[derive(Debug, Clone)]
 pub struct SiteCtx {
     pub title: String,
@@ -47,6 +49,7 @@ pub struct SiteCtx {
 
 impl SiteCtx {
     /// Current calendar year (UTC), used in footer copyright.
+    #[allow(clippy::unused_self)]
     pub fn year(&self) -> i32 {
         use chrono::{Datelike, Utc};
         Utc::now().year()
