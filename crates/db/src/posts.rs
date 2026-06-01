@@ -591,6 +591,8 @@ pub struct PostUpdate {
     pub status: Option<String>,
     pub scheduled_for: Option<Option<i64>>,
     pub tags_csv: Option<String>,
+    /// Serialised JSON blob; replaces the existing `meta_json` column entirely.
+    pub meta_json: Option<String>,
 }
 
 pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result<(), DbError> {
@@ -664,6 +666,14 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result
     }
     if let Some(v) = &u.scheduled_for {
         sqlx::query("UPDATE posts SET scheduled_for = ?, updated_at = ? WHERE id = ?")
+            .bind(v)
+            .bind(now)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(v) = &u.meta_json {
+        sqlx::query("UPDATE posts SET meta_json = ?, updated_at = ? WHERE id = ?")
             .bind(v)
             .bind(now)
             .bind(id)

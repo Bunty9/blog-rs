@@ -33,6 +33,12 @@ struct EditTpl {
     body_html: String,
     status: String,
     scheduled_for: String,
+    // meta_json-derived fields
+    series: String,
+    meta_description: String,
+    og_image: String,
+    canonical_url: String,
+    twitter_card: String,
 }
 
 pub async fn handler(
@@ -57,6 +63,20 @@ pub async fn handler(
     .fetch_all(&state.pool)
     .await?;
 
+    // Parse meta_json once to extract SEO fields + series.
+    let meta: serde_json::Value = post
+        .meta_json
+        .as_deref()
+        .and_then(|s| serde_json::from_str(s).ok())
+        .unwrap_or(serde_json::Value::Object(Default::default()));
+
+    let str_field = |key: &str| -> String {
+        meta.get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_owned()
+    };
+
     Ok(EditTpl {
         csrf: session.csrf_token.clone(),
         nav: "posts",
@@ -77,5 +97,10 @@ pub async fn handler(
             .scheduled_for
             .map(|t| t.to_string())
             .unwrap_or_default(),
+        series: str_field("series"),
+        meta_description: str_field("meta_description"),
+        og_image: str_field("og_image"),
+        canonical_url: str_field("canonical_url"),
+        twitter_card: str_field("twitter_card"),
     })
 }
