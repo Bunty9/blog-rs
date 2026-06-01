@@ -67,16 +67,21 @@ pub async fn handler(
         let out = content::render(&post.body_md)
             .map_err(|e| AppError::Internal(format!("re-render failed: {e}")))?;
         let assets_json = serde_json::to_string(&out.assets).unwrap_or_else(|_| "[]".into());
+        let toc_json = serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into());
         db::posts::update_rendered_cache(
             &state.pool,
             post.id,
             &out.html,
             &assets_json,
+            &toc_json,
+            out.reading_minutes,
             content::RENDER_VERSION as i64,
         )
         .await?;
         post.body_html = out.html;
         post.assets_json = assets_json;
+        post.toc_json = toc_json;
+        post.reading_minutes = Some(out.reading_minutes);
     }
 
     let tag_rows = db::tags::list_for_post(&state.pool, post.id).await?;

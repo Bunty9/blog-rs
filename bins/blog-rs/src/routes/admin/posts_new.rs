@@ -51,6 +51,8 @@ pub async fn post(
             body_md: "",
             body_html: "",
             meta_json: None,
+            toc_json: "[]",
+            reading_minutes: None,
         },
     )
     .await?;
