@@ -19,4 +19,4 @@ pub use asset::{Asset, AssetKind, AssetManifest};
 pub use error::ContentError;
 pub use frontmatter::Frontmatter;
 pub use render::{render, RenderOutput};
-pub use toc::{Toc, TocEntry};
+pub use toc::{Slugger, Toc, TocEntry};

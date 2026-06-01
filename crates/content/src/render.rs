@@ -183,8 +183,8 @@ mod tests {
         assert_eq!(out.toc.0[0].id, "alpha");
         assert_eq!(out.toc.0[0].children.len(), 1);
         assert_eq!(out.toc.0[0].children[0].id, "beta");
-        // Reading time
-        assert!(out.reading_minutes >= 1);
+        // Reading time: "some words here" = 3 words → ceil(3/220) = 1 minute.
+        assert_eq!(out.reading_minutes, 1);
     }
 
     #[test]

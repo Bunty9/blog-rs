@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A single entry in a table of contents.
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -77,22 +77,69 @@ impl Toc {
 ///
 /// Converts text to lowercase, collapses non-alphanumeric runs to `-`,
 /// strips leading/trailing `-`, and appends `-2`, `-3`, … for repeats.
+/// Empty slugs (e.g. from emoji-only or punctuation-only headings) fall back
+/// to `"section"` before dedup.
+///
+/// Collision avoidance uses the full set of emitted slugs as the source of
+/// truth, so a heading whose text is literally "intro-2" will not collide
+/// with an auto-generated "intro-2" suffix — it will instead receive
+/// "intro-3" (or the next free slot in the "intro" sequence).
 #[derive(Debug, Default)]
 pub struct Slugger {
-    seen: HashMap<String, u32>,
+    /// Every slug that has actually been emitted, used as the collision source of truth.
+    emitted: HashSet<String>,
+    /// Next suffix counter per root base (tracks the last n tried for `base-n`).
+    counters: HashMap<String, u32>,
 }
 
 impl Slugger {
     /// Produce a slug from `text`, deduplicating within this document.
     pub fn slug(&mut self, text: &str) -> String {
-        let base = slugify_text(text);
-        let count = self.seen.entry(base.clone()).or_insert(0);
-        *count += 1;
-        if *count == 1 {
-            base
+        let raw = slugify_text(text);
+        // Fall back to "section" for headings that produce an empty base slug
+        // (e.g. emoji-only or punctuation-only text).
+        let base = if raw.is_empty() {
+            "section".to_string()
         } else {
-            format!("{}-{}", base, count)
+            raw
+        };
+
+        // Determine the canonical root of `base`: if `base` looks like
+        // `<root>-<N>` and `<root>` is a known root (has a counter entry),
+        // treat it as part of the same sequence so we continue from `<N>+1`
+        // rather than appending another suffix like `<base>-2`.
+        let root = strip_numeric_suffix(&base)
+            .filter(|root| self.counters.contains_key(*root))
+            .map(|root| root.to_string())
+            .unwrap_or_else(|| base.clone());
+
+        // Advance the counter for this root until we find a free slot.
+        // Start from the base (no suffix) on first encounter, then -2, -3, …
+        let counter = self.counters.entry(root.clone()).or_insert(1);
+
+        loop {
+            let candidate = if *counter == 1 {
+                root.clone()
+            } else {
+                format!("{}-{}", root, counter)
+            };
+            *counter += 1;
+            if !self.emitted.contains(&candidate) {
+                self.emitted.insert(candidate.clone());
+                return candidate;
+            }
         }
+    }
+}
+
+/// If `s` ends with `-<digits>`, return the part before the suffix.
+fn strip_numeric_suffix(s: &str) -> Option<&str> {
+    let idx = s.rfind('-')?;
+    let suffix = &s[idx + 1..];
+    if !suffix.is_empty() && suffix.chars().all(|c| c.is_ascii_digit()) {
+        Some(&s[..idx])
+    } else {
+        None
     }
 }
 
@@ -131,6 +178,21 @@ mod tests {
         assert_eq!(s.slug("Intro"), "intro");
         assert_eq!(s.slug("Intro"), "intro-2");
         assert_eq!(s.slug("Hello, World!"), "hello-world");
+    }
+
+    #[test]
+    fn slugger_avoids_collision_with_explicit_suffix() {
+        let mut s = Slugger::default();
+        assert_eq!(s.slug("Intro"), "intro");
+        assert_eq!(s.slug("Intro"), "intro-2");
+        assert_eq!(s.slug("intro-2"), "intro-3"); // must NOT collide with the auto "intro-2"
+    }
+
+    #[test]
+    fn slugger_falls_back_for_empty() {
+        let mut s = Slugger::default();
+        assert_eq!(s.slug("???"), "section");
+        assert_eq!(s.slug("🚀"), "section-2");
     }
 
     #[test]
