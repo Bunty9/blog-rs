@@ -3,9 +3,9 @@
   <div class="container">
     <a class="wordmark" href="/"><span class="dot"></span><span>{{ site.title }}</span></a>
     <nav class="nav" aria-label="Primary">
-      <a href="/"{% if nav == "home" %} class="active"{% endif %}>Home</a>
-      <a href="/tags"{% if nav == "tags" %} class="active"{% endif %}>Tags</a>
-      <a href="/series"{% if nav == "series" %} class="active"{% endif %}>Series</a>
+      <a href="/"{% if nav == "home" %} class="active" aria-current="page"{% endif %}>Home</a>
+      <a href="/tags"{% if nav == "tags" %} class="active" aria-current="page"{% endif %}>Tags</a>
+      <a href="/series"{% if nav == "series" %} class="active" aria-current="page"{% endif %}>Series</a>
       <a href="/about">About</a>
     </nav>
     <div class="header-actions">
