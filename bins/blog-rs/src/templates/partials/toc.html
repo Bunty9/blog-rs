@@ -1,0 +1,21 @@
+{% if !toc.is_empty() %}
+<aside class="post-aside" aria-label="Table of contents">
+  <nav class="toc" id="toc">
+    <div class="toc-label">On this page</div>
+    <ul>
+      {% for entry in toc %}
+      <li>
+        <a href="#{{ entry.id }}">{{ entry.text }}</a>
+        {% if !entry.children.is_empty() %}
+        <ul>
+          {% for child in entry.children %}
+          <li><a href="#{{ child.id }}">{{ child.text }}</a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+</aside>
+{% endif %}

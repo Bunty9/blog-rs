@@ -1,8 +1,8 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// A single entry in a table of contents.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TocEntry {
     pub level: u8,
     pub id: String,
@@ -12,7 +12,7 @@ pub struct TocEntry {
 
 /// The table of contents for a document, represented as a forest of
 /// [`TocEntry`] nodes.
-#[derive(Debug, Clone, Serialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Toc(pub Vec<TocEntry>);
 
 impl Toc {

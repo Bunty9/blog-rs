@@ -8,28 +8,147 @@
 <meta property="og:type" content="article" />
 {% if let Some(c) = post.cover_image %}<meta property="og:image" content="{{ c }}" />{% endif %}
 <link rel="canonical" href="{{ site.base_url }}/posts/{{ post.slug }}" />
+<style>
+  .post-layout { display: grid; grid-template-columns: 1fr minmax(0, var(--measure)) 1fr; gap: var(--space-6); padding-top: var(--space-6); }
+  .post-aside { position: relative; }
+  .post-aside .toc { position: sticky; top: calc(var(--header-h) + var(--space-6)); padding-left: var(--space-4); }
+  .post-main { min-width: 0; }
+  .post-head h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin-top: var(--space-3); }
+  .post-head .subtitle { font-size: 1.2rem; color: var(--text-2); margin-top: var(--space-3); line-height: 1.5; }
+  .post-head .meta-strip { margin-top: var(--space-4); }
+  .post-cover { width: 100%; aspect-ratio: 2/1; object-fit: cover; border-radius: var(--r-md); background: var(--surface-2); margin-top: var(--space-5); border: 1px solid var(--border); }
+  .toc-mobile { display: none; }
+  .post-foot { margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--border); }
+  .series-banner { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); text-decoration: none; margin-top: var(--space-5); }
+  .series-banner .sb-icon { width: 38px; height: 38px; border-radius: var(--r-md); background: var(--accent-subtle); color: var(--accent-hover); display: flex; align-items: center; justify-content: center; flex: none; }
+  .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4); margin-top: var(--space-4); }
+  @media (max-width: 1024px) {
+    .post-layout { grid-template-columns: 1fr; max-width: var(--measure); margin-inline: auto; }
+    .post-aside { display: none; }
+    .toc-mobile { display: block; }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<article class="post">
-<header class="post-header">
-<h1 class="post-title">{{ post.title }}</h1>
-{% if let Some(sub) = post.subtitle %}<p class="post-subtitle">{{ sub }}</p>{% endif %}
-<p class="post-meta">
-{% if let Some(d) = post.published_date %}<time datetime="{{ d }}">{{ d }}</time>{% endif %}
-{% if let Some(m) = post.reading_minutes %}<span> · {{ m }} min read</span>{% endif %}
-{% for tag in tags %}
-<a class="post-tag" href="/tags/{{ tag.slug }}">#{{ tag.name }}</a>
-{% endfor %}
-</p>
-</header>
+<div class="post-layout">
+  <div></div>
+  <article class="post-main">
+    <div class="breadcrumb">
+      <a href="/">Home</a>
+      <span class="sep">/</span>
+      {% if let Some(first_tag) = tags.first() %}
+      <a href="/tags/{{ first_tag.slug }}">{{ first_tag.name }}</a>
+      {% else %}
+      <span>Posts</span>
+      {% endif %}
+    </div>
 
-<div class="post-body">{{ post.body_html|safe }}</div>
+    <header class="post-head">
+      <h1>{{ post.title }}</h1>
+      {% if let Some(sub) = post.subtitle %}<p class="subtitle">{{ sub }}</p>{% endif %}
+      <div class="meta-strip">
+        <span class="avatar">RS</span>
+        {% if let Some(m) = post.reading_minutes %}<span class="meta">{{ m }} min read</span><span class="dot-sep">·</span>{% endif %}
+        {% if let Some(d) = post.published_date %}<span class="meta">{{ d }}</span>{% if !tags.is_empty() %}<span class="dot-sep">·</span>{% endif %}{% endif %}
+        {% for tag in tags %}<a class="tag" href="/tags/{{ tag.slug }}">{{ tag.name }}</a>{% endfor %}
+      </div>
+      {% if let Some(img) = post.cover_image %}
+      <img class="post-cover" src="{{ img }}" alt="" width="800" height="400" />
+      {% endif %}
+    </header>
 
-{% if let Some(s) = series %}
-<aside class="post-series">
-<p>Part of the series <a href="/series/{{ s.slug }}">{{ s.slug }}</a>.</p>
-</aside>
-{% endif %}
-</article>
+    {% if !post.toc.is_empty() %}
+    <details class="accordion toc-mobile" style="margin-top: var(--space-5)">
+      <summary>Contents <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></summary>
+      <div class="acc-body">
+        <nav class="toc">
+          <ul>
+            {% for entry in post.toc %}
+            <li>
+              <a href="#{{ entry.id }}">{{ entry.text }}</a>
+              {% if !entry.children.is_empty() %}
+              <ul>
+                {% for child in entry.children %}
+                <li><a href="#{{ child.id }}">{{ child.text }}</a></li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </div>
+    </details>
+    {% endif %}
+
+    <div class="prose" id="article">{{ post.body_html|safe }}</div>
+
+    <div class="post-foot">
+      {% if !tags.is_empty() %}
+      <div class="row-wrap" style="margin-bottom: var(--space-5)">
+        <span class="meta">Tagged</span>
+        {% for tag in tags %}<a class="tag" href="/tags/{{ tag.slug }}">{{ tag.name }}</a>{% endfor %}
+      </div>
+      {% endif %}
+
+      {% if let Some(s) = series %}
+      <a class="series-banner" href="/series/{{ s.slug }}">
+        <div class="sb-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+        <div><div class="meta">Part of a series</div><div style="font-weight:600">{{ s.slug }} →</div></div>
+      </a>
+      {% endif %}
+
+      {% if !related.is_empty() %}
+      <h3 style="margin-top: var(--space-7); margin-bottom: var(--space-4); font-size:1.2rem">Related</h3>
+      <div class="related-grid">
+        {% for card in related %}
+        {% include "partials/post_card.html" %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if prev.is_some() || next.is_some() %}
+      <nav class="prevnext">
+        {% if let Some(card) = prev %}
+        <a class="prev" href="/posts/{{ card.slug }}">
+          <div class="pn-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg> Previous</div>
+          <div class="pn-title">{{ card.title }}</div>
+        </a>
+        {% else %}
+        <span></span>
+        {% endif %}
+        {% if let Some(card) = next %}
+        <a class="next" href="/posts/{{ card.slug }}">
+          <div class="pn-label">Next <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+          <div class="pn-title">{{ card.title }}</div>
+        </a>
+        {% endif %}
+      </nav>
+      {% endif %}
+    </div>
+  </article>
+
+  {% if !post.toc.is_empty() %}
+  <aside class="post-aside" aria-label="Table of contents">
+    <nav class="toc" id="toc">
+      <div class="toc-label">On this page</div>
+      <ul>
+        {% for entry in post.toc %}
+        <li>
+          <a href="#{{ entry.id }}">{{ entry.text }}</a>
+          {% if !entry.children.is_empty() %}
+          <ul>
+            {% for child in entry.children %}
+            <li><a href="#{{ child.id }}">{{ child.text }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </aside>
+  {% endif %}
+</div>
 {% endblock %}

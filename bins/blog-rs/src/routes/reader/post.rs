@@ -8,6 +8,7 @@ use axum::http::StatusCode;
 use db::posts::Post;
 
 use crate::error::AppError;
+use crate::routes::reader::home::PostCard;
 use crate::state::AppState;
 use crate::view::{iso_date, AssetTag, SiteCtx};
 
@@ -20,6 +21,7 @@ pub struct PostView {
     pub body_html: String,
     pub published_date: Option<String>,
     pub reading_minutes: Option<i64>,
+    pub toc: Vec<content::TocEntry>,
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +44,9 @@ pub struct PostTemplate {
     pub post: PostView,
     pub tags: Vec<TagLink>,
     pub series: Option<SeriesLink>,
+    pub related: Vec<PostCard>,
+    pub prev: Option<PostCard>,
+    pub next: Option<PostCard>,
 }
 
 pub async fn handler(
@@ -106,6 +111,16 @@ pub async fn handler(
 
     let asset_tags = AssetTag::from_manifest(&post.assets());
 
+    let toc: Vec<content::TocEntry> =
+        serde_json::from_str::<Vec<content::TocEntry>>(&post.toc_json).unwrap_or_default();
+
+    let related_posts = db::posts::related(&state.pool, post.id, 3).await?;
+    let related: Vec<PostCard> = related_posts.iter().map(PostCard::from).collect();
+
+    let (prev_post, next_post) = db::posts::neighbors(&state.pool, post.id).await?;
+    let prev: Option<PostCard> = prev_post.as_ref().map(PostCard::from);
+    let next: Option<PostCard> = next_post.as_ref().map(PostCard::from);
+
     let view = PostView {
         slug: post.slug.clone(),
         title: post.title.clone(),
@@ -114,6 +129,7 @@ pub async fn handler(
         body_html: post.body_html.clone(),
         published_date: post.published_at.map(iso_date),
         reading_minutes: post.reading_minutes,
+        toc,
     };
 
     Ok(PostTemplate {
@@ -123,6 +139,9 @@ pub async fn handler(
         post: view,
         tags,
         series,
+        related,
+        prev,
+        next,
     }
     .into_response())
 }
@@ -249,5 +268,142 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn meta_strip_present_in_rendered_page() {
+        let (app, pool) = test_app().await;
+        sqlx::query(
+            r#"
+            INSERT INTO posts (slug, title, subtitle, status, author_id, published_at,
+                               updated_at, created_at, body_md, body_html,
+                               body_html_version, meta_json, assets_json, reading_minutes)
+            VALUES ('meta-strip-test', 'Meta Strip Post', 'a subtitle', 'published', 1,
+                    1700000000, 1700000000, 1700000000,
+                    '# x', '<p>body</p>', ?, '{}', '[]', 5)
+            "#,
+        )
+        .bind(content::RENDER_VERSION as i64)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/posts/meta-strip-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        assert!(body.contains("class=\"meta-strip\""), "meta-strip div missing");
+        assert!(body.contains("5 min read"), "reading minutes missing");
+        assert!(body.contains("2023-11-14"), "published date missing");
+        assert!(body.contains("a subtitle"), "subtitle missing");
+    }
+
+    #[tokio::test]
+    async fn toc_aside_rendered_when_headings_present() {
+        let (app, pool) = test_app().await;
+        // Pre-compute a real toc_json from markdown with headings
+        let md = "## Introduction\n\nSome text.\n\n## Conclusion\n\nDone.";
+        let out = content::render(md).expect("render failed");
+        let toc_json = serde_json::to_string(&out.toc).unwrap();
+
+        sqlx::query(
+            r#"
+            INSERT INTO posts (slug, title, status, author_id, published_at,
+                               updated_at, created_at, body_md, body_html,
+                               body_html_version, meta_json, assets_json, toc_json, reading_minutes)
+            VALUES ('toc-post', 'TOC Post', 'published', 1,
+                    1700000000, 1700000000, 1700000000,
+                    ?, ?, ?, '{}', '[]', ?, ?)
+            "#,
+        )
+        .bind(md)
+        .bind(&out.html)
+        .bind(content::RENDER_VERSION as i64)
+        .bind(&toc_json)
+        .bind(out.reading_minutes)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/posts/toc-post")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        assert!(
+            body.contains("class=\"toc\""),
+            "toc nav missing: {body}"
+        );
+        assert!(
+            body.contains("href=\"#introduction\"") || body.contains("href=\"#"),
+            "toc anchor link missing"
+        );
+    }
+
+    #[tokio::test]
+    async fn related_and_prevnext_render_when_seeded() {
+        let (app, pool) = test_app().await;
+
+        // Seed three posts with different timestamps
+        for (slug, title, ts) in [
+            ("prev-post", "Previous Post", 1_699_000_000_i64),
+            ("main-post", "Main Post", 1_700_000_000_i64),
+            ("next-post", "Next Post", 1_701_000_000_i64),
+        ] {
+            sqlx::query(
+                r#"
+                INSERT INTO posts (slug, title, status, author_id, published_at,
+                                   updated_at, created_at, body_md, body_html,
+                                   body_html_version, meta_json, assets_json)
+                VALUES (?, ?, 'published', 1, ?, ?, ?,
+                        '# x', '<p>body</p>', ?, '{}', '[]')
+                "#,
+            )
+            .bind(slug)
+            .bind(title)
+            .bind(ts)
+            .bind(ts)
+            .bind(ts)
+            .bind(content::RENDER_VERSION as i64)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/posts/main-post")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        // prevnext section should have links to neighbors
+        assert!(body.contains("class=\"prevnext\""), "prevnext nav missing");
+        assert!(body.contains("/posts/prev-post"), "prev link missing");
+        assert!(body.contains("/posts/next-post"), "next link missing");
+        assert!(body.contains("Previous Post"), "prev title missing");
+        assert!(body.contains("Next Post"), "next title missing");
+        // related grid should contain the two other posts
+        assert!(body.contains("class=\"related-grid\""), "related-grid missing");
     }
 }
