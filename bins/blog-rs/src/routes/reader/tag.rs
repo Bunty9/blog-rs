@@ -24,6 +24,7 @@ pub struct TagView {
 pub struct TagTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub tag: TagView,
     pub cards: Vec<PostCard>,
     pub pagination: Pagination,
@@ -51,6 +52,7 @@ pub async fn handler(
     Ok(TagTemplate {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "tags",
         tag: TagView {
             slug: tag.slug,
             name: tag.name,

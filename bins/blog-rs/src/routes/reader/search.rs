@@ -25,6 +25,7 @@ pub struct SearchHitView {
 pub struct SearchTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub query: String,
     pub hits: Vec<SearchHitView>,
     pub pagination: Pagination,
@@ -77,6 +78,7 @@ pub async fn handler(
     Ok(SearchTemplate {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "",
         query,
         hits: hit_views,
         pagination,

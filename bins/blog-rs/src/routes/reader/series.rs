@@ -16,6 +16,7 @@ pub struct SeriesView {
 pub struct SeriesTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub series: SeriesView,
     pub cards: Vec<PostCard>,
 }
@@ -41,6 +42,7 @@ pub async fn handler(
     Ok(SeriesTemplate {
         site: SiteCtx::placeholder(),
         asset_tags: Vec::new(),
+        nav: "series",
         series: SeriesView { slug: meta.slug },
         cards,
     }

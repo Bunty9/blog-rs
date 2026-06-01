@@ -46,6 +46,12 @@ pub struct SiteCtx {
 }
 
 impl SiteCtx {
+    /// Current calendar year (UTC), used in footer copyright.
+    pub fn year(&self) -> i32 {
+        use chrono::{Datelike, Utc};
+        Utc::now().year()
+    }
+
     /// Build a site-wide context. Reads `BLOG_BASE_URL`, `BLOG_TITLE`,
     /// `BLOG_DESCRIPTION` from the environment so a deployment can override
     /// without touching code. Defaults match the server's default bind.

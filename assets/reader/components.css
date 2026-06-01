@@ -481,3 +481,14 @@ details.accordion .acc-body { padding: 0 var(--space-4) var(--space-4); color: v
 @media (prefers-reduced-motion: no-preference) {
   [hx-swapping], .htmx-swapping { opacity: 0; transition: opacity 100ms; }
 }
+
+/* ============== MOBILE SHEET ================== */
+.mobile-sheet.open { display: block; position: fixed; top: var(--header-h); left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 99; padding: var(--space-3); }
+.mobile-sheet.open nav { display: flex; flex-direction: column; gap: 4px; }
+.mobile-sheet.open nav a { padding: 12px; text-decoration: none; color: var(--text-2); border-radius: var(--r-md); }
+.mobile-sheet.open nav a:hover { background: var(--surface); }
+@media (max-width: 768px) {
+  .site-header .nav { display: none; }
+  .hamburger { display: inline-flex; }
+  .header-actions .btn-outline-accent { display: none; }
+}

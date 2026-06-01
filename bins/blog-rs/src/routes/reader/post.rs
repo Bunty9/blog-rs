@@ -38,6 +38,7 @@ pub struct SeriesLink {
 pub struct PostTemplate {
     pub site: SiteCtx,
     pub asset_tags: Vec<AssetTag>,
+    pub nav: &'static str,
     pub post: PostView,
     pub tags: Vec<TagLink>,
     pub series: Option<SeriesLink>,
@@ -113,6 +114,7 @@ pub async fn handler(
     Ok(PostTemplate {
         site: SiteCtx::placeholder(),
         asset_tags,
+        nav: "",
         post: view,
         tags,
         series,
