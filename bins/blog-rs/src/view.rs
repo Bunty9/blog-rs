@@ -63,6 +63,15 @@ impl PageMeta {
         let Ok(v) = serde_json::from_str::<serde_json::Value>(raw) else {
             return Self::default();
         };
+        Self::from_value(Some(&v))
+    }
+
+    /// Build `PageMeta` from an already-parsed `serde_json::Value`, avoiding a
+    /// second parse when the caller has already deserialised `meta_json`.
+    pub fn from_value(v: Option<&serde_json::Value>) -> Self {
+        let Some(v) = v else {
+            return Self::default();
+        };
         let str_field = |key: &str| {
             v.get(key)
                 .and_then(|x| x.as_str())
@@ -76,6 +85,21 @@ impl PageMeta {
             twitter_card: str_field("twitter_card"),
         }
     }
+}
+
+/// Harden a JSON-LD string for safe embedding inside an HTML
+/// `<script type="application/ld+json">` block.
+///
+/// `serde_json` does not escape `<`, `>`, or `&`, so a title or description
+/// containing `</script>` would break out of the script tag and allow arbitrary
+/// script injection.  Replacing those three characters with their JSON
+/// unicode-escape equivalents keeps the JSON semantically valid (structured-data
+/// parsers read `<` as `<`) while making it impossible for the browser's
+/// HTML parser to see a literal `</script>` sequence inside the block.
+pub fn harden_jsonld(s: String) -> String {
+    s.replace('<', "\\u003c")
+        .replace('>', "\\u003e")
+        .replace('&', "\\u0026")
 }
 
 /// Cheap site-wide context handed to every template via the base layout.
@@ -245,6 +269,26 @@ mod tests {
     #[test]
     fn iso_date_known_epoch() {
         assert_eq!(iso_date(1_700_000_000), "2023-11-14");
+    }
+
+    #[test]
+    fn harden_jsonld_escapes_angle_brackets_and_ampersand() {
+        let input = r#"{"headline":"</script><script>alert(1)</script>","url":"https://example.com/a&b"}"#.to_string();
+        let hardened = harden_jsonld(input);
+        // No raw angle brackets remain.
+        assert!(!hardened.contains('<'), "raw '<' found after hardening");
+        assert!(!hardened.contains('>'), "raw '>' found after hardening");
+        // Unicode escapes are present.
+        assert!(hardened.contains("\\u003c"), "\\u003c missing");
+        assert!(hardened.contains("\\u003e"), "\\u003e missing");
+        assert!(hardened.contains("\\u0026"), "\\u0026 missing");
+        // The hardened string is still valid JSON and round-trips correctly.
+        let v: serde_json::Value = serde_json::from_str(&hardened).expect("hardened JSON invalid");
+        assert_eq!(
+            v["headline"].as_str().unwrap(),
+            "</script><script>alert(1)</script>",
+            "JSON value should deserialize back to the original text"
+        );
     }
 
     #[test]

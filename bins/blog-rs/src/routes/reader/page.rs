@@ -13,7 +13,7 @@ use db::pages::Page;
 use crate::error::AppError;
 use crate::routes::reader::error::ErrorTemplate;
 use crate::state::AppState;
-use crate::view::{AssetTag, PageMeta, SiteCtx};
+use crate::view::{harden_jsonld, AssetTag, PageMeta, SiteCtx};
 
 /// Slugs that must not be captured by the static page route. These are all
 /// handled by more-specific routes registered earlier in the router.
@@ -131,7 +131,7 @@ pub async fn handler(
         if let Some(ref img) = meta.og_image {
             obj["image"] = serde_json::Value::String(img.clone());
         }
-        serde_json::to_string(&obj).unwrap_or_default()
+        harden_jsonld(serde_json::to_string(&obj).unwrap_or_default())
     };
 
     let view = PageView {
@@ -384,6 +384,48 @@ mod tests {
         // Exactly one <meta name="description"
         let count = body.matches(r#"<meta name="description""#).count();
         assert_eq!(count, 1, "expected exactly 1 meta description tag, got {count}");
+    }
+
+    #[tokio::test]
+    async fn jsonld_title_with_script_tag_is_escaped() {
+        // A title containing `</script>` must NOT break out of the JSON-LD block.
+        let (app, pool) = test_app().await;
+        let xss_title = r#"Hello </script><script>alert(1)</script> World"#;
+        sqlx::query(
+            "INSERT INTO pages (slug, title, body_md, body_html, body_html_version,
+                                toc_json, meta_json, status, created_at, updated_at)
+             VALUES ('xss-page', ?, '# x', '<p>body</p>',
+                     ?, '[]', NULL, 'published', 0, 0)",
+        )
+        .bind(xss_title)
+        .bind(content::RENDER_VERSION as i64)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/xss-page")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+
+        // The raw breakout sequence must not appear anywhere in the page.
+        assert!(
+            !body.contains("</script><script>alert(1)"),
+            "XSS breakout sequence found in response"
+        );
+        // The JSON-LD block must contain the unicode-escaped form of `<`.
+        assert!(
+            body.contains("\\u003c/script\\u003e"),
+            "expected unicode-escaped angle brackets in JSON-LD, got: {body}"
+        );
     }
 
     #[tokio::test]
