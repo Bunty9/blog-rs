@@ -82,7 +82,16 @@ function doLogin(e) {
 }
 function showErr(msg) {
     var existing = document.querySelector('.login-err');
-    if (existing) { existing.querySelector('span') ? existing.querySelector('span').textContent = msg : existing.lastChild.nodeValue = ' ' + msg; return; }
+    if (existing) {
+        // Find the last text node and update it, or fall back to setting innerText on the container
+        var nodes = existing.childNodes;
+        var textNode = null;
+        for (var i = nodes.length - 1; i >= 0; i--) {
+            if (nodes[i].nodeType === Node.TEXT_NODE) { textNode = nodes[i]; break; }
+        }
+        if (textNode) { textNode.nodeValue = ' ' + msg; } else { existing.lastChild.textContent = msg; }
+        return;
+    }
     var div = document.createElement('div');
     div.className = 'login-err';
     div.setAttribute('role', 'alert');

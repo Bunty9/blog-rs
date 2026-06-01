@@ -38,6 +38,35 @@
     <span><kbd>&#8629;</kbd> open</span>
     <span>FTS5 &middot; debounced 200ms</span>
   </div>
+  <script>
+  (function() {
+    var input = document.getElementById('q');
+    if (!input) return;
+    input.addEventListener('keydown', function(e) {
+      var results = document.querySelectorAll('#search-results .search-result');
+      if (!results.length) return;
+      var active = document.querySelector('#search-results .search-result.kbd-active');
+      var idx = active ? Array.prototype.indexOf.call(results, active) : -1;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (active) active.classList.remove('kbd-active');
+        var next = results[idx + 1] || results[0];
+        next.classList.add('kbd-active');
+        next.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (active) active.classList.remove('kbd-active');
+        var prev = results[idx - 1] || results[results.length - 1];
+        prev.classList.add('kbd-active');
+        prev.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && active) {
+        e.preventDefault();
+        var link = active.href ? active : active.querySelector('a[href]');
+        if (link && link.href) window.location.href = link.href;
+      }
+    });
+  })();
+  </script>
 
   <div id="search-results">
     {% include "partials/search_results.html" %}
