@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block title %}Media · blog-rs{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" disabled title="Upload is enabled in the media plan">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M5 11l7-7 7 7M5 20h14"/></svg>
+    Upload
+</button>
+{% endblock %}
+
+{% block content %}
+
+<style>
+.media-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-4); }
+.media-toolbar .search-box { max-width: 240px; }
+.media-toolbar .search-box input { padding-block: var(--space-2); }
+.dropzone { border: 1.5px dashed var(--border-strong); border-radius: var(--r-md); padding: var(--space-6); text-align: center; color: var(--text-muted); margin-bottom: var(--space-5); opacity: .55; cursor: not-allowed; }
+.media-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-10) var(--space-6); text-align: center; color: var(--text-muted); gap: var(--space-3); }
+.media-empty svg { opacity: .35; }
+.media-empty p { max-width: 380px; font-size: 0.9rem; line-height: 1.6; }
+</style>
+
+<div class="media-toolbar">
+    <div class="search-box">
+        <span class="s-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <input type="search" placeholder="Search filenames…" disabled title="Upload is enabled in the media plan" />
+    </div>
+    <select class="select" style="width:auto;padding-block:var(--space-2)" disabled>
+        <option>All types</option>
+    </select>
+</div>
+
+<div class="dropzone">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block"><path d="M12 16V4M5 11l7-7 7 7M5 20h14"/></svg>
+    <div>Drag &amp; drop images here, or click to browse</div>
+    <div class="meta" style="margin-top:6px">PNG, JPG, WebP, SVG · max 8 MB · content-addressed on disk</div>
+</div>
+
+<div class="media-empty">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+    <p>No media files yet. File uploads will be available once the media plan is enabled.</p>
+</div>
+
+<div class="callout info" style="margin-top:var(--space-2)">
+    <span class="co-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    </span>
+    <div class="co-body" style="font-size:0.9rem">
+        Media uploads are a planned feature. When enabled, images and files will be stored content-addressed on disk and served under <code>/media/</code>. Upload is currently disabled.
+    </div>
+</div>
+
+{% endblock %}

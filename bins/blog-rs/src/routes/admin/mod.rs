@@ -2,9 +2,11 @@
 //! Plan 1b) require an authenticated admin session and CSRF validation on
 //! mutating verbs.
 
+pub mod analytics;
 pub mod dashboard;
 pub mod login;
 pub mod logout;
+pub mod media;
 pub mod members_list;
 pub mod pages_delete;
 pub mod pages_edit;
@@ -48,6 +50,8 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/posts/:id/publish", post(posts_publish::handler))
         .route("/posts/:id/delete", post(posts_delete::handler))
         .route("/posts/:id/preview", post(posts_preview::handler))
+        .route("/analytics", get(analytics::handler))
+        .route("/media", get(media::handler))
         .route("/members", get(members_list::handler))
         .route("/members/export.csv", get(members_list::export_csv))
         .route("/settings", get(settings::get).post(settings::post))

@@ -1,24 +1,64 @@
 {% extends "admin/base.html" %}
 {% block title %}Dashboard · blog-rs{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-primary btn-sm" href="/admin/posts/new">New post</a>
+{% endblock %}
+
 {% block content %}
-<h2>Dashboard</h2>
 
 <div class="stat-grid">
-    <div class="stat-card"><div class="n">{{ drafts }}</div><div class="label">Drafts</div></div>
-    <div class="stat-card"><div class="n">{{ scheduled }}</div><div class="label">Scheduled</div></div>
-    <div class="stat-card"><div class="n">{{ published }}</div><div class="label">Published</div></div>
-    <div class="stat-card"><div class="n">{{ members_confirmed }}</div><div class="label">Confirmed members ({{ members_total }} total)</div></div>
+    <div class="stat-card">
+        <div class="sc-label">Drafts</div>
+        <div class="sc-value">{{ drafts }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Scheduled</div>
+        <div class="sc-value">{{ scheduled }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Published</div>
+        <div class="sc-value">{{ published }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="sc-label">Confirmed members</div>
+        <div class="sc-value">{{ members_confirmed }}</div>
+        <div class="sc-foot sc-foot-meta">{{ members_total }} total</div>
+    </div>
 </div>
 
-<h3>Recent activity</h3>
-<table class="posts">
-    <thead><tr><th>Title</th><th>Slug</th><th>Status</th><th>Updated</th></tr></thead>
-    <tbody>
-        {% for row in recent %}
-            {% include "admin/partials/post_row.html" %}
-        {% endfor %}
-    </tbody>
-</table>
+<div class="panels-2">
+    <div class="panel">
+        <h3 class="panel-title">Recent posts</h3>
+        <table class="mini-table">
+            {% for row in recent %}
+            <tr>
+                <td>
+                    <a href="/admin/posts/{{ row.id }}">{{ row.title }}</a>
+                    <div class="meta" style="margin-top:2px">{{ row.slug }}</div>
+                </td>
+                <td>
+                    <span class="badge {{ row.status }}">{{ row.status }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if recent.is_empty() %}
+            <tr>
+                <td colspan="2" style="text-align:center;color:var(--text-muted);padding:var(--space-7)">
+                    No posts yet. <a href="/admin/posts/new">Create your first post</a>.
+                </td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    <div class="panel">
+        <h3 class="panel-title">Analytics</h3>
+        <div class="panel-pad" style="padding:var(--space-6);text-align:center;color:var(--text-muted)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-3);display:block;opacity:.4"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+            <div style="font-size:0.9rem">Analytics will appear once the analytics module is enabled.</div>
+            <a href="/admin/analytics" class="btn btn-secondary btn-sm" style="margin-top:var(--space-4);display:inline-flex">View Analytics</a>
+        </div>
+    </div>
+</div>
 
-<p style="margin-top:1.5rem;"><a class="btn primary" href="/admin/posts/new">New draft</a></p>
 {% endblock %}
