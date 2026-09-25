@@ -22,6 +22,9 @@ pub fn fmt_day(d: Date) -> String {
 
 /// Record one view of `path` on `day` (UTC, `YYYY-MM-DD`), optionally
 /// attributing it to a referrer host. Upserts both aggregate tables.
+/// Distinct referrer hosts stored per day; see `record_view`.
+pub const MAX_REFERRER_HOSTS_PER_DAY: i64 = 500;
+
 pub async fn record_view(
     pool: &SqlitePool,
     day: &str,
@@ -38,12 +41,19 @@ pub async fn record_view(
     .await?;
 
     if let Some(host) = referrer_host {
+        // Referer is client-controlled: cap distinct hosts per day so
+        // referrer spam can't grow the table without bound. Known hosts keep
+        // counting once the cap is hit; new ones are dropped.
         sqlx::query(
-            "INSERT INTO referrers_daily (day, host, views) VALUES (?, ?, 1)
+            "INSERT INTO referrers_daily (day, host, views)
+             SELECT ?1, ?2, 1
+             WHERE EXISTS (SELECT 1 FROM referrers_daily WHERE day = ?1 AND host = ?2)
+                OR (SELECT COUNT(*) FROM referrers_daily WHERE day = ?1) < ?3
              ON CONFLICT(day, host) DO UPDATE SET views = views + 1",
         )
         .bind(day)
         .bind(host)
+        .bind(MAX_REFERRER_HOSTS_PER_DAY)
         .execute(pool)
         .await?;
     }
@@ -183,6 +193,30 @@ mod tests {
     use super::*;
     use crate::test_support::fresh_pool;
     use time::macros::date;
+
+    #[tokio::test]
+    async fn referrer_hosts_capped_per_day_but_known_hosts_keep_counting() {
+        let pool = fresh_pool().await;
+        for i in 0..MAX_REFERRER_HOSTS_PER_DAY {
+            record_view(&pool, "2026-09-25", "/", Some(&format!("h{i}.example")))
+                .await
+                .unwrap();
+        }
+        record_view(&pool, "2026-09-25", "/", Some("new.example"))
+            .await
+            .unwrap();
+        record_view(&pool, "2026-09-25", "/", Some("h0.example"))
+            .await
+            .unwrap();
+        let rows: Vec<(String, i64)> =
+            sqlx::query_as("SELECT host, views FROM referrers_daily WHERE day = '2026-09-25'")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(rows.len() as i64, MAX_REFERRER_HOSTS_PER_DAY);
+        assert!(rows.iter().all(|(h, _)| h != "new.example"));
+        assert!(rows.contains(&("h0.example".to_string(), 2)));
+    }
 
     #[tokio::test]
     async fn record_view_upserts_and_increments() {

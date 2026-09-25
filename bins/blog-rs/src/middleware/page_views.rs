@@ -124,9 +124,12 @@ fn is_bot_ua(headers: &HeaderMap) -> bool {
     BOT_MARKERS.iter().any(|m| ua.contains(m))
 }
 
-/// Strip the query string (already gone via `Uri::path()`) and any trailing
+/// Percent-decode (so `/posts/%68ello` and `/posts/hello` share one row),
+/// strip the query string (already gone via `Uri::path()`) and any trailing
 /// slash except on the root, then cap the length.
 fn normalize_path(raw: &str) -> String {
+    let decoded = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
+    let raw = decoded.as_ref();
     let trimmed = if raw.len() > 1 {
         raw.trim_end_matches('/')
     } else {
@@ -151,8 +154,12 @@ fn normalize_host(h: &str) -> String {
 
 fn referrer_host(headers: &HeaderMap, own: Option<&str>) -> Option<String> {
     let raw = headers.get(header::REFERER).and_then(|v| v.to_str().ok())?;
-    let host = normalize_host(url::Url::parse(raw).ok()?.host_str()?);
-    if own == Some(host.as_str()) {
+    let url = url::Url::parse(raw).ok()?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return None;
+    }
+    let host = normalize_host(url.host_str()?);
+    if host.len() > 253 || own == Some(host.as_str()) {
         None
     } else {
         Some(host)
@@ -168,6 +175,24 @@ mod unit_tests {
         assert_eq!(normalize_path("/foo/"), "/foo");
         assert_eq!(normalize_path("/"), "/");
         assert_eq!(normalize_path("/foo"), "/foo");
+    }
+
+    #[test]
+    fn normalize_path_percent_decodes() {
+        assert_eq!(normalize_path("/posts/%68ello"), "/posts/hello");
+        assert_eq!(normalize_path("/posts/h%65llo/"), "/posts/hello");
+    }
+
+    #[test]
+    fn referrer_ignores_non_http_schemes() {
+        let mut h = HeaderMap::new();
+        h.insert(header::REFERER, "ftp://files.example/x".parse().unwrap());
+        assert_eq!(referrer_host(&h, None), None);
+        h.insert(
+            header::REFERER,
+            "https://www.News.example/a".parse().unwrap(),
+        );
+        assert_eq!(referrer_host(&h, None).as_deref(), Some("news.example"));
     }
 
     #[test]
