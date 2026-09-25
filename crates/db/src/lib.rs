@@ -6,6 +6,7 @@ pub mod migrations;
 pub mod pool;
 
 // Tables - filled in by later tasks.
+pub mod analytics;
 pub mod media;
 pub mod members;
 pub mod outbox;

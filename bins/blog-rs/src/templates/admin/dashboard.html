@@ -53,11 +53,27 @@
     </div>
     <div class="panel">
         <h3 class="panel-title">Analytics</h3>
+        {% if views_30d > 0 %}
+        <div class="panel-pad" style="display:flex;gap:var(--space-6)">
+            <div>
+                <div class="sc-label">Views today</div>
+                <div class="sc-value">{{ views_today }}</div>
+            </div>
+            <div>
+                <div class="sc-label">Views · 30d</div>
+                <div class="sc-value">{{ views_30d }}</div>
+            </div>
+        </div>
+        <div class="panel-pad" style="padding-top:0">
+            <a href="/admin/analytics" class="btn btn-secondary btn-sm">View Analytics</a>
+        </div>
+        {% else %}
         <div class="panel-pad" style="padding:var(--space-6);text-align:center;color:var(--text-muted)">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-3);display:block;opacity:.4"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
-            <div style="font-size:0.9rem">Analytics will appear once the analytics module is enabled.</div>
+            <div style="font-size:0.9rem">No page views recorded yet.</div>
             <a href="/admin/analytics" class="btn btn-secondary btn-sm" style="margin-top:var(--space-4);display:inline-flex">View Analytics</a>
         </div>
+        {% endif %}
     </div>
 </div>
 

@@ -22,7 +22,7 @@ pub fn router(state: AppState) -> Router {
 
     Router::new()
         .merge(health::router())
-        .merge(reader::router())
+        .merge(reader::router(state.clone()))
         .merge(members::router())
         .nest("/admin", admin::router(state.clone()))
         .route("/assets/*path", axum::routing::get(crate::embed::handler))

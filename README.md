@@ -15,6 +15,7 @@ A self-hosted blog engine written in Rust. Each post is a composable document of
 | Public reader                   | Implemented | Home, post detail, tags, series, search (FTS5), RSS, sitemap, robots                 |
 | Admin dashboard                 | Implemented | htmx editor, post CRUD, publish + fan-out, settings, member list, CSV export         |
 | Media library                   | Implemented | Upload (magic-byte sniffed PNG/JPEG/GIF/WebP, dedup by hash), `/media/:file` serving, editor picker |
+| Analytics                       | Implemented | Cookieless daily page-view + referrer aggregates; admin overview with 7/30/90d windows |
 | Members and newsletter          | Implemented | Signup, HMAC-confirm, one-click unsubscribe, preferences, background outbox worker   |
 | Research importer               | Implemented | `tools/import-research` converts a markdown research dump into per-domain posts      |
 | End-to-end test                 | Scaffolded  | Playwright spec covers bootstrap, publish, signup, confirm, public page              |
@@ -223,6 +224,10 @@ The clippy bar is set to `-D warnings`. The current workspace is clean.
 4. Playwright end-to-end against a release build of the server
 
 The Playwright job needs `tests/e2e/package-lock.json` for `npm ci`. Generate it once with `(cd tests/e2e && npm install)` and commit the lockfile before the e2e job will go green.
+
+## Analytics
+
+Page views are tracked with a cookieless, aggregate-only model: a background-checked middleware on the public reader routes increments a `(day, path)` counter and, if the request carries a `Referer` header, a `(day, referrer host)` counter. Nothing else is stored -- no cookies, no IP addresses, no user agents, and no per-visitor identifier of any kind, so there is nothing to link two page views to the same person. Requests are skipped when they carry `DNT: 1` or `Sec-GPC: 1`, when the User-Agent looks like a bot/crawler, when they're htmx partials, or when they target admin/asset/health routes. Aggregate rows older than 400 days are pruned automatically. See `/admin/analytics` for the daily chart, top pages, and top referrers, and `crates/db/src/analytics.rs` / `bins/blog-rs/src/middleware/page_views.rs` for the implementation.
 
 ## Known follow-ups
 
