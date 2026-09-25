@@ -17,11 +17,8 @@ use std::net::SocketAddr;
 
 use crate::rate_limit;
 use crate::state::AppState;
-use crate::tokens::Purpose;
 use crate::view::{AssetTag, SiteCtx};
 use db::members;
-use lettre::message::header::ContentType;
-use lettre::Message;
 
 /// Combined view-model for both the empty form and the "pending — check inbox"
 /// view. We render a single template with a `pending` flag so the URL stays
@@ -140,8 +137,10 @@ pub async fn submit(
             | members::SignupOutcome::Resubscribed
     );
     if should_send {
-        if let Err(e) = enqueue_and_send_confirm(&st, &member).await {
-            tracing::error!(error = ?e, "confirm enqueue/send failed");
+        // The outbox worker renders and sends the confirm mail; sending it
+        // here as well delivered every confirm email twice.
+        if let Err(e) = members::enqueue_confirm(&st.pool, member.id).await {
+            tracing::error!(error = ?e, "confirm enqueue failed");
         }
     }
 
@@ -158,37 +157,6 @@ pub async fn submit(
         ttl_hours,
     }
     .into_response()
-}
-
-async fn enqueue_and_send_confirm(
-    st: &AppState,
-    member: &db::members::Member,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    members::enqueue_confirm(&st.pool, member.id).await?;
-
-    let member_id_u32 = u32::try_from(member.id).map_err(|_| "member_id overflow u32")?;
-    let token = st.tokens.issue(member_id_u32, Purpose::Confirm)?;
-    let confirm_url = format!(
-        "{}/confirm/{}",
-        st.site.base_url.trim_end_matches('/'),
-        token
-    );
-    let body = crate::templates::ConfirmEmail {
-        site_title: &st.site.site_title,
-        confirm_url,
-        ttl_hours: (st.tokens.ttl() / 3600).max(1),
-    }
-    .render()?;
-
-    let msg = Message::builder()
-        .from(st.site.admin_from.parse()?)
-        .to(member.email.parse()?)
-        .subject(format!("Confirm your {} subscription", st.site.site_title))
-        .header(ContentType::TEXT_HTML)
-        .body(body)?;
-
-    st.mailer.send(msg).await?;
-    Ok(())
 }
 
 fn csrf_from_cookie(headers: &axum::http::HeaderMap) -> Option<String> {

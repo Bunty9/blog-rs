@@ -5,6 +5,7 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: ".",
+  testMatch: "spec.ts",
   fullyParallel: false, // one server, sequential tests
   retries: 0,
   workers: 1,
@@ -22,9 +23,6 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    // The server is brought up by the spec via a child_process so we can set
-    // env vars per-test. We deliberately do NOT use Playwright's webServer
-    // option for this; leaving the field commented for posterity.
-  },
+  // No webServer: the spec spawns the server itself via child_process so it
+  // can set env vars per run.
 });

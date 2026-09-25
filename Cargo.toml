@@ -63,3 +63,10 @@ getrandom = "0.2"
 tokio-util = { version = "0.7", features = ["rt"] }
 walkdir = "2"
 async-trait = "0.1"
+
+# argon2id is unusably slow unoptimized (~7s per hash in debug), which stalls
+# server boot, login tests, and the e2e health check. Optimize just the hash.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
