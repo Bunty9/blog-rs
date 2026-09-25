@@ -14,6 +14,7 @@ A self-hosted blog engine written in Rust. Each post is a composable document of
 | HTTP server                     | Implemented | Axum, tower middleware stack, healthz, readyz, embedded assets, correlation IDs      |
 | Public reader                   | Implemented | Home, post detail, tags, series, search (FTS5), RSS, sitemap, robots                 |
 | Admin dashboard                 | Implemented | htmx editor, post CRUD, publish + fan-out, settings, member list, CSV export         |
+| Media library                   | Implemented | Upload (magic-byte sniffed PNG/JPEG/GIF/WebP, dedup by hash), `/media/:file` serving, editor picker |
 | Analytics                       | Implemented | Cookieless daily page-view + referrer aggregates; admin overview with 7/30/90d windows |
 | Members and newsletter          | Implemented | Signup, HMAC-confirm, one-click unsubscribe, preferences, background outbox worker   |
 | Research importer               | Implemented | `tools/import-research` converts a markdown research dump into per-domain posts      |
@@ -170,6 +171,7 @@ Important environment variables:
 | `BLOG_BASE_URL`                         | Public URL used in RSS, sitemap, canonical, `og:url`               |
 | `BLOG_TITLE`                            | Site title shown in templates and RSS                              |
 | `BLOG_DESCRIPTION`                      | Site description for RSS and meta tags                             |
+| `BLOG_MEDIA_DIR`                        | Directory uploaded media files are stored under, default `./media` |
 | `BLOG_RS_MAIL`                          | `test` writes mail to `./test-mailbox.eml`; unset uses SMTP        |
 | `BLOG_SMTP_HOST`, `BLOG_SMTP_PORT`, `BLOG_SMTP_USERNAME`, `BLOG_SMTP_PASSWORD`, `BLOG_SMTP_FROM` | SMTP transport |
 | `OUTBOX_POLL_INTERVAL`                  | Outbox worker poll interval in seconds, default 5                  |

@@ -1,0 +1,19 @@
+<style>
+.mp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--space-2); }
+.mp-item { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: none; padding: 0; cursor: pointer; text-align: left; }
+.mp-item:hover { border-color: var(--accent); }
+.mp-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: var(--surface-2); }
+.mp-item span { display: block; padding: 4px 6px; font-family: var(--font-mono); font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+{% if rows.is_empty() %}
+<p class="meta">No media yet — upload one from the <a href="/admin/media">Media</a> page first.</p>
+{% else %}
+<div class="mp-grid">
+    {% for row in rows %}
+    <button type="button" class="mp-item" data-src="/media/{{ row.filename }}" data-alt="{{ row.alt }}">
+        <img src="/media/{{ row.filename }}" alt="" loading="lazy" />
+        <span>{{ row.filename }}</span>
+    </button>
+    {% endfor %}
+</div>
+{% endif %}

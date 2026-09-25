@@ -15,6 +15,8 @@ mod embed;
 mod error;
 #[path = "../src/mailer/mod.rs"]
 mod mailer;
+#[path = "../src/media.rs"]
+mod media;
 #[path = "../src/middleware/mod.rs"]
 mod middleware;
 #[path = "../src/rate_limit.rs"]

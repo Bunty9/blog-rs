@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod health;
+pub mod media_serve;
 pub mod members;
 pub mod reader;
 
@@ -25,6 +26,7 @@ pub fn router(state: AppState) -> Router {
         .merge(members::router())
         .nest("/admin", admin::router(state.clone()))
         .route("/assets/*path", axum::routing::get(crate::embed::handler))
+        .route("/media/:filename", axum::routing::get(media_serve::handler))
         .fallback(reader::error::fallback)
         .layer(service)
         .with_state(state)

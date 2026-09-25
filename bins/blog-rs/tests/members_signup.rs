@@ -25,6 +25,8 @@ mod embed;
 mod error;
 #[path = "../src/mailer/mod.rs"]
 mod mailer;
+#[path = "../src/media.rs"]
+mod media;
 #[path = "../src/middleware/mod.rs"]
 mod middleware;
 #[path = "../src/rate_limit.rs"]
@@ -62,6 +64,7 @@ async fn boot() -> (axum::Router, AppState, std::path::PathBuf) {
             base_url: "http://localhost".into(),
             site_title: "blog-rs".into(),
             admin_from: "blog-rs <noreply@localhost>".into(),
+            media_dir: "./media".into(),
         });
     let app = routes::router(st.clone());
     (app, st, mailbox_path)

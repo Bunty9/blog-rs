@@ -16,3 +16,5 @@ test-mailbox.eml
 .claude/worktrees/
 tests/e2e/node_modules/
 tests/e2e/test-results/
+/media/
+tests/e2e/media/

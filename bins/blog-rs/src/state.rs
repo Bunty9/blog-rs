@@ -47,6 +47,9 @@ pub struct SiteConfig {
     // binaries (e.g. tests/server_boot.rs) don't include.
     #[allow(dead_code)]
     pub admin_from: String,
+    /// Directory uploaded media files are stored under. Not part of the
+    /// figment `Config` — read the same way as the other `BLOG_*` site vars.
+    pub media_dir: std::path::PathBuf,
 }
 
 impl SiteConfig {
@@ -58,6 +61,9 @@ impl SiteConfig {
             site_title: std::env::var("BLOG_TITLE").unwrap_or_else(|_| "blog-rs".into()),
             admin_from: std::env::var("BLOG_FROM")
                 .unwrap_or_else(|_| "blog-rs <noreply@localhost>".into()),
+            media_dir: std::env::var("BLOG_MEDIA_DIR")
+                .unwrap_or_else(|_| "./media".into())
+                .into(),
         }
     }
 }
@@ -68,6 +74,7 @@ impl Default for SiteConfig {
             base_url: "http://localhost:8080".into(),
             site_title: "blog-rs".into(),
             admin_from: "blog-rs <noreply@localhost>".into(),
+            media_dir: "./media".into(),
         }
     }
 }
