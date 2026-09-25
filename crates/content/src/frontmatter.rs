@@ -16,18 +16,13 @@ pub struct Frontmatter {
     pub canonical: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PostStatus {
+    #[default]
     Draft,
     Published,
     Scheduled,
-}
-
-impl Default for PostStatus {
-    fn default() -> Self {
-        Self::Draft
-    }
 }
 
 static FM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s)\A---\r?\n(.*?)\r?\n---\r?\n?").unwrap());
