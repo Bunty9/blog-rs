@@ -42,7 +42,10 @@ struct MediaRow {
 
 impl From<db::Media> for MediaRow {
     fn from(m: db::Media) -> Self {
-        let shortcode = format!(r#"{{{{< image src="/media/{}" alt="{}" >}}}}"#, m.filename, m.alt);
+        let shortcode = format!(
+            r#"{{{{< image src="/media/{}" alt="{}" >}}}}"#,
+            m.filename, m.alt
+        );
         Self {
             id: m.id,
             filename: m.filename,
@@ -267,11 +270,7 @@ mod tests {
         body
     }
 
-    async fn upload_png(
-        app: &axum::Router,
-        sid: &str,
-        csrf: &str,
-    ) -> axum::http::Response<Body> {
+    async fn upload_png(app: &axum::Router, sid: &str, csrf: &str) -> axum::http::Response<Body> {
         let boundary = "X-BOUNDARY-X";
         let body = multipart_body(boundary, "cat.png", TINY_PNG);
         app.clone()
@@ -341,7 +340,10 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(body.contains(".png"), "expected filename in response: {body}");
+        assert!(
+            body.contains(".png"),
+            "expected filename in response: {body}"
+        );
         assert!(
             body.contains("image\" src=\"/media/") || body.contains("src=\"/media/"),
             "expected media item image tag: {body}"
@@ -441,7 +443,9 @@ mod tests {
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
 
-        let err = db::media::find_by_id(&state.pool, row.id).await.unwrap_err();
+        let err = db::media::find_by_id(&state.pool, row.id)
+            .await
+            .unwrap_err();
         assert!(matches!(err, db::DbError::NotFound));
         assert!(!tmp.path().join(&row.filename).exists());
     }
@@ -460,10 +464,7 @@ mod tests {
                     .uri(format!("/admin/media/{}/alt", row.id))
                     .header(header::COOKIE, cookie(&sid))
                     .header("x-csrf-token", &csrf)
-                    .header(
-                        header::CONTENT_TYPE,
-                        "application/x-www-form-urlencoded",
-                    )
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                     .body(Body::from("alt=a+happy+cat"))
                     .unwrap(),
             )

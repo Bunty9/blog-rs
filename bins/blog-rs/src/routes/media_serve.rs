@@ -94,10 +94,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        assert_eq!(
-            res.headers().get("content-type").unwrap(),
-            "image/png"
-        );
+        assert_eq!(res.headers().get("content-type").unwrap(), "image/png");
         assert_eq!(
             res.headers().get("x-content-type-options").unwrap(),
             "nosniff"

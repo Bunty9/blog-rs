@@ -23,7 +23,10 @@ pub fn sniff(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 /// Best-effort width/height from the file's own header. Only PNG and GIF are
@@ -86,7 +89,10 @@ mod tests {
 
     #[test]
     fn sniff_jpeg() {
-        assert_eq!(sniff(&[0xff, 0xd8, 0xff, 0xe0]), Some(("image/jpeg", "jpg")));
+        assert_eq!(
+            sniff(&[0xff, 0xd8, 0xff, 0xe0]),
+            Some(("image/jpeg", "jpg"))
+        );
     }
 
     #[test]
@@ -114,10 +120,7 @@ mod tests {
 
     #[test]
     fn filename_validation() {
-        assert_eq!(
-            valid_filename("0123456789abcdef.png"),
-            Some("image/png")
-        );
+        assert_eq!(valid_filename("0123456789abcdef.png"), Some("image/png"));
         assert_eq!(valid_filename("0123456789abcdef.svg"), None); // bad ext
         assert_eq!(valid_filename("../../etc/passwd.png"), None); // too long stem, bad chars
         assert_eq!(valid_filename("0123456789ABCDEF.png"), None); // uppercase hex
