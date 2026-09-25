@@ -39,6 +39,17 @@ const DEFAULT_MAX_ATTEMPTS: i64 = 5;
 /// from a crash within one human-noticeable polling cycle.
 #[allow(dead_code)]
 const DEFAULT_RECLAIM_AFTER: i64 = 300;
+/// How long aggregate page-view rows are kept before the daily prune sweep
+/// deletes them.
+#[allow(dead_code)]
+const ANALYTICS_RETENTION_DAYS: i64 = 400;
+
+/// True if the prune sweep hasn't run yet today (UTC). Pulled out as a pure
+/// function so the "once per day" logic is testable without a live pool.
+#[allow(dead_code)]
+fn prune_due(last_pruned: Option<time::Date>, today: time::Date) -> bool {
+    last_pruned != Some(today)
+}
 
 #[allow(dead_code)]
 pub async fn run(state: AppState, shutdown: CancellationToken) {
@@ -67,7 +78,25 @@ pub async fn run(state: AppState, shutdown: CancellationToken) {
         "outbox worker starting"
     );
 
+    // Analytics retention: prune page_views_daily/referrers_daily rows older
+    // than ANALYTICS_RETENTION_DAYS. Piggybacks on this loop rather than its
+    // own timer -- `last_pruned` just remembers the UTC day it last ran so a
+    // 5-second poll interval doesn't turn into 17000 no-op DELETEs a day.
+    let mut last_pruned: Option<time::Date> = None;
+
     loop {
+        let today = time::OffsetDateTime::now_utc().date();
+        if prune_due(last_pruned, today) {
+            let cutoff =
+                db::analytics::fmt_day(today - time::Duration::days(ANALYTICS_RETENTION_DAYS));
+            match db::analytics::prune_older_than(&state.pool, &cutoff).await {
+                Ok(n) if n > 0 => tracing::info!(pruned = n, "pruned old analytics rows"),
+                Ok(_) => {}
+                Err(e) => tracing::error!(error = ?e, "analytics prune failed"),
+            }
+            last_pruned = Some(today);
+        }
+
         // Reclaim before claiming: rows whose previous worker died between
         // `mailer.send` returning Ok and `mark_sent` committing get rotated
         // back to `pending` so this tick can re-claim them.
@@ -205,4 +234,24 @@ async fn dispatch(state: &AppState, row: &outbox::OutboxRow) -> Result<(), DynEr
         .body(html)?;
     state.mailer.send(msg).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod prune_tests {
+    use super::prune_due;
+    use time::macros::date;
+
+    #[test]
+    fn runs_once_per_calendar_day() {
+        let today = date!(2026 - 09 - 25);
+        assert!(prune_due(None, today), "never run -> due");
+        assert!(
+            !prune_due(Some(today), today),
+            "already ran today -> not due"
+        );
+        assert!(
+            prune_due(Some(date!(2026 - 09 - 24)), today),
+            "ran yesterday -> due again"
+        );
+    }
 }

@@ -4,11 +4,13 @@ use askama::Template;
 use askama_axum::IntoResponse;
 use axum::extract::State;
 use axum::Extension;
-use db::{members, posts};
+use db::{analytics, members, posts};
 
 use crate::error::AppError;
 use crate::middleware::auth_required::SessionCtx;
 use crate::state::AppState;
+
+const DASHBOARD_ANALYTICS_WINDOW_DAYS: i64 = 30;
 
 #[derive(Template)]
 #[template(path = "admin/dashboard.html")]
@@ -22,6 +24,8 @@ struct DashboardTpl {
     members_total: i64,
     members_confirmed: i64,
     recent: Vec<posts::AdminPostRow>,
+    views_today: i64,
+    views_30d: i64,
 }
 
 pub async fn handler(
@@ -31,6 +35,11 @@ pub async fn handler(
     let (drafts, scheduled, published) = posts::dashboard_counts(&state.pool).await?;
     let (members_total, members_confirmed, _) = members::count_all(&state.pool).await?;
     let recent = posts::list_admin(&state.pool, posts::PostStatusFilter::All, None, 10).await?;
+
+    let today = time::OffsetDateTime::now_utc().date();
+    let views_today = analytics::views_on(&state.pool, today).await?;
+    let views_30d =
+        analytics::total_views(&state.pool, today, DASHBOARD_ANALYTICS_WINDOW_DAYS).await?;
 
     Ok(DashboardTpl {
         csrf: session.csrf_token,
@@ -42,6 +51,8 @@ pub async fn handler(
         members_total,
         members_confirmed,
         recent,
+        views_today,
+        views_30d,
     })
 }
 
@@ -154,5 +165,56 @@ mod tests {
         let body = std::str::from_utf8(&bytes).unwrap();
         assert!(body.contains("Hello Recent"), "recent post title missing");
         assert!(body.contains("hello-world"), "recent post slug missing");
+    }
+
+    #[tokio::test]
+    async fn dashboard_shows_no_data_yet_when_no_views_recorded() {
+        let (app, state) = test_app().await;
+        let (sid, _csrf) = seed_admin_session(&state).await;
+
+        let cookie = format!("{}={}", auth::session::SESSION_COOKIE, sid);
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/admin")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        assert!(body.contains("No page views recorded yet"));
+    }
+
+    #[tokio::test]
+    async fn dashboard_shows_view_counts_once_recorded() {
+        let (app, state) = test_app().await;
+        let (sid, _csrf) = seed_admin_session(&state).await;
+
+        let today = time::OffsetDateTime::now_utc().date();
+        let day = db::analytics::fmt_day(today);
+        db::analytics::record_view(&state.pool, &day, "/posts/hello", None)
+            .await
+            .unwrap();
+
+        let cookie = format!("{}={}", auth::session::SESSION_COOKIE, sid);
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/admin")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        assert!(body.contains("Views today"), "views today label missing");
+        assert!(body.contains("Views · 30d"), "views 30d label missing");
     }
 }
