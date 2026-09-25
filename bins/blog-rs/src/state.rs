@@ -43,6 +43,9 @@ pub struct AppState {
 pub struct SiteConfig {
     pub base_url: String,
     pub site_title: String,
+    // Read only by the outbox worker, which some #[path]-mirrored test
+    // binaries (e.g. tests/server_boot.rs) don't include.
+    #[allow(dead_code)]
     pub admin_from: String,
 }
 

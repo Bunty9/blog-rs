@@ -8,9 +8,16 @@
 //! on cross-origin POSTs and that would defeat the double-submit guarantee.
 //! The second channel (the header) is what proves the request originated from
 //! same-origin JavaScript that could read the cookie.
+//!
+//! Plain (non-htmx) `<form method="post">` submissions can't set headers, so
+//! when the header is absent an urlencoded body's `csrf_token` field is
+//! accepted instead. That is the synchronizer-token pattern: the value is
+//! rendered into same-origin HTML, and a cross-origin attacker can neither
+//! read that page nor the cookie, so they can't supply it.
 
+use axum::body::Body;
 use axum::extract::{Request, State};
-use axum::http::Method;
+use axum::http::{header, Method};
 use axum::middleware::Next;
 use axum::response::Response;
 
@@ -41,15 +48,46 @@ pub async fn layer(
     // and reading it server-side collapses the double-submit pattern into a
     // single-channel check that an attacker on another origin would pass for
     // free.
-    let submitted = req
+    let header_token = req
         .headers()
         .get("x-csrf-token")
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
-        .ok_or(AppError::Forbidden)?;
+        .map(|s| s.to_string());
+
+    let (submitted, req) = match header_token {
+        Some(t) => (t, req),
+        None => form_field_token(req).await?,
+    };
 
     auth::csrf::validate(&session.csrf_token, &submitted)?;
     Ok(next.run(req).await)
+}
+
+/// Max urlencoded body buffered to look for `csrf_token`. Admin plain forms
+/// (settings, new draft, delete) are tiny; the large editor form goes
+/// through htmx and carries the header.
+const FORM_BODY_LIMIT: usize = 1024 * 1024;
+
+/// Pull `csrf_token` out of an `application/x-www-form-urlencoded` body,
+/// handing back a request rebuilt with the same bytes for the handler.
+async fn form_field_token(req: Request) -> Result<(String, Request), AppError> {
+    let is_form = req
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|ct| ct.starts_with("application/x-www-form-urlencoded"));
+    if !is_form {
+        return Err(AppError::Forbidden);
+    }
+    let (parts, body) = req.into_parts();
+    let bytes = axum::body::to_bytes(body, FORM_BODY_LIMIT)
+        .await
+        .map_err(|_| AppError::Forbidden)?;
+    let token = url::form_urlencoded::parse(&bytes)
+        .find(|(k, _)| k == "csrf_token")
+        .map(|(_, v)| v.into_owned())
+        .ok_or(AppError::Forbidden)?;
+    Ok((token, Request::from_parts(parts, Body::from(bytes))))
 }
 
 #[cfg(test)]
@@ -126,6 +164,48 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    }
+
+    fn form_post(session_token: &str, csrf_value: &str, body: String) -> Request<Body> {
+        Request::builder()
+            .method("POST")
+            .uri("/probe")
+            .header(header::COOKIE, cookie_header(session_token, csrf_value))
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(body))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn plain_form_with_matching_csrf_field_is_accepted() {
+        let (app, _st, session_token, csrf_value) = boot().await;
+        let body = format!("site_title=x&csrf_token={csrf_value}");
+        let res = app
+            .oneshot(form_post(&session_token, &csrf_value, body))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn plain_form_with_wrong_or_missing_csrf_field_is_rejected() {
+        let (app, _st, session_token, csrf_value) = boot().await;
+        for body in ["csrf_token=nope".to_string(), "site_title=x".to_string()] {
+            let res = app
+                .clone()
+                .oneshot(form_post(&session_token, &csrf_value, body))
+                .await
+                .unwrap();
+            // Mismatch surfaces as 401 (AuthError), missing as 403.
+            assert!(
+                matches!(
+                    res.status(),
+                    StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED
+                ),
+                "got {}",
+                res.status()
+            );
+        }
     }
 
     #[tokio::test]
