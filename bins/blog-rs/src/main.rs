@@ -6,6 +6,7 @@ mod error;
 mod mailer;
 mod media;
 mod middleware;
+mod rate_limit;
 mod routes;
 mod state;
 mod templates;
@@ -119,9 +120,12 @@ async fn main() -> ExitCode {
         }
     };
     tracing::info!(addr = %cfg.bind, "listening");
-    let serve_result = axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await;
+    let serve_result = axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await;
     shutdown.cancel();
     for h in worker_handles {
         let _ = h.await;

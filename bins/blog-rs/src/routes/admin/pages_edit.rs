@@ -44,7 +44,7 @@ pub async fn handler(
     Ok(EditTpl {
         csrf: session.csrf_token.clone(),
         nav: "pages",
-        page_title: format!("Edit · {}", &page.title),
+        page_title: format!("Edit · {}", page.title),
         flash: None,
         flash_kind: String::new(),
         id: page.id,

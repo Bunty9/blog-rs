@@ -50,6 +50,8 @@ pub fn load(path: Option<PathBuf>) -> Result<Config, Box<figment::Error>> {
 }
 
 #[cfg(test)]
+// figment::Jail closures must return the (large) unboxed figment::Error.
+#[allow(clippy::result_large_err)]
 mod tests {
     use super::*;
 

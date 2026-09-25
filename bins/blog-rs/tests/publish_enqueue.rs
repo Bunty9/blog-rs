@@ -24,6 +24,8 @@ mod mailer;
 mod media;
 #[path = "../src/middleware/mod.rs"]
 mod middleware;
+#[path = "../src/rate_limit.rs"]
+mod rate_limit;
 #[path = "../src/routes/mod.rs"]
 mod routes;
 #[path = "../src/state.rs"]
