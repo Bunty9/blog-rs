@@ -4,6 +4,7 @@ mod config;
 mod embed;
 mod error;
 mod mailer;
+mod media;
 mod middleware;
 mod routes;
 mod state;
@@ -95,6 +96,10 @@ async fn main() -> ExitCode {
         }
     };
     let site = state::SiteConfig::from_env();
+    if let Err(e) = std::fs::create_dir_all(&site.media_dir) {
+        tracing::error!(error = %e, dir = %site.media_dir.display(), "failed to create media dir");
+        return ExitCode::from(2);
+    }
     let state = AppState::new(pool, cfg.clone(), signing_key)
         .with_mailer(mailer)
         .with_site(site);

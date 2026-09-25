@@ -19,6 +19,8 @@ mod embed;
 mod error;
 #[path = "../src/mailer/mod.rs"]
 mod mailer;
+#[path = "../src/media.rs"]
+mod media;
 #[path = "../src/middleware/mod.rs"]
 mod middleware;
 #[path = "../src/routes/mod.rs"]
@@ -68,6 +70,7 @@ async fn fresh_state(mailer: MailerHandle) -> AppState {
             base_url: "http://localhost".into(),
             site_title: "test".into(),
             admin_from: "test <noreply@localhost>".into(),
+            media_dir: "./media".into(),
         })
 }
 

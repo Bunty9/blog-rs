@@ -10,6 +10,7 @@ set -euo pipefail
 export PORT="${PORT:-8080}"
 export BLOG_RS__BIND="0.0.0.0:${PORT}"
 export BLOG_RS__DATABASE_URL="${BLOG_RS__DATABASE_URL:-sqlite:///data/blog.db?mode=rwc}"
+export BLOG_MEDIA_DIR="${BLOG_MEDIA_DIR:-/data/media}"
 
 mkdir -p /data/media
 

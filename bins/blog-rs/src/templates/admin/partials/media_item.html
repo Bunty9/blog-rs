@@ -1,0 +1,30 @@
+<div class="media-item" id="media-item-{{ row.id }}">
+    <img src="/media/{{ row.filename }}" alt="{{ row.alt }}" loading="lazy" />
+    <div class="mi-body">
+        <div class="mi-name" title="{{ row.original_name }}">{{ row.filename }}</div>
+        <div class="mi-meta">
+            {{ row.size_bytes|filesizeformat }}
+            {% if let Some(w) = row.width %}{% if let Some(h) = row.height %} · {{ w }}×{{ h }}{% endif %}{% endif %}
+        </div>
+
+        <form class="mi-row"
+              hx-post="/admin/media/{{ row.id }}/alt"
+              hx-target="#media-item-{{ row.id }}"
+              hx-swap="outerHTML">
+            <input class="input" type="text" name="alt" value="{{ row.alt }}" placeholder="Alt text" />
+            <button class="btn btn-secondary btn-sm" type="submit" title="Save alt text">Save</button>
+        </form>
+
+        <div class="mi-row">
+            <input class="input" type="text" readonly value="{{ row.shortcode }}" id="mi-sc-{{ row.id }}" onclick="this.select()" />
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="navigator.clipboard.writeText(document.getElementById('mi-sc-{{ row.id }}').value)">Copy</button>
+        </div>
+
+        <button type="button" class="btn btn-danger btn-sm"
+                hx-post="/admin/media/{{ row.id }}/delete"
+                hx-target="#media-item-{{ row.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete {{ row.filename }}? This can't be undone.">Delete</button>
+    </div>
+</div>

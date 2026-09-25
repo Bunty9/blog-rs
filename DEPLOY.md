@@ -80,6 +80,6 @@ git pull && ./deploy.sh update
 - **Cloudflare Access** policy on `blog.bunty9.com/admin*` (Zero-Trust → Access → Applications): require OTP/Google/GitHub to reach the admin dashboard at the edge, before requests ever hit blog-rs.
 
 ## Notes / deferred
-- **Media-dir backup** is not configured yet — Litestream replicates only the SQLite DB. Media uploads aren't built yet; when they ship, add an `rclone`/`restic` cron sync of `/data/media` → R2.
+- **Media-dir backup** is not configured yet — Litestream replicates only the SQLite DB (`/data/blog.db`), not `BLOG_MEDIA_DIR` (`/data/media` in this container). Add an `rclone`/`restic` cron sync of `/data/media` → R2 to cover uploaded images.
 - **Building on the Nitro5** is intentional (no registry needed). A GHCR build+push job can be added later if build time becomes annoying.
 - Graceful stop: the app handles SIGTERM, so `docker stop` / `./deploy.sh stop` lets the outbox worker finish its tick before exit.

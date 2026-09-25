@@ -29,6 +29,9 @@ pub enum AppError {
     #[error("not found")]
     NotFound,
 
+    #[error("unsupported media type: {0}")]
+    UnsupportedMediaType(String),
+
     #[error("internal: {0}")]
     Internal(String),
 }
@@ -40,6 +43,7 @@ impl AppError {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::UnsupportedMediaType(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             Self::Db(db::DbError::NotFound) => StatusCode::NOT_FOUND,
             Self::Db(db::DbError::Conflict(_)) => StatusCode::CONFLICT,
             Self::Db(_) | Self::Sqlx(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,

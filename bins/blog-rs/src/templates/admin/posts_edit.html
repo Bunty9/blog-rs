@@ -122,7 +122,7 @@
         <button type="button" onclick="edBlock('chart')">{chart}</button>
         <button type="button" onclick="edBlock('embed')">{embed}</button>
         <span class="tb-sep" aria-hidden="true"></span>
-        <button type="button" disabled title="Media picker — coming soon">+ media</button>
+        <button type="button" class="media-picker-btn" onclick="openMediaPicker('body')" title="Insert image">+ media</button>
         <button type="button" disabled title="Revisions — coming soon">Revisions</button>
       </div>
       <textarea id="body-md"
@@ -173,7 +173,7 @@
       <div class="field">
         <label for="ds-cover">Cover image URL</label>
         <input id="ds-cover" name="cover_image" type="text" class="input" value="{{ cover_image }}" placeholder="/media/cover.jpg" />
-        <span class="help">Or: <button type="button" disabled title="Media picker — coming soon" class="btn btn-ghost btn-sm" style="padding:2px 6px">Choose from library…</button></span>
+        <span class="help">Or: <button type="button" class="media-picker-btn btn btn-ghost btn-sm" onclick="openMediaPicker('cover')" style="padding:2px 6px">Choose from library…</button></span>
       </div>
 
       <div class="field">
@@ -260,6 +260,23 @@
   </aside>
 </form>
 
+<!-- ── Media picker dialog ──────────────────────────────────── -->
+<dialog id="media-picker" style="border:1px solid var(--border); border-radius:var(--r-md); padding:0; width:640px; max-width:92vw; max-height:80vh; color:var(--text); background:var(--bg)">
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--border)">
+    <strong>Choose an image</strong>
+    <button type="button" class="icon-btn" aria-label="Close" onclick="document.getElementById('media-picker').close()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="media-picker-list"
+       style="padding:var(--space-4); overflow-y:auto; max-height:calc(80vh - 56px)"
+       hx-get="/admin/media/picker"
+       hx-trigger="click from:.media-picker-btn once"
+       hx-swap="innerHTML">
+    Loading…
+  </div>
+</dialog>
+
 <script>
   /* Drawer open/close */
   function openDrawer() {
@@ -312,5 +329,27 @@
     ta.value = v.slice(0,s) + (blocks[type] || '') + v.slice(s);
     ta.focus(); ta.dispatchEvent(new Event('keyup', {bubbles:true}));
   }
+
+  /* Media picker */
+  var mediaPickerTarget = 'body';
+  function openMediaPicker(target) {
+    mediaPickerTarget = target;
+    document.getElementById('media-picker').showModal();
+  }
+  document.getElementById('media-picker-list').addEventListener('click', function (e) {
+    var item = e.target.closest('.mp-item');
+    if (!item) return;
+    var src = item.dataset.src, alt = item.dataset.alt || '';
+    if (mediaPickerTarget === 'cover') {
+      document.getElementById('ds-cover').value = src;
+    } else {
+      var lcb = '{', rcb = '}';
+      var snippet = '\n' + lcb + lcb + '< image src="' + src + '" alt="' + alt + '" >' + rcb + rcb + '\n';
+      var s = ta.selectionStart, v = ta.value;
+      ta.value = v.slice(0,s) + snippet + v.slice(s);
+      ta.focus(); ta.dispatchEvent(new Event('keyup', {bubbles:true}));
+    }
+    document.getElementById('media-picker').close();
+  });
 </script>
 {% endblock %}

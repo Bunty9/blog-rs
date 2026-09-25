@@ -24,6 +24,7 @@ pub mod settings;
 
 use crate::middleware::{auth_required, csrf};
 use crate::state::AppState;
+use axum::extract::DefaultBodyLimit;
 use axum::routing::{get, post};
 use axum::Router;
 
@@ -51,7 +52,15 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/posts/:id/delete", post(posts_delete::handler))
         .route("/posts/:id/preview", post(posts_preview::handler))
         .route("/analytics", get(analytics::handler))
-        .route("/media", get(media::handler))
+        .route(
+            "/media",
+            get(media::handler)
+                .post(media::upload)
+                .layer(DefaultBodyLimit::max(10 * 1024 * 1024)),
+        )
+        .route("/media/picker", get(media::picker))
+        .route("/media/:id/alt", post(media::set_alt))
+        .route("/media/:id/delete", post(media::delete))
         .route("/members", get(members_list::handler))
         .route("/members/export.csv", get(members_list::export_csv))
         .route("/settings", get(settings::get).post(settings::post))
