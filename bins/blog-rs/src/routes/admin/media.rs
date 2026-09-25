@@ -135,7 +135,29 @@ pub async fn upload(
     let filename = format!("{}.{ext}", &sha256[..16]);
     let (width, height) = crate::media::sniff_dims(content_type, &data);
 
-    let row = media::insert(
+    // File first, then row: a failed write must not leave a row pointing at
+    // nothing. The name is content-addressed, so an existing file already
+    // holds these bytes and is left alone — rewriting it in place would let a
+    // concurrent public GET (cached `immutable` for a year) read a torn file.
+    let path = state.site.media_dir.join(&filename);
+    if tokio::fs::metadata(&path).await.is_err() {
+        let tmp = state
+            .site
+            .media_dir
+            .join(format!(".{}.tmp", uuid::Uuid::new_v4()));
+        let write = async {
+            tokio::fs::write(&tmp, &data).await?;
+            tokio::fs::rename(&tmp, &path).await
+        };
+        if let Err(e) = write.await {
+            let _ = tokio::fs::remove_file(&tmp).await;
+            return Err(AppError::Internal(format!(
+                "failed to write media file: {e}"
+            )));
+        }
+    }
+
+    media::insert(
         &state.pool,
         NewMedia {
             filename: &filename,
@@ -148,14 +170,6 @@ pub async fn upload(
         },
     )
     .await?;
-
-    // Idempotent: the filename is content-addressed, so writing the same
-    // bytes again on a dedupe hit is a harmless no-op rather than a branch
-    // to get wrong.
-    let path = state.site.media_dir.join(&row.filename);
-    tokio::fs::write(&path, &data)
-        .await
-        .map_err(|e| AppError::Internal(format!("failed to write media file: {e}")))?;
 
     Ok(MediaItemsTpl {
         rows: rows(&state).await?,
@@ -179,7 +193,11 @@ pub async fn set_alt(
     Path(id): Path<i64>,
     Form(form): Form<AltForm>,
 ) -> Result<impl IntoResponse, AppError> {
-    media::update_alt(&state.pool, id, &form.alt).await?;
+    // The alt is pasted verbatim into `alt="…"` shortcode snippets, and the
+    // shortcode args parser has no escapes: a `"` or `}}` would break the
+    // render of every post that uses the image.
+    let alt = form.alt.replace('"', "'").replace("}}", "");
+    media::update_alt(&state.pool, id, alt.trim()).await?;
     let row = media::find_by_id(&state.pool, id).await?.into();
     Ok(MediaItemTpl { row })
 }
@@ -465,7 +483,7 @@ mod tests {
                     .header(header::COOKIE, cookie(&sid))
                     .header("x-csrf-token", &csrf)
                     .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                    .body(Body::from("alt=a+happy+cat"))
+                    .body(Body::from("alt=a+%22happy%22+cat%7D%7D"))
                     .unwrap(),
             )
             .await
@@ -473,6 +491,7 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
 
         let updated = db::media::find_by_id(&state.pool, row.id).await.unwrap();
-        assert_eq!(updated.alt, "a happy cat");
+        // Quotes and `}}` would break the shortcode snippet built from alt.
+        assert_eq!(updated.alt, "a 'happy' cat");
     }
 }

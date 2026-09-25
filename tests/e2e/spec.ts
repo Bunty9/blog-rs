@@ -28,6 +28,7 @@ test.beforeAll(async () => {
     // separate site / mail vars (no BLOG_RS__ prefix)
     BLOG_RS_MAIL: "test",
     BLOG_RS_MAIL_FILE: mailbox,
+    BLOG_MEDIA_DIR: path.join(workdir, "media"),
     BLOG_BASE_URL: BASE,
     BLOG_TITLE: "E2E Blog",
     BLOG_FROM: "E2E <noreply@e2e.test>",
@@ -76,6 +77,24 @@ test("admin can publish a post visible to readers and members get email", async 
   await page.locator('input[name="password"]').fill("admin-pass-12345");
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(new RegExp(`^${BASE}/admin/?$`));
+
+  // 1b. Upload an image to the media library and fetch it publicly.
+  //     1x1 transparent PNG.
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  await page.goto(`${BASE}/admin/media`);
+  await page.locator('input[type="file"][name="file"]').setInputFiles({
+    name: "pixel.png", mimeType: "image/png", buffer: png,
+  });
+  await page.getByRole("button", { name: "Upload" }).click();
+  const img = page.locator('#media-items img[src^="/media/"]').first();
+  await expect(img).toBeVisible();
+  const src = await img.getAttribute("src");
+  const served = await fetch(`${BASE}${src}`);
+  expect(served.status).toBe(200);
+  expect(served.headers.get("content-type")).toBe("image/png");
 
   // 2. Create new post draft.
   // GET /admin/posts/new renders a minimal form; clicking "Create draft"
