@@ -174,6 +174,10 @@ Important environment variables:
 | `OUTBOX_POLL_INTERVAL`                  | Outbox worker poll interval in seconds, default 5                  |
 | `OUTBOX_RECLAIM_AFTER`                  | Stale-claim recovery threshold, default 300 seconds                |
 
+### Rate limiting
+
+`POST /admin/login` and `POST /signup` are throttled by a small in-process, in-memory fixed-window limiter (`bins/blog-rs/src/rate_limit.rs`): login allows 10 attempts per 15 minutes per client IP and per normalized email, signup allows 5 per hour per client IP. Client IP is read from `CF-Connecting-IP` (the production Cloudflare Tunnel sets this), falling back to `X-Forwarded-For`'s first hop, then the TCP peer address. Exceeding either limit returns `429` with a `Retry-After` header. These limits are fixed constants, not configurable via env vars, and reset on process restart since state is per-process.
+
 ## Testing
 
 The workspace ships 447 tests across the crates, integration test binaries, and the importer:

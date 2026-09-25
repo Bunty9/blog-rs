@@ -8,6 +8,9 @@ use tokio::sync::Mutex;
 
 use crate::config::Config;
 use crate::mailer::{MailError, MailerHandle, Transport};
+use crate::rate_limit::{
+    RateLimiter, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW, SIGNUP_MAX_ATTEMPTS, SIGNUP_WINDOW,
+};
 use crate::tokens::TokenSigner;
 
 #[derive(Clone)]
@@ -29,6 +32,11 @@ pub struct AppState {
     /// worker a small warm-up grace window before failing on a `None`
     /// heartbeat.
     pub started_at: Instant,
+    /// Brute-force throttle for POST /admin/login, keyed by both client IP
+    /// and normalized email (see `crate::rate_limit`).
+    pub login_limiter: Arc<RateLimiter>,
+    /// Spam throttle for POST /signup, keyed by client IP.
+    pub signup_limiter: Arc<RateLimiter>,
 }
 
 #[derive(Clone, Debug)]
@@ -99,6 +107,8 @@ impl AppState {
             site: SiteConfig::default(),
             worker_heartbeat: Arc::new(Mutex::new(None)),
             started_at: Instant::now(),
+            login_limiter: Arc::new(RateLimiter::new(LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW)),
+            signup_limiter: Arc::new(RateLimiter::new(SIGNUP_MAX_ATTEMPTS, SIGNUP_WINDOW)),
         }
     }
 
