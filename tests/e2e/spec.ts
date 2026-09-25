@@ -47,15 +47,16 @@ test.beforeAll(async () => {
   server.stdout?.on("data", (b) => process.stdout.write(`[server] ${b}`));
   server.stderr?.on("data", (b) => process.stderr.write(`[server] ${b}`));
 
-  // Wait up to 10s for /healthz to respond 200.
-  for (let i = 0; i < 50; i++) {
+  // Wait up to 30s for /healthz to respond 200 (first boot hashes the admin
+  // password with argon2id, which is slow on a cold CI runner).
+  for (let i = 0; i < 150; i++) {
     try {
       const r = await fetch(`${BASE}/healthz`);
       if (r.ok) return;
     } catch (_) { /* not up yet */ }
     await delay(200);
   }
-  throw new Error("server did not become healthy in 10s");
+  throw new Error("server did not become healthy in 30s");
 });
 
 test.afterAll(async () => {
@@ -138,7 +139,9 @@ test("admin can publish a post visible to readers and members get email", async 
   expect(mailContents).toContain("To: reader@e2e.test");
   expect(mailContents).toMatch(/\/confirm\/[A-Za-z0-9_-]+/);
 
-  // 10. Extract the confirm URL and visit it.
+  // 10. Extract the confirm URL and visit it. Lettre QP-encodes the HTML
+  //     body: undo `=\r\n` soft wraps and `=3D` before matching.
+  mailContents = mailContents.replace(/=\r?\n/g, "").replace(/=3D/g, "=");
   const confirmUrl = mailContents.match(/https?:\/\/[^\s"<]*\/confirm\/[A-Za-z0-9_-]+/)?.[0];
   expect(confirmUrl).toBeTruthy();
   await rp.goto(confirmUrl!);

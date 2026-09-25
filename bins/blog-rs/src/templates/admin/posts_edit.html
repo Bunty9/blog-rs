@@ -68,7 +68,7 @@
 {# Hidden form — htmx auto-saves on any change delay:800ms; also used by Save Now button #}
 <form id="editor"
       hx-post="/admin/posts/{{ id }}"
-      hx-trigger="change delay:800ms from:closest form"
+      hx-trigger="submit, change delay:800ms from:closest form"
       hx-target="#flash-slot"
       hx-swap="innerHTML"
       hx-include="closest form"

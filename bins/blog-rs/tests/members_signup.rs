@@ -197,12 +197,15 @@ async fn signup_then_confirm_then_unsubscribe() {
     assert_eq!(m.email, "alice@example.com");
     assert!(m.confirmed_at.is_none());
 
-    // 3) Synchronous send already wrote the confirm email to the mailbox.
-    //    Draining the outbox once is still a no-op for the same row (it was
-    //    marked sent? actually the signup handler only sends synchronously
-    //    without status update — the outbox row is still pending). Tick once
-    //    to flush so the worker path is exercised too; either ordering should
-    //    leave at least one rendered message on disk.
+    // 3) Signup only enqueues; one worker tick renders and sends exactly one
+    //    confirm email.
+    assert!(
+        tokio::fs::read(&mailbox_path)
+            .await
+            .map(|b| b.is_empty())
+            .unwrap_or(true),
+        "signup must not send inline"
+    );
     let _ = worker::outbox::tick(&st, 10, 3).await;
 
     let raw_bytes = tokio::fs::read(&mailbox_path).await.unwrap();
@@ -214,6 +217,11 @@ async fn signup_then_confirm_then_unsubscribe() {
     );
     assert!(raw.contains("Subject:"), "subject header missing");
     assert!(raw.contains("/confirm/"), "confirm URL missing");
+    assert_eq!(
+        raw.matches("To: alice@example.com").count(),
+        1,
+        "exactly one confirm email expected:\n{raw}"
+    );
 
     // 4) Extract the confirm token and exchange it for a confirmed row.
     let token = extract_token_after(&raw, "/confirm/").expect("token present in mailbox");
