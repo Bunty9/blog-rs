@@ -26,6 +26,9 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: '22' }
       - run: cargo build --release -p blog-rs
-      - run: npm ci --prefix tests/e2e
-      - run: npx --prefix tests/e2e playwright install --with-deps chromium
-      - run: npx --prefix tests/e2e playwright test
+      - run: npm ci
+        working-directory: tests/e2e
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/e2e
+      - run: npx playwright test
+        working-directory: tests/e2e
