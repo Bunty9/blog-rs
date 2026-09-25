@@ -3,14 +3,16 @@
 
 use askama::Template;
 use askama_axum::IntoResponse;
-use axum::extract::State;
-use axum::http::{header::SET_COOKIE, HeaderMap, StatusCode};
+use axum::extract::{ConnectInfo, State};
+use axum::http::{header::SET_COOKIE, HeaderMap, HeaderValue, StatusCode};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use time::{Duration, OffsetDateTime};
 
 use crate::error::AppError;
+use crate::rate_limit;
 use crate::state::AppState;
 
 // Argon2id hash of the static string "blog-rs-dummy-password" using the
@@ -48,8 +50,24 @@ async fn form() -> impl IntoResponse {
 
 async fn submit(
     State(state): State<AppState>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+    headers: HeaderMap,
     Json(form): Json<LoginForm>,
 ) -> Result<axum::response::Response, AppError> {
+    let ip = rate_limit::client_ip(&headers, connect_info.map(|ci| ci.0));
+    let ip_key = format!("login-ip:{ip}");
+    let email_key = format!("login-email:{}", form.email.trim().to_lowercase());
+
+    // Count both failed and successful attempts against IP and email; either
+    // limiter tripping is a reject. Headers are spoofable off-proxy, hence
+    // the email key on top of the IP key.
+    let ip_ok = state.login_limiter.check(&ip_key);
+    let email_ok = state.login_limiter.check(&email_key);
+    if !ip_ok || !email_ok {
+        tracing::warn!(email = %form.email, ip = %ip, "login rate limited");
+        return Ok(too_many_requests(state.login_limiter.window_secs()));
+    }
+
     let user = match db::users::find_by_email(&state.pool, &form.email).await {
         Ok(u) => u,
         Err(_) => {
@@ -70,6 +88,7 @@ async fn submit(
         OffsetDateTime::now_utc().unix_timestamp() + state.config.session_lifetime_seconds;
 
     db::sessions::create(&state.pool, &session_token, user.id, &csrf, expires_at).await?;
+    state.login_limiter.reset(&email_key);
 
     let session_c = auth::session::session_cookie(&session_token, lifetime).to_string();
     let csrf_c = auth::session::csrf_cookie(&csrf, lifetime).to_string();
@@ -87,6 +106,23 @@ async fn submit(
         }),
     )
         .into_response())
+}
+
+/// 429 response matching this handler's JSON error style, with a
+/// `Retry-After` header naming the throttle window in seconds.
+fn too_many_requests(window_secs: u64) -> axum::response::Response {
+    let mut res = (
+        StatusCode::TOO_MANY_REQUESTS,
+        Json(serde_json::json!({
+            "error": "too many login attempts, try again later",
+            "status": StatusCode::TOO_MANY_REQUESTS.as_u16(),
+        })),
+    )
+        .into_response();
+    if let Ok(v) = HeaderValue::from_str(&window_secs.to_string()) {
+        res.headers_mut().insert(axum::http::header::RETRY_AFTER, v);
+    }
+    res
 }
 
 #[cfg(test)]
@@ -177,5 +213,49 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn eleventh_attempt_for_same_email_is_throttled() {
+        let app = router_under_test(state().await);
+        let body = serde_json::to_vec(&serde_json::json!({
+            "email": "admin@example.com",
+            "password": "nope"
+        }))
+        .unwrap();
+
+        for _ in 0..10 {
+            let res = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/login")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.clone()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+        }
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/login")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::TOO_MANY_REQUESTS);
+        let retry_after = res
+            .headers()
+            .get(axum::http::header::RETRY_AFTER)
+            .expect("Retry-After header");
+        assert_eq!(retry_after, "900");
     }
 }

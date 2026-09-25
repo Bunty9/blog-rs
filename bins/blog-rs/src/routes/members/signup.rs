@@ -8,12 +8,14 @@
 
 use askama::Template;
 use askama_axum::IntoResponse;
-use axum::extract::{Form, State};
-use axum::http::StatusCode;
+use axum::extract::{ConnectInfo, Form, State};
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::Response;
 use cookie::Cookie;
 use serde::Deserialize;
+use std::net::SocketAddr;
 
+use crate::rate_limit;
 use crate::state::AppState;
 use crate::tokens::Purpose;
 use crate::view::{AssetTag, SiteCtx};
@@ -79,6 +81,7 @@ pub async fn show(State(st): State<AppState>, headers: axum::http::HeaderMap) ->
 
 pub async fn submit(
     State(st): State<AppState>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
     headers: axum::http::HeaderMap,
     Form(input): Form<Input>,
 ) -> Response {
@@ -95,6 +98,14 @@ pub async fn submit(
     };
     if auth::csrf::validate(&cookie_csrf, &input.csrf_token).is_err() {
         return (StatusCode::FORBIDDEN, "CSRF validation failed").into_response();
+    }
+
+    // Only count requests that pass CSRF: only those can actually trigger a
+    // send below, so this is the point that matters for spam throttling.
+    let ip = rate_limit::client_ip(&headers, connect_info.map(|ci| ci.0));
+    if !st.signup_limiter.check(&format!("signup-ip:{ip}")) {
+        tracing::warn!(ip = %ip, "signup rate limited");
+        return too_many_requests(st.signup_limiter.window_secs());
     }
 
     if !is_valid_email(&input.email) {
@@ -192,6 +203,20 @@ fn csrf_from_cookie(headers: &axum::http::HeaderMap) -> Option<String> {
         })
 }
 
+/// 429 response with a `Retry-After` header naming the throttle window in
+/// seconds, in this handler's existing plain-text error style.
+fn too_many_requests(window_secs: u64) -> Response {
+    let mut res = (
+        StatusCode::TOO_MANY_REQUESTS,
+        "Too many signups, try again later",
+    )
+        .into_response();
+    if let Ok(v) = HeaderValue::from_str(&window_secs.to_string()) {
+        res.headers_mut().insert(axum::http::header::RETRY_AFTER, v);
+    }
+    res
+}
+
 fn is_valid_email(s: &str) -> bool {
     // Minimal RFC-ish check: one '@', non-empty local and domain, no whitespace,
     // at least one '.' in the domain part.
@@ -216,7 +241,12 @@ fn is_valid_email(s: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_valid_email;
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use axum::routing::get;
+    use db::test_support::fresh_pool;
+    use tower::ServiceExt;
 
     #[test]
     fn accepts_well_formed() {
@@ -231,5 +261,70 @@ mod tests {
         assert!(!is_valid_email("a@@b.co"));
         assert!(!is_valid_email(""));
         assert!(!is_valid_email("a @b.co"));
+    }
+
+    async fn state() -> AppState {
+        let pool = fresh_pool().await;
+        let cfg = crate::config::Config::default();
+        AppState::new(pool, cfg, vec![0u8; 32])
+    }
+
+    fn router_under_test(state: AppState) -> axum::Router {
+        axum::Router::new()
+            .route("/signup", get(show).post(submit))
+            .with_state(state)
+    }
+
+    const CSRF: &str = "test-csrf-token-0123456789";
+
+    fn signup_request(email: &str, cf_connecting_ip: Option<&str>) -> Request<Body> {
+        let body = format!("email={}&csrf_token={}", urlencoding::encode(email), CSRF);
+        let mut builder = Request::builder()
+            .method("POST")
+            .uri("/signup")
+            .header("content-type", "application/x-www-form-urlencoded")
+            .header("cookie", format!("XSRF-TOKEN={CSRF}"));
+        if let Some(ip) = cf_connecting_ip {
+            builder = builder.header("cf-connecting-ip", ip);
+        }
+        builder.body(Body::from(body)).unwrap()
+    }
+
+    #[tokio::test]
+    async fn valid_signup_shows_pending() {
+        let app = router_under_test(state().await);
+        let res = app
+            .oneshot(signup_request("reader@example.com", None))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn sixth_signup_from_same_ip_is_throttled() {
+        let app = router_under_test(state().await);
+
+        for i in 0..5 {
+            let res = app
+                .clone()
+                .oneshot(signup_request(
+                    &format!("reader{i}@example.com"),
+                    Some("5.6.7.8"),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::OK);
+        }
+
+        let res = app
+            .oneshot(signup_request("reader6@example.com", Some("5.6.7.8")))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::TOO_MANY_REQUESTS);
+        let retry_after = res
+            .headers()
+            .get(axum::http::header::RETRY_AFTER)
+            .expect("Retry-After header");
+        assert_eq!(retry_after, "3600");
     }
 }
