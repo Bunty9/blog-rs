@@ -4,17 +4,15 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-        with: { components: rustfmt, clippy }
+        with: { components: "rustfmt, clippy, llvm-tools-preview" }
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov --locked
+      - uses: taiki-e/install-action@cargo-llvm-cov
       - name: Coverage
-        # adjust threshold after first run
         run: cargo llvm-cov --workspace --fail-under-lines 70
   e2e:
     runs-on: ubuntu-latest
@@ -22,11 +20,11 @@ jobs:
     env:
       E2E_PROFILE: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+      - uses: actions/setup-node@v5
+        with: { node-version: '22' }
       - run: cargo build --release -p blog-rs
       - run: npm ci --prefix tests/e2e
       - run: npx --prefix tests/e2e playwright install --with-deps chromium
