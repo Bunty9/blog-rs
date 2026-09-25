@@ -15,7 +15,7 @@ pub mod sitemap;
 pub mod tag;
 pub mod tags;
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", get(home::handler))
         .route("/posts/:slug", get(post::handler))
@@ -30,4 +30,10 @@ pub fn router() -> Router<AppState> {
         // Static pages: registered LAST so all more-specific routes take priority.
         // The handler also guards against reserved slugs explicitly.
         .route("/:slug", get(page::handler))
+        // Privacy-friendly page view recording (see middleware::page_views).
+        // Scoped to the public reader surface only -- never admin/assets.
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            crate::middleware::page_views::layer,
+        ))
 }
