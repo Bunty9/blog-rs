@@ -12,6 +12,7 @@ pub mod members;
 pub mod outbox;
 pub mod pages;
 pub mod posts;
+pub mod revisions;
 pub mod search;
 pub mod series;
 pub mod sessions;
