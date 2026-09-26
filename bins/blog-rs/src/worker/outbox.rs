@@ -199,6 +199,13 @@ async fn dispatch(state: &AppState, row: &outbox::OutboxRow) -> Result<(), DynEr
         Some(id) => id,
     };
 
+    // Fan-out only enqueues active members, but a member may unsubscribe
+    // before their row is sent (or while it waits on retries). Drop it: the
+    // row is marked sent without mailing anyone.
+    if member.unsubscribed_at.is_some() {
+        return Ok(());
+    }
+
     // Post dispatch: fetch the post, render the email, issue an unsubscribe
     // token, send. `find_by_id` returns a full Post row; we only use a handful
     // of fields, but reusing the existing accessor keeps the worker free of

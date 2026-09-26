@@ -35,14 +35,20 @@ pub async fn create_pending(pool: &SqlitePool, email: &str) -> Result<i64, DbErr
     Ok(res.last_insert_rowid())
 }
 
+/// Mark the member confirmed and (re)subscribed. Reached only through an
+/// HMAC-signed link sent to the member's own inbox, so it is also the one
+/// place an unsubscribed member is resubscribed. Returns 0 when already
+/// confirmed and active.
 pub async fn confirm(pool: &SqlitePool, id: i64) -> Result<u64, DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
-    let r =
-        sqlx::query("UPDATE members SET confirmed_at = ? WHERE id = ? AND confirmed_at IS NULL")
-            .bind(now)
-            .bind(id)
-            .execute(pool)
-            .await?;
+    let r = sqlx::query(
+        "UPDATE members SET confirmed_at = COALESCE(confirmed_at, ?), unsubscribed_at = NULL
+         WHERE id = ? AND (confirmed_at IS NULL OR unsubscribed_at IS NOT NULL)",
+    )
+    .bind(now)
+    .bind(id)
+    .execute(pool)
+    .await?;
     Ok(r.rows_affected())
 }
 
@@ -161,7 +167,9 @@ pub enum SignupOutcome {
     AlreadyPending,
     /// Email already confirmed and active.
     AlreadyConfirmed,
-    /// Email exists but is currently unsubscribed; resubscribing.
+    /// Email exists but is unsubscribed. Nothing changes until the member
+    /// clicks the confirm link: anyone can type an address into the form,
+    /// so it must not silently undo an opt-out.
     Resubscribed,
 }
 
@@ -180,13 +188,7 @@ pub async fn signup(pool: &SqlitePool, email: &str) -> Result<(Member, SignupOut
     .await?
     {
         let outcome = match (existing.confirmed_at, existing.unsubscribed_at) {
-            (Some(_), Some(_)) => {
-                sqlx::query("UPDATE members SET unsubscribed_at = NULL WHERE id = ?")
-                    .bind(existing.id)
-                    .execute(pool)
-                    .await?;
-                SignupOutcome::Resubscribed
-            }
+            (Some(_), Some(_)) => SignupOutcome::Resubscribed,
             (Some(_), None) => SignupOutcome::AlreadyConfirmed,
             (None, _) => SignupOutcome::AlreadyPending,
         };
@@ -221,14 +223,26 @@ pub async fn change_email(pool: &SqlitePool, id: i64, new_email: &str) -> Result
 /// since no real post exists yet (migration 0007 widened the column to allow
 /// this). The worker treats NULL as the confirm slot. Post fan-out should use
 /// `crate::outbox::enqueue` once a real post is published.
+/// A member's single confirm row (see migration 0007's partial unique index)
+/// is re-armed once it finished (`sent`/`dead`) and is older than this, so a
+/// lost email or a resubscribe can get a fresh link without letting the
+/// signup form spam an inbox.
+pub const CONFIRM_RESEND_AFTER_SECS: i64 = 60 * 60;
+
 pub async fn enqueue_confirm(pool: &SqlitePool, member_id: i64) -> Result<(), DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     sqlx::query(
-        "INSERT OR IGNORE INTO newsletter_outbox(post_id, member_id, status, attempts, created_at)
-         VALUES (NULL, ?, 'pending', 0, ?)",
+        "INSERT INTO newsletter_outbox(post_id, member_id, status, attempts, created_at)
+         VALUES (NULL, ?, 'pending', 0, ?)
+         ON CONFLICT(member_id) WHERE post_id IS NULL DO UPDATE SET
+             status = 'pending', attempts = 0, last_error = NULL, sent_at = NULL,
+             created_at = excluded.created_at
+         WHERE newsletter_outbox.status IN ('sent', 'dead')
+           AND newsletter_outbox.created_at <= excluded.created_at - ?",
     )
     .bind(member_id)
     .bind(now)
+    .bind(CONFIRM_RESEND_AFTER_SECS)
     .execute(pool)
     .await?;
     Ok(())
@@ -462,8 +476,49 @@ mod signup_tests {
         assert!(m3.unsubscribed_at.is_some());
         let (_, outcome) = signup(&p, "a@example.com").await.unwrap();
         assert_eq!(outcome, SignupOutcome::Resubscribed);
+        // Signing up again must not undo the opt-out by itself...
         let m4 = find_by_id(&p, m.id).await.unwrap();
-        assert!(m4.unsubscribed_at.is_none());
+        assert!(m4.unsubscribed_at.is_some());
+        // ...only the emailed confirm link does.
+        assert_eq!(confirm(&p, m.id).await.unwrap(), 1);
+        let m5 = find_by_id(&p, m.id).await.unwrap();
+        assert!(m5.unsubscribed_at.is_none());
+        assert_eq!(m5.confirmed_at, m2.confirmed_at);
+        assert_eq!(confirm(&p, m.id).await.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn enqueue_confirm_rearms_only_finished_old_rows() {
+        let p = pool().await;
+        let (m, _) = signup(&p, "a@example.com").await.unwrap();
+        enqueue_confirm(&p, m.id).await.unwrap();
+        let status = || async {
+            sqlx::query_scalar::<_, String>(
+                "SELECT status FROM newsletter_outbox WHERE member_id = ? AND post_id IS NULL",
+            )
+            .bind(m.id)
+            .fetch_one(&p)
+            .await
+            .unwrap()
+        };
+        // Sent recently: not re-armed.
+        sqlx::query("UPDATE newsletter_outbox SET status = 'sent' WHERE member_id = ?")
+            .bind(m.id)
+            .execute(&p)
+            .await
+            .unwrap();
+        enqueue_confirm(&p, m.id).await.unwrap();
+        assert_eq!(status().await, "sent");
+        // Sent over an hour ago: re-armed as pending.
+        sqlx::query(
+            "UPDATE newsletter_outbox SET created_at = created_at - 3601 WHERE member_id = ?",
+        )
+        .bind(m.id)
+        .execute(&p)
+        .await
+        .unwrap();
+        enqueue_confirm(&p, m.id).await.unwrap();
+        assert_eq!(status().await, "pending");
     }
 
     #[tokio::test]
