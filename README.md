@@ -13,7 +13,7 @@ A self-hosted blog engine written in Rust. Each post is a composable document of
 | Auth                            | Implemented | argon2id passwords, sessions, double-submit CSRF, HMAC-signed member tokens          |
 | HTTP server                     | Implemented | Axum, tower middleware stack, healthz, readyz, embedded assets, correlation IDs      |
 | Public reader                   | Implemented | Home, post detail, tags, series, search (FTS5), RSS, sitemap, robots                 |
-| Admin dashboard                 | Implemented | htmx editor, post CRUD, publish + fan-out, settings, member list, CSV export         |
+| Admin dashboard                 | Implemented | htmx editor, post CRUD, publish + fan-out, revisions with restore, settings, member list, CSV export |
 | Media library                   | Implemented | Upload (magic-byte sniffed PNG/JPEG/GIF/WebP, dedup by hash), `/media/:file` serving, editor picker |
 | Analytics                       | Implemented | Cookieless daily page-view + referrer aggregates; admin overview with 7/30/90d windows |
 | Members and newsletter          | Implemented | Signup, HMAC-confirm, one-click unsubscribe, preferences, background outbox worker   |
