@@ -49,3 +49,6 @@ The dependency direction is strictly **content/shortcodes → db → auth → bi
 - **Mailer** is pluggable (`mailer/`): `smtp` for production, `test_file` writes `.eml` to disk for tests/local.
 - Config tests use `figment::Jail` to isolate `BLOG_RS__*` env state across parallel runs — follow that pattern when adding config tests.
 
+## Known follow-ups
+
+- Draft seed articles in `content/articles/` (domains 2–5) carry `<!-- TODO: diagram? -->` markers where the source doc had inline values as images; they need author input, not code changes.

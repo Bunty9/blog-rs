@@ -234,6 +234,10 @@ cargo build -p blog-rs && cd tests/e2e && npm ci && npx playwright install chrom
 
 Page views are tracked with a cookieless, aggregate-only model: a background-checked middleware on the public reader routes increments a `(day, path)` counter and, if the request carries a `Referer` header, a `(day, referrer host)` counter. Nothing else is stored -- no cookies, no IP addresses, no user agents, and no per-visitor identifier of any kind, so there is nothing to link two page views to the same person. Requests are skipped when they carry `DNT: 1` or `Sec-GPC: 1`, when the User-Agent looks like a bot/crawler, when they're htmx partials, or when they target admin/asset/health routes. Aggregate rows older than 400 days are pruned automatically. See `/admin/analytics` for the daily chart, top pages, and top referrers, and `crates/db/src/analytics.rs` / `bins/blog-rs/src/middleware/page_views.rs` for the implementation.
 
+## Known follow-ups
+
+- Four draft seed articles under `content/articles/` (domains 2–5) contain 13 `<!-- TODO: diagram? -->` markers. The source research doc rendered those inline values and equations as images (`![][imageN]`), so the text never existed in the export; the author needs to fill them in before publishing.
+
 ## License
 
 MIT. See `LICENSE`.
