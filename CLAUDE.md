@@ -43,10 +43,13 @@ The dependency direction is strictly **content/shortcodes → db → auth → bi
 
 - **Adding a shortcode**: implement `Shortcode` in `crates/shortcodes/src/`, register it in `default_registry()`. The render pipeline and per-page asset injection pick it up automatically — no template edits needed.
 - **Render caching**: `content::RENDER_VERSION` (in `content/src/lib.rs`) stamps cached `body_html` rows. Bump it whenever a registry/markdown/escape change would alter output for the same input; stale rows are found via `body_html_version <> RENDER_VERSION`.
-- **Two env var families.** The `Config` struct (bind, database_url, signing_key, session/token TTLs, pool size, admin_bootstrap) loads via `figment` with the **`BLOG_RS__`** prefix and `__` nesting (e.g. `BLOG_RS__ADMIN_BOOTSTRAP__EMAIL`). Site/mail/worker settings are read separately from their own vars: `BLOG_BASE_URL`, `BLOG_TITLE`, `BLOG_DESCRIPTION`, `BLOG_RS_MAIL` (`test` writes to `./test-mailbox.eml`), `BLOG_SMTP_*`, `OUTBOX_POLL_INTERVAL`, `OUTBOX_RECLAIM_AFTER`. Don't conflate the prefixes.
+- **Two env var families.** The `Config` struct (bind, database_url, signing_key, session/token TTLs, pool size, admin_bootstrap) loads via `figment` with the **`BLOG_RS__`** prefix and `__` nesting (e.g. `BLOG_RS__ADMIN_BOOTSTRAP__EMAIL`). Site/mail/worker settings are read separately from their own vars: `BLOG_BASE_URL`, `BLOG_TITLE`, `BLOG_DESCRIPTION`, `BLOG_RS_MAIL` (`test` writes to `./test-mailbox.eml`), `BLOG_SMTP_*`, `BLOG_MEDIA_DIR` (uploads, default `./media`), `OUTBOX_POLL_INTERVAL`, `OUTBOX_RECLAIM_AFTER`. Don't conflate the prefixes.
 - **First boot**: seeds the admin row from `BLOG_RS__ADMIN_BOOTSTRAP__*`, then ignores those vars once `users` is non-empty (password lives only as an argon2id hash).
-- **Migrations** are append-only SQL files in `migrations/` (`0001`…`0013`), run automatically on startup and in `fresh_pool()`.
+- **Migrations** are append-only SQL files in `migrations/` (`0001`…`0014`), run automatically on startup and in `fresh_pool()`.
 - **Mailer** is pluggable (`mailer/`): `smtp` for production, `test_file` writes `.eml` to disk for tests/local.
+- **Integration tests mirror `src/` via `#[path]`**: `bins/blog-rs/tests/*.rs` re-include the binary's modules (a bin can't be linked as a lib). A new top-level module in `bins/blog-rs/src/` must be added to each of those files, and code only some mirrors use may trip `dead_code`.
+- **Admin CSRF**: htmx requests carry `X-CSRF-Token` (added by `assets/admin/admin.js`); plain `<form method="post">` must include a hidden `csrf_token` field, which the middleware reads from urlencoded bodies.
+- **Post saves** go through `posts_save::render_body`, which sets every derived column (HTML, TOC, asset manifest, reading time); don't write `body_html` without `assets_json`.
 - Config tests use `figment::Jail` to isolate `BLOG_RS__*` env state across parallel runs — follow that pattern when adding config tests.
 
 ## Known follow-ups
