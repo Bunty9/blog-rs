@@ -20,6 +20,7 @@ pub struct Page {
     pub status: String,
     pub created_at: i64,
     pub updated_at: i64,
+    pub assets_json: String,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +32,7 @@ pub struct NewPage<'a> {
     pub toc_json: &'a str,
     pub meta_json: Option<&'a str>,
     pub status: &'a str,
+    pub assets_json: &'a str,
 }
 
 pub async fn create(pool: &SqlitePool, p: NewPage<'_>) -> Result<i64, DbError> {
@@ -40,8 +42,8 @@ pub async fn create(pool: &SqlitePool, p: NewPage<'_>) -> Result<i64, DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     let res = sqlx::query(
         "INSERT INTO pages (slug, title, body_md, body_html, body_html_version,
-                            toc_json, meta_json, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            toc_json, meta_json, status, created_at, updated_at, assets_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(p.slug)
     .bind(p.title)
@@ -53,6 +55,7 @@ pub async fn create(pool: &SqlitePool, p: NewPage<'_>) -> Result<i64, DbError> {
     .bind(p.status)
     .bind(now)
     .bind(now)
+    .bind(p.assets_json)
     .execute(pool)
     .await
     .map_err(|e| match e {
@@ -97,6 +100,8 @@ pub struct PageUpdate {
     pub toc_json: Option<String>,
     pub meta_json: Option<Option<String>>,
     pub status: Option<String>,
+    /// Shortcode asset manifest for `body_html`; kept when `None`.
+    pub assets_json: Option<String>,
 }
 
 pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PageUpdate) -> Result<(), DbError> {
@@ -123,11 +128,13 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PageUpdate) -> Result
         let toc = u.toc_json.as_deref().unwrap_or("[]");
         sqlx::query(
             "UPDATE pages SET body_md = ?, body_html = ?, toc_json = ?,
+                              assets_json = COALESCE(?, assets_json),
                               body_html_version = ?, updated_at = ? WHERE id = ?",
         )
         .bind(md)
         .bind(html)
         .bind(toc)
+        .bind(&u.assets_json)
         .bind(content::RENDER_VERSION as i64)
         .bind(now)
         .bind(id)
@@ -166,22 +173,25 @@ pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Overwrite the rendered cache for a page (`body_html`, `toc_json`,
-/// `body_html_version`). Used by the lazy regeneration path when a published
-/// page is read with a stale `body_html_version`.
+/// Overwrite the rendered cache for a page (`body_html`, `assets_json`,
+/// `toc_json`, `body_html_version`). Used by the lazy regeneration path when a
+/// published page is read with a stale `body_html_version`.
 pub async fn update_rendered_cache(
     pool: &SqlitePool,
     id: i64,
     body_html: &str,
+    assets_json: &str,
     toc_json: &str,
     version: i64,
 ) -> Result<(), DbError> {
     let now = OffsetDateTime::now_utc().unix_timestamp();
     sqlx::query(
-        "UPDATE pages SET body_html = ?, toc_json = ?, body_html_version = ?, updated_at = ?
+        "UPDATE pages SET body_html = ?, assets_json = ?, toc_json = ?, body_html_version = ?,
+                          updated_at = ?
          WHERE id = ?",
     )
     .bind(body_html)
+    .bind(assets_json)
     .bind(toc_json)
     .bind(version)
     .bind(now)
@@ -189,6 +199,23 @@ pub async fn update_rendered_cache(
     .execute(pool)
     .await?;
     Ok(())
+}
+
+use content::AssetManifest;
+
+impl Page {
+    /// Decode the cached AssetManifest. On parse failure (corrupt row),
+    /// return an empty manifest and log a warning rather than failing the
+    /// request — the page still renders, it just lacks block-specific assets.
+    pub fn assets(&self) -> AssetManifest {
+        match serde_json::from_str::<AssetManifest>(&self.assets_json) {
+            Ok(m) => m,
+            Err(e) => {
+                tracing::warn!(page.id = self.id, error = ?e, "corrupt assets_json, falling back to empty manifest");
+                AssetManifest::default()
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +238,7 @@ mod tests {
                 toc_json: "[]",
                 meta_json: None,
                 status,
+                assets_json: "[]",
             },
         )
         .await
@@ -257,6 +285,7 @@ mod tests {
                 toc_json: "[]",
                 meta_json: None,
                 status: "scheduled", // not valid for pages
+                assets_json: "[]",
             },
         )
         .await
@@ -278,6 +307,7 @@ mod tests {
                 toc_json: "[]",
                 meta_json: None,
                 status: "draft",
+                assets_json: "[]",
             },
         )
         .await
@@ -309,11 +339,13 @@ mod tests {
         let md = "# New heading\n\nFresh content.";
         let out = content::render(md).expect("render failed");
         let toc_json = serde_json::to_string(&out.toc).unwrap();
+        let assets_json = serde_json::to_string(&out.assets).unwrap();
 
         update_rendered_cache(
             &pool,
             id,
             &out.html,
+            &assets_json,
             &toc_json,
             content::RENDER_VERSION as i64,
         )
@@ -323,6 +355,47 @@ mod tests {
         let row = find_by_id(&pool, id).await.unwrap();
         assert_eq!(row.body_html_version, content::RENDER_VERSION as i64);
         assert_eq!(row.body_html, out.html);
+    }
+
+    /// assets_json round-trips through create + find, and update_rendered_cache
+    /// persists a freshly-rendered manifest for a page whose body uses a
+    /// shortcode with block assets.
+    #[tokio::test]
+    async fn assets_json_round_trips_through_create_and_regen() {
+        let pool = fresh_pool().await;
+        let md = r#"{{< chart type="bar" data="[1,2]" >}}"#;
+        let out = content::render(md).expect("render failed");
+        let assets_json = serde_json::to_string(&out.assets).unwrap();
+        assert_ne!(assets_json, "[]", "chart shortcode should emit assets");
+
+        let id = create(
+            &pool,
+            NewPage {
+                slug: "chart-page",
+                title: "Chart Page",
+                body_md: md,
+                body_html: &out.html,
+                toc_json: "[]",
+                meta_json: None,
+                status: "published",
+                assets_json: &assets_json,
+            },
+        )
+        .await
+        .unwrap();
+
+        let page = find_by_id(&pool, id).await.unwrap();
+        assert_eq!(page.assets_json, assets_json);
+        let manifest = page.assets();
+        assert!(!manifest.assets.is_empty());
+
+        // Simulate lazy regen from a stale row: update_rendered_cache must
+        // also overwrite assets_json.
+        update_rendered_cache(&pool, id, &out.html, &assets_json, "[]", content::RENDER_VERSION as i64)
+            .await
+            .unwrap();
+        let regen = find_by_id(&pool, id).await.unwrap();
+        assert_eq!(regen.assets_json, assets_json);
     }
 
     #[tokio::test]
