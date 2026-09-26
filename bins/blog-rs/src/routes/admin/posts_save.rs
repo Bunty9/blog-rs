@@ -61,11 +61,50 @@ struct FlashTpl {
     flash_kind: String,
 }
 
+/// Render markdown to the trio of columns a post save/restore persists
+/// alongside `body_md`. Shared by the normal save path and by revision
+/// restore, so the two never drift on how HTML/TOC/reading time are derived.
+pub(crate) fn render_body(md: &str) -> Result<(String, String, i64), AppError> {
+    let out = content::render(md).map_err(|e| AppError::BadRequest(e.to_string()))?;
+    let toc_json = serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into());
+    Ok((out.html, toc_json, out.reading_minutes))
+}
+
 pub async fn handler(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(form): Form<SaveForm>,
 ) -> Result<impl IntoResponse, AppError> {
+    // Snapshot pre-save content as a revision before it's overwritten, per
+    // db::revisions::should_snapshot's throttle policy (skip when nothing
+    // in title/body actually changed, or the last revision is too recent).
+    let current = posts::find_by_id(&state.pool, id).await?;
+    // Mirror the emptiness filter the title update below applies, so a
+    // blank `title` field (which never lands in `update.title`) doesn't
+    // register as a change here either.
+    let new_title = form
+        .title
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&current.title);
+    let new_body = form.body_md.as_deref().unwrap_or(&current.body_md);
+    let content_changed = new_title != current.title || new_body != current.body_md;
+    if content_changed {
+        let latest = db::revisions::latest_created_at(&state.pool, id).await?;
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        if db::revisions::should_snapshot(true, latest, now) {
+            db::revisions::snapshot(
+                &state.pool,
+                id,
+                &current.title,
+                current.subtitle.as_deref(),
+                &current.body_md,
+                current.meta_json.as_deref(),
+            )
+            .await?;
+        }
+    }
+
     let mut update = PostUpdate::default();
 
     if let Some(v) = form.title.as_ref().filter(|s| !s.is_empty()) {
@@ -101,11 +140,11 @@ pub async fn handler(
         });
     }
     if let Some(md) = form.body_md.as_ref() {
-        let out = content::render(md).map_err(|e| AppError::BadRequest(e.to_string()))?;
+        let (body_html, toc_json, reading_minutes) = render_body(md)?;
         update.body_md = Some(md.clone());
-        update.body_html = Some(out.html);
-        update.toc_json = Some(serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()));
-        update.reading_minutes = Some(out.reading_minutes);
+        update.body_html = Some(body_html);
+        update.toc_json = Some(toc_json);
+        update.reading_minutes = Some(reading_minutes);
     }
 
     // --- Merge SEO / series fields into meta_json ---

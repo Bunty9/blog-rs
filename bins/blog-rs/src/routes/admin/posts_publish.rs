@@ -23,6 +23,19 @@ pub async fn handler(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, AppError> {
+    // Always snapshot right before publish, regardless of the save-throttle
+    // policy — this is the one revision an author can always get back to.
+    let current = posts::find_by_id(&state.pool, id).await?;
+    db::revisions::snapshot(
+        &state.pool,
+        id,
+        &current.title,
+        current.subtitle.as_deref(),
+        &current.body_md,
+        current.meta_json.as_deref(),
+    )
+    .await?;
+
     let enqueued = posts::publish(&state.pool, id).await?;
     Ok(FlashTpl {
         flash: Some(format!(
