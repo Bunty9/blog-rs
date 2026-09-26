@@ -123,7 +123,7 @@
         <button type="button" onclick="edBlock('embed')">{embed}</button>
         <span class="tb-sep" aria-hidden="true"></span>
         <button type="button" class="media-picker-btn" onclick="openMediaPicker('body')" title="Insert image">+ media</button>
-        <button type="button" disabled title="Revisions — coming soon">Revisions</button>
+        <button type="button" onclick="openRevisions()" title="Revisions">Revisions</button>
       </div>
       <textarea id="body-md"
                 name="body_md"
@@ -229,12 +229,16 @@
         </div>
       </details>
 
-      <details style="margin-bottom:var(--space-4)">
+      <details id="revisions-details" style="margin-bottom:var(--space-4)"
+                hx-get="/admin/posts/{{ id }}/revisions"
+                hx-trigger="toggle once"
+                hx-target="#revisions-list"
+                hx-swap="innerHTML">
         <summary style="cursor:pointer; font-weight:600; padding:var(--space-2) 0; user-select:none">
-          Revisions <span class="help" style="font-weight:400">(coming soon)</span>
+          Revisions
         </summary>
-        <div style="padding-top:var(--space-3); color:var(--text-muted); font-size:0.85rem">
-          Revision history is not yet available.
+        <div id="revisions-list" style="padding-top:var(--space-3); color:var(--text-muted); font-size:0.85rem">
+          Loading…
         </div>
       </details>
 
@@ -288,6 +292,12 @@
     document.getElementById('ed-drawer').classList.remove('open');
     document.getElementById('ed-overlay').classList.remove('open');
     document.getElementById('settings-btn').setAttribute('aria-expanded', 'false');
+  }
+  function openRevisions() {
+    openDrawer();
+    var d = document.getElementById('revisions-details');
+    d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /* View segment toggle */

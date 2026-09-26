@@ -20,6 +20,7 @@ pub mod posts_new;
 pub mod posts_preview;
 pub mod posts_publish;
 pub mod posts_save;
+pub mod revisions;
 pub mod settings;
 
 use crate::middleware::{auth_required, csrf};
@@ -51,6 +52,11 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/posts/:id/publish", post(posts_publish::handler))
         .route("/posts/:id/delete", post(posts_delete::handler))
         .route("/posts/:id/preview", post(posts_preview::handler))
+        .route("/posts/:id/revisions", get(revisions::list))
+        .route(
+            "/posts/:id/revisions/:rev_id/restore",
+            post(revisions::restore),
+        )
         .route("/analytics", get(analytics::handler))
         .route(
             "/media",

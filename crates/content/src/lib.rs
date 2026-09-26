@@ -5,7 +5,9 @@
 /// different output for the same input. Persisted callers (see `db::posts`)
 /// write this value alongside `body_html`, so a future regen pass can find
 /// stale rows via `body_html_version <> content::RENDER_VERSION`.
-pub const RENDER_VERSION: u32 = 2;
+// v3: forces a re-render that repairs assets_json left stale by admin saves
+// before saves persisted the manifest.
+pub const RENDER_VERSION: u32 = 3;
 
 pub mod asset;
 pub mod error;
