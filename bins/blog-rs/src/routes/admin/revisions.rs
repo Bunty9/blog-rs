@@ -103,17 +103,13 @@ pub async fn restore(
     )
     .await?;
 
-    let (body_html, toc_json, reading_minutes) = render_body(&rev.body_md)?;
-    let update = PostUpdate {
+    let mut update = PostUpdate {
         title: Some(rev.title),
         subtitle: Some(rev.subtitle.unwrap_or_default()),
-        body_md: Some(rev.body_md),
-        body_html: Some(body_html),
-        toc_json: Some(toc_json),
-        reading_minutes: Some(reading_minutes),
         meta_json: Some(rev.meta_json.unwrap_or_else(|| "{}".into())),
         ..Default::default()
     };
+    render_body(&rev.body_md, &mut update)?;
     posts::update_fields(&state.pool, post_id, &update).await?;
 
     let mut res = StatusCode::OK.into_response();

@@ -587,6 +587,8 @@ pub struct PostUpdate {
     pub body_md: Option<String>,
     pub body_html: Option<String>,
     pub toc_json: Option<String>,
+    /// Shortcode asset manifest for `body_html`; kept when `None`.
+    pub assets_json: Option<String>,
     pub reading_minutes: Option<i64>,
     pub status: Option<String>,
     pub scheduled_for: Option<Option<i64>>,
@@ -644,12 +646,14 @@ pub async fn update_fields(pool: &SqlitePool, id: i64, u: &PostUpdate) -> Result
         let mins = u.reading_minutes.unwrap_or(1);
         sqlx::query(
             "UPDATE posts SET body_md = ?, body_html = ?, toc_json = ?, reading_minutes = ?,
+                              assets_json = COALESCE(?, assets_json),
                               body_html_version = ?, updated_at = ? WHERE id = ?",
         )
         .bind(md)
         .bind(html)
         .bind(toc)
         .bind(mins)
+        .bind(&u.assets_json)
         .bind(content::RENDER_VERSION as i64)
         .bind(now)
         .bind(id)

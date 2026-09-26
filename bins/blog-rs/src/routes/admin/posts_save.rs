@@ -61,13 +61,18 @@ struct FlashTpl {
     flash_kind: String,
 }
 
-/// Render markdown to the trio of columns a post save/restore persists
-/// alongside `body_md`. Shared by the normal save path and by revision
-/// restore, so the two never drift on how HTML/TOC/reading time are derived.
-pub(crate) fn render_body(md: &str) -> Result<(String, String, i64), AppError> {
+/// Render `md` and set every column derived from it (`body_md`, HTML, TOC,
+/// asset manifest, reading time) on `update`. Shared by the normal save path
+/// and by revision restore so the two never drift. The asset manifest must
+/// move with the HTML: the reader injects shortcode CSS/JS from it.
+pub(crate) fn render_body(md: &str, update: &mut PostUpdate) -> Result<(), AppError> {
     let out = content::render(md).map_err(|e| AppError::BadRequest(e.to_string()))?;
-    let toc_json = serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into());
-    Ok((out.html, toc_json, out.reading_minutes))
+    update.body_md = Some(md.to_string());
+    update.toc_json = Some(serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()));
+    update.assets_json = Some(serde_json::to_string(&out.assets).unwrap_or_else(|_| "[]".into()));
+    update.reading_minutes = Some(out.reading_minutes);
+    update.body_html = Some(out.html);
+    Ok(())
 }
 
 pub async fn handler(
@@ -140,11 +145,7 @@ pub async fn handler(
         });
     }
     if let Some(md) = form.body_md.as_ref() {
-        let (body_html, toc_json, reading_minutes) = render_body(md)?;
-        update.body_md = Some(md.clone());
-        update.body_html = Some(body_html);
-        update.toc_json = Some(toc_json);
-        update.reading_minutes = Some(reading_minutes);
+        render_body(md, &mut update)?;
     }
 
     // --- Merge SEO / series fields into meta_json ---
@@ -283,6 +284,44 @@ mod tests {
         .fetch_one(&state.pool)
         .await
         .unwrap()
+    }
+
+    #[tokio::test]
+    async fn saving_body_refreshes_asset_manifest() {
+        // Regression: body saves rewrote body_html but kept the old
+        // assets_json, so a newly added chart shipped without its JS.
+        let (app, state) = test_app().await;
+        let (sid, csrf) = seed_admin_session(&state).await;
+        let post_id = seed_draft_post(&state, "assets-refresh", "{}").await;
+
+        let body = format!(
+            "body_md={}",
+            urlencoding::encode(r#"{{< chart type="bar" data="[1,2]" >}}"#)
+        );
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/admin/posts/{post_id}"))
+                    .header(
+                        header::COOKIE,
+                        format!("{}={}", auth::session::SESSION_COOKIE, sid),
+                    )
+                    .header("x-csrf-token", &csrf)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let assets: String = sqlx::query_scalar("SELECT assets_json FROM posts WHERE id = ?")
+            .bind(post_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap();
+        assert_ne!(assets, "[]", "chart assets missing from manifest");
     }
 
     #[tokio::test]
