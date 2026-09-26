@@ -105,6 +105,7 @@ mod tests {
                 toc_json: "[]",
                 meta_json: None,
                 status: "published",
+                assets_json: "[]",
             },
         )
         .await

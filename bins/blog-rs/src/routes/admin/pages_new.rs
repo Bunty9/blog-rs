@@ -48,6 +48,7 @@ pub async fn post(State(state): State<AppState>) -> Result<Redirect, AppError> {
             toc_json: "[]",
             meta_json: None,
             status: "draft",
+            assets_json: "[]",
         },
     )
     .await?;

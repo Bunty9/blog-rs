@@ -90,16 +90,19 @@ pub async fn handler(
     if page.body_html_version < content::RENDER_VERSION as i64 {
         let out = content::render(&page.body_md)
             .map_err(|e| AppError::Internal(format!("re-render failed: {e}")))?;
+        let assets_json = serde_json::to_string(&out.assets).unwrap_or_else(|_| "[]".into());
         let toc_json = serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into());
         db::pages::update_rendered_cache(
             &state.pool,
             page.id,
             &out.html,
+            &assets_json,
             &toc_json,
             content::RENDER_VERSION as i64,
         )
         .await?;
         page.body_html = out.html;
+        page.assets_json = assets_json;
         page.toc_json = toc_json;
     }
 
@@ -142,9 +145,11 @@ pub async fn handler(
         toc,
     };
 
+    let asset_tags = AssetTag::from_manifest(&page.assets());
+
     Ok(PageTemplate {
         site,
-        asset_tags: vec![],
+        asset_tags,
         nav: "",
         page: view,
         meta,
@@ -181,6 +186,7 @@ mod tests {
                 toc_json: "[]",
                 meta_json: None,
                 status,
+                assets_json: "[]",
             },
         )
         .await
@@ -208,6 +214,54 @@ mod tests {
         assert!(
             body.contains("This is the about page."),
             "body content missing"
+        );
+    }
+
+    #[tokio::test]
+    async fn page_with_chart_shortcode_renders_asset_tags() {
+        // Regression: static pages ignored the shortcode asset manifest, so a
+        // page using a chart/animate/code-playground block shipped without
+        // its CSS/JS.
+        let (app, pool) = test_app().await;
+        let md = r#"{{< chart type="bar" data="[1,2]" >}}"#;
+        let out = content::render(md).expect("render failed");
+        let assets_json = serde_json::to_string(&out.assets).unwrap();
+
+        db::pages::create(
+            &pool,
+            db::pages::NewPage {
+                slug: "charts",
+                title: "Charts Page",
+                body_md: md,
+                body_html: &out.html,
+                toc_json: "[]",
+                meta_json: None,
+                status: "published",
+                assets_json: &assets_json,
+            },
+        )
+        .await
+        .unwrap();
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/charts")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        assert!(
+            body.contains(r#"href="/assets/blocks/chart.css""#),
+            "chart CSS asset tag missing: {body}"
+        );
+        assert!(
+            body.contains(r#"src="/assets/blocks/chart.js""#),
+            "chart JS asset tag missing: {body}"
         );
     }
 

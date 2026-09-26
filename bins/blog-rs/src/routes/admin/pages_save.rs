@@ -59,6 +59,8 @@ pub async fn handler(
         update.body_md = Some(md.clone());
         update.body_html = Some(out.html);
         update.toc_json = Some(serde_json::to_string(&out.toc).unwrap_or_else(|_| "[]".into()));
+        update.assets_json =
+            Some(serde_json::to_string(&out.assets).unwrap_or_else(|_| "[]".into()));
     }
 
     pages::update_fields(&state.pool, id, &update).await?;
@@ -88,4 +90,95 @@ fn slugify(s: &str) -> String {
         out.push_str("page");
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::Config;
+    use axum::body::Body;
+    use axum::http::{header, Request, StatusCode};
+    use db::test_support::fresh_pool;
+    use tower::ServiceExt;
+
+    async fn test_app() -> (axum::Router, crate::state::AppState) {
+        let pool = fresh_pool().await;
+        let state = crate::state::AppState::new(pool, Config::default(), vec![0u8; 32]);
+        let app = crate::routes::router(state.clone());
+        (app, state)
+    }
+
+    async fn seed_admin_session(state: &crate::state::AppState) -> (String, String) {
+        let hash = auth::password::hash("hunter2").unwrap();
+        db::users::bootstrap_admin(&state.pool, "admin@example.com", &hash)
+            .await
+            .unwrap();
+        let user_id = db::users::find_by_email(&state.pool, "admin@example.com")
+            .await
+            .unwrap()
+            .id;
+        let session_token = auth::session::mint_token();
+        let csrf = auth::session::mint_token();
+        let expires = time::OffsetDateTime::now_utc().unix_timestamp() + 3600;
+        db::sessions::create(&state.pool, &session_token, user_id, &csrf, expires)
+            .await
+            .unwrap();
+        (session_token, csrf)
+    }
+
+    async fn seed_draft_page(state: &crate::state::AppState, slug: &str) -> i64 {
+        db::pages::create(
+            &state.pool,
+            db::pages::NewPage {
+                slug,
+                title: "Test Page",
+                body_md: "# x",
+                body_html: "<h1>x</h1>",
+                toc_json: "[]",
+                meta_json: None,
+                status: "draft",
+                assets_json: "[]",
+            },
+        )
+        .await
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn saving_body_refreshes_asset_manifest() {
+        // Regression: static pages ignored the shortcode asset manifest, so
+        // a page using a chart/animate/code-playground block shipped
+        // without its CSS/JS.
+        let (app, state) = test_app().await;
+        let (sid, csrf) = seed_admin_session(&state).await;
+        let page_id = seed_draft_page(&state, "assets-refresh").await;
+
+        let body = format!(
+            "body_md={}",
+            urlencoding::encode(r#"{{< chart type="bar" data="[1,2]" >}}"#)
+        );
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/admin/pages/{page_id}"))
+                    .header(
+                        header::COOKIE,
+                        format!("{}={}", auth::session::SESSION_COOKIE, sid),
+                    )
+                    .header("x-csrf-token", &csrf)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let assets: String = sqlx::query_scalar("SELECT assets_json FROM pages WHERE id = ?")
+            .bind(page_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap();
+        assert_ne!(assets, "[]", "chart assets missing from manifest");
+    }
 }
