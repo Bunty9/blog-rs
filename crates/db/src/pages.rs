@@ -391,9 +391,16 @@ mod tests {
 
         // Simulate lazy regen from a stale row: update_rendered_cache must
         // also overwrite assets_json.
-        update_rendered_cache(&pool, id, &out.html, &assets_json, "[]", content::RENDER_VERSION as i64)
-            .await
-            .unwrap();
+        update_rendered_cache(
+            &pool,
+            id,
+            &out.html,
+            &assets_json,
+            "[]",
+            content::RENDER_VERSION as i64,
+        )
+        .await
+        .unwrap();
         let regen = find_by_id(&pool, id).await.unwrap();
         assert_eq!(regen.assets_json, assets_json);
     }
