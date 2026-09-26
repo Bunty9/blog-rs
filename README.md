@@ -28,7 +28,7 @@ blog-rs/
   Cargo.toml                       workspace manifest
   rust-toolchain.toml              pins stable channel
   justfile                         build, test, lint recipes
-  migrations/                      SQLx migration files (0001..0013)
+  migrations/                      SQLx migration files (0001..0015)
   assets/                          static CSS / JS / fonts embedded at build time
   content/
     samples/                       three showcase posts that exercise every shortcode
