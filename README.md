@@ -181,6 +181,8 @@ Important environment variables:
 
 `POST /admin/login` and `POST /signup` are throttled by a small in-process, in-memory fixed-window limiter (`bins/blog-rs/src/rate_limit.rs`): login allows 10 attempts per 15 minutes per client IP and per normalized email, signup allows 5 per hour per client IP. Client IP is read from `CF-Connecting-IP` (the production Cloudflare Tunnel sets this), falling back to `X-Forwarded-For`'s first hop, then the TCP peer address. Exceeding either limit returns `429` with a `Retry-After` header. These limits are fixed constants, not configurable via env vars, and reset on process restart since state is per-process.
 
+The per-email login limit means anyone who knows the admin address can keep the admin locked out by failing logins. Put `/admin*` behind Cloudflare Access (see `DEPLOY.md`) so strangers never reach the login form.
+
 ## Testing
 
 The workspace ships several hundred tests across the crates, integration test binaries, and the importer:
