@@ -86,9 +86,8 @@ pub async fn submit(
     // seeded by GET /signup before the user ever submits, so a real browser
     // round-trip always has it. Anonymous POSTs that arrive without the
     // cookie are either cross-origin attacks or scripts that bypassed the
-    // form render; either way, reject. Synchronous SMTP send on the happy
-    // path makes this endpoint cheap to weaponise as an email-spammer, so
-    // CSRF is unconditional here.
+    // form render; either way, reject. Each accepted POST can queue mail to
+    // an arbitrary address, so CSRF is unconditional here.
     let cookie_csrf = match csrf_from_cookie(&headers) {
         Some(v) if !v.is_empty() => v,
         _ => return (StatusCode::FORBIDDEN, "CSRF cookie missing").into_response(),
