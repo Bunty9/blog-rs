@@ -103,6 +103,44 @@ async fn tick_sends_pending_confirm_rows() {
 }
 
 #[tokio::test]
+async fn tick_skips_post_mail_for_members_who_unsubscribed_after_fanout() {
+    let ok = Arc::new(OkMailer {
+        count: AtomicUsize::new(0),
+    });
+    let state = fresh_state(ok.clone()).await;
+
+    let (m, _) = db::members::signup(&state.pool, "a@example.com")
+        .await
+        .unwrap();
+    db::members::confirm(&state.pool, m.id).await.unwrap();
+    sqlx::query(
+        "INSERT INTO users (email, password_hash, created_at) VALUES ('x@example.com', 'h', 0)",
+    )
+    .execute(&state.pool)
+    .await
+    .unwrap();
+    let post_id: i64 = sqlx::query_scalar(
+        "INSERT INTO posts (slug, title, status, author_id, updated_at, created_at, body_md,
+                            body_html, meta_json, assets_json)
+         VALUES ('p', 'P', 'published', 1, 0, 0, '', '', '{}', '[]') RETURNING id",
+    )
+    .fetch_one(&state.pool)
+    .await
+    .unwrap();
+    db::members::enqueue_post_to_all_confirmed(&state.pool, post_id)
+        .await
+        .unwrap();
+    db::members::unsubscribe(&state.pool, m.id).await.unwrap();
+
+    worker::outbox::tick(&state, 10, 3).await;
+    assert_eq!(
+        ok.count.load(Ordering::SeqCst),
+        0,
+        "unsubscribed member was mailed"
+    );
+}
+
+#[tokio::test]
 async fn tick_marks_failures_back_to_pending_until_max_then_dead() {
     let fail: MailerHandle = Arc::new(AlwaysFails);
     let state = fresh_state(fail).await;
