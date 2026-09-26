@@ -45,11 +45,10 @@ The dependency direction is strictly **content/shortcodes → db → auth → bi
 - **Render caching**: `content::RENDER_VERSION` (in `content/src/lib.rs`) stamps cached `body_html` rows. Bump it whenever a registry/markdown/escape change would alter output for the same input; stale rows are found via `body_html_version <> RENDER_VERSION`.
 - **Two env var families.** The `Config` struct (bind, database_url, signing_key, session/token TTLs, pool size, admin_bootstrap) loads via `figment` with the **`BLOG_RS__`** prefix and `__` nesting (e.g. `BLOG_RS__ADMIN_BOOTSTRAP__EMAIL`). Site/mail/worker settings are read separately from their own vars: `BLOG_BASE_URL`, `BLOG_TITLE`, `BLOG_DESCRIPTION`, `BLOG_RS_MAIL` (`test` writes to `./test-mailbox.eml`), `BLOG_SMTP_*`, `OUTBOX_POLL_INTERVAL`, `OUTBOX_RECLAIM_AFTER`. Don't conflate the prefixes.
 - **First boot**: seeds the admin row from `BLOG_RS__ADMIN_BOOTSTRAP__*`, then ignores those vars once `users` is non-empty (password lives only as an argon2id hash).
-- **Migrations** are append-only SQL files in `migrations/` (`0001`…`0009`), run automatically on startup and in `fresh_pool()`.
+- **Migrations** are append-only SQL files in `migrations/` (`0001`…`0013`), run automatically on startup and in `fresh_pool()`.
 - **Mailer** is pluggable (`mailer/`): `smtp` for production, `test_file` writes `.eml` to disk for tests/local.
 - Config tests use `figment::Jail` to isolate `BLOG_RS__*` env state across parallel runs — follow that pattern when adding config tests.
 
-## Known follow-ups (from README)
+## Known follow-ups
 
-- `db::members::enqueue_confirm` writes confirm-purpose outbox rows with `post_id = 0`; migration `0007` made `post_id` nullable but production may still want a clean schema/sentinel decision.
-- Seed articles under `content/articles/` carry `<!-- TODO: chart? -->` markers awaiting author review before public publish.
+- Draft seed articles in `content/articles/` (domains 2–5) carry `<!-- TODO: diagram? -->` markers where the source doc had inline values as images; they need author input, not code changes.

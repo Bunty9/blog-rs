@@ -18,7 +18,7 @@ A self-hosted blog engine written in Rust. Each post is a composable document of
 | Analytics                       | Implemented | Cookieless daily page-view + referrer aggregates; admin overview with 7/30/90d windows |
 | Members and newsletter          | Implemented | Signup, HMAC-confirm, one-click unsubscribe, preferences, background outbox worker   |
 | Research importer               | Implemented | `tools/import-research` converts a markdown research dump into per-domain posts      |
-| End-to-end test                 | Scaffolded  | Playwright spec covers bootstrap, publish, signup, confirm, public page              |
+| End-to-end test                 | Implemented | Playwright spec covers bootstrap, publish, signup, confirm, public page, media upload, RSS |
 | CI                              | Configured  | GitHub Actions: fmt, clippy, workspace tests, Playwright e2e                         |
 
 ## Workspace layout
@@ -28,7 +28,7 @@ blog-rs/
   Cargo.toml                       workspace manifest
   rust-toolchain.toml              pins stable channel
   justfile                         build, test, lint recipes
-  migrations/                      SQLx migration files (0001..0004)
+  migrations/                      SQLx migration files (0001..0013)
   assets/                          static CSS / JS / fonts embedded at build time
   content/
     samples/                       three showcase posts that exercise every shortcode
@@ -183,7 +183,7 @@ Important environment variables:
 
 ## Testing
 
-The workspace ships 447 tests across the crates, integration test binaries, and the importer:
+The workspace ships several hundred tests across the crates, integration test binaries, and the importer:
 
 ```
 cargo test --workspace
@@ -221,9 +221,14 @@ The clippy bar is set to `-D warnings`. The current workspace is clean.
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --workspace --all-targets -- -D warnings`
 3. `cargo test --workspace`
-4. Playwright end-to-end against a release build of the server
+4. Coverage check: `cargo llvm-cov --workspace --fail-under-lines 70`
+5. Playwright end-to-end against a release build of the server
 
-The Playwright job needs `tests/e2e/package-lock.json` for `npm ci`. Generate it once with `(cd tests/e2e && npm install)` and commit the lockfile before the e2e job will go green.
+To run e2e tests locally:
+
+```
+cargo build -p blog-rs && cd tests/e2e && npm ci && npx playwright install chromium && npx playwright test
+```
 
 ## Analytics
 
@@ -231,9 +236,7 @@ Page views are tracked with a cookieless, aggregate-only model: a background-che
 
 ## Known follow-ups
 
-- `db::members::enqueue_confirm` writes the confirm-purpose outbox row with `post_id = 0`. Integration tests seed a sentinel `posts(id = 0)` row; production needs either a sentinel migration or a schema change that allows null `post_id` on confirm-purpose rows.
-- The `members::unsubscribe` SQL overwrites `unsubscribed_at` on every call; observable behaviour is idempotent but the timestamp is bumped on repeats. A `COALESCE` keeps the original.
-- Five seed articles under `content/articles/` retain `<!-- TODO: chart? -->` markers where the source research had numeric tables; author review is intended before public publish.
+- Four draft seed articles under `content/articles/` (domains 2–5) contain 13 `<!-- TODO: diagram? -->` markers. The source research doc rendered those inline values and equations as images (`![][imageN]`), so the text never existed in the export; the author needs to fill them in before publishing.
 
 ## License
 

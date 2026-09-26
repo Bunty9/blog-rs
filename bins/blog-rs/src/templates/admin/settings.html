@@ -54,12 +54,11 @@
             <label for="smtp_password">SMTP password</label>
             <input class="input" id="smtp_password" name="smtp_password" type="password" value="{{ smtp_password }}" />
         </div>
-        <div class="field" style="flex-direction:row;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:var(--r-md);padding:var(--space-4)">
-            <div>
-                <label style="margin:0">Analytics tracking</label>
-                <div class="help">Track opens &amp; clicks — backend not yet built.</div>
-            </div>
-            <input type="checkbox" disabled title="Coming soon" />
+        <div class="callout info" style="margin-top:var(--space-3)">
+            <span class="co-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </span>
+            <div class="co-body" style="font-size:0.9rem">Page-view analytics are cookieless and aggregate-only — no IP addresses, no cookies, and no tracking across pages. Requests honour <code>DNT</code> and Global Privacy Control. See <a href="/admin/analytics">analytics overview</a>.</div>
         </div>
         <div class="callout info" style="margin-top:var(--space-3)">
             <span class="co-icon">
